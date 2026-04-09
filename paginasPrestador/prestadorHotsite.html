@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServGo! - João Carpintaria</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/estiloServGo.css">
+</head>
+
+<body>
+
+       <!-- NAVBAR -->
+    <header>
+        <nav class="navbar navbar-expand-lg">
+            <div class="container menu">
+                <a class="navbar-brand" href="/index.html">
+                    <span class="serv-part">Serv</span><span class="go-part">Go!</span>
+                </a>
+                <div class="d-flex order-lg-3">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                </div>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav mx-auto">
+                        <li class="nav-item"><a class="nav-link nav-link-active" href="/index.html">Início</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/paginasSite/avaliacao.html">Avaliações</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/paginasSite/contatoSite.html">Contato</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/paginasSite/faqSite.html">FAQ</a></li>
+                    </ul>                    
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="container">
+        <div class="hotsite-main-layout">
+
+            <!-- ASIDE: PERFIL -->
+            <aside class="hotsite-perfil-aside">
+                <div class="hotsite-avatar">JC</div>
+                <div class="hotsite-nome">João Carpintaria</div>
+                <div class="hotsite-meta-info">
+                    Carpintaria &nbsp;·&nbsp;
+                    <span class="hotsite-estrelas">★★★★</span><span class="hotsite-estrela-vazia">☆</span>
+                    &nbsp;4.8 &nbsp;·&nbsp; 150 avaliações
+                </div>
+                <div class="hotsite-atende">
+                    <i class="bi bi-geo-alt-fill me-1"></i> Atende em: Presidente Prudente
+                </div>
+                <a class="cta" href="/paginasCliente/clienteAgendarServicos.html" style="width: 100%; text-align: center;">
+                    <i class="bi bi-calendar-check me-1"></i> Agendar Serviço
+                </a>
+            </aside>
+
+            <!-- SEÇÃO: CONTEÚDO -->
+            <section class="hotsite-conteudo">
+
+                <!-- SERVIÇOS E DESCRIÇÃO -->
+                <div class="hotsite-conteudo-card">
+                    <div class="hotsite-cabecalho-bloco">
+                        <div>
+                            <div class="hotsite-secao-titulo">Serviços &amp; Descrição</div>
+                            <p class="hotsite-desc">Montagem de móveis, pequenos reparos, sob medida e restauração. Atendimentos residenciais e comerciais.</p>
+                        </div>
+                        <div style="text-align:right; flex-shrink:0;">
+                            <div class="hotsite-estrelas" style="font-size:1.2rem;">★★★★<span class="hotsite-estrela-vazia">☆</span></div>
+                            <div style="font-size:0.83rem; color:var(--texto-muted);">4.8 (150)</div>
+                        </div>
+                    </div>
+
+                    <div class="hotsite-secao-titulo" style="margin-top: 16px;">Galeria de Trabalhos</div>
+                    <div class="hotsite-galeria">
+                        <div class="hotsite-thumb"><i class="bi bi-image"></i> Foto 1</div>
+                        <div class="hotsite-thumb"><i class="bi bi-image"></i> Foto 2</div>
+                        <div class="hotsite-thumb"><i class="bi bi-image"></i> Foto 3</div>
+                        <div class="hotsite-thumb"><i class="bi bi-play-circle"></i> Vídeo</div>
+                    </div>
+                </div>
+
+                <!-- DEPOIMENTOS -->
+                <div class="hotsite-conteudo-card">
+                    <div class="hotsite-secao-titulo">Depoimentos</div>
+                    <div class="hotsite-depoimento">"Atendimento rápido e muito profissional. Recomendo!" — Maria</div>
+                    <div class="hotsite-depoimento">"Conserto impecável, chegou no horário." — Pedro</div>
+                </div>
+
+                <!-- CONTATOS -->
+                <div class="hotsite-conteudo-card">
+                    <div class="hotsite-secao-titulo">Contatos</div>
+                    <p style="font-size:0.9rem; color:#444; margin: 0;">
+                        <i class="bi bi-envelope me-1"></i> joao@carpintaria.com
+                        &nbsp;&nbsp;
+                        <i class="bi bi-telephone me-1"></i> (18) 9xxxx-xxxx
+                    </p>
+                </div>
+
+                <!-- AGENDA & DISPONIBILIDADE -->
+                <div class="hotsite-conteudo-card">
+                    <div class="hotsite-secao-titulo">Agenda &amp; Disponibilidade</div>
+                    <div class="placeholder">
+                        Próximo horário disponível: <strong>Seg, 10:00</strong> (simulado)
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container" style="padding-top: 40px; padding-bottom: 32px;">
+            <div class="row">
+                <div class="col-md-3 mb-4">
+                    <a class="navbar-footer" href="#">
+                        <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
+                    </a>
+                    <p class="small text-muted mt-2">Análise, inovação e conteúdo de valor.</p>
+                    <div class="d-flex social-icons-custom mt-2">
+                        <a href="#" class="text-white me-3"><i class="bi bi-linkedin"></i></a>
+                        <a href="#" class="text-white me-3"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Links Rápidos</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50 text-decoration-none">Quem Somos</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Serviços</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Fale Conosco</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Nossos Serviços</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Contato</h5>
+                    <p class="small text-white-50"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</p>
+                    <p class="small text-white-50"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</p>
+                    <p class="small text-white-50"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</p>
+                    <a href="#" class="small text-decoration-none text-warning">Trabalhe Conosco</a>
+                </div>
+            </div>
+            <hr class="text-white-50">
+            <div class="text-center small text-white-50">
+                © 2025 ServGo! Todos os direitos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/script.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ServGo! - Avaliações</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">        
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="/css/estiloServGo.css">
+    </head>
+
+    <body>
+
+        <!--INÍCIO DO CABEÇALHO DA PÁGINA-->
+        <header>
+
+            <!--TOPO DA PÁGINA-->
+
+            <!--Trabalha sobre os Menus (links)-->
+
+            <nav class="navbar navbar-expand-lg">
+
+                <div class="container menu"> <!--Altera o conteúdo dos Menus (links)-->
+
+                    <!--Propriedades do Logo (Topo da Página) + Clicar no Logo volta para página Home-->
+
+                    <a class="navbar-brand" href="../index.html">
+                        <span class="serv-part">Serv</span><span class="go-part">Go!</span>
+                    </a>
+
+                    <!--Botão Serviços Quando Estiver em Responsividade-->
+
+                    <div class="d-flex order-lg-3">
+                        <button class="btn btn-primary d-lg-none me-2" type="button" data-bs-toggle="offcanvas"
+                            data-bs-target="#offcanvasServices" aria-controls="offcanvasServices"
+                            style="background-color: #146ADB !important; border-color: #146ADB !important;">
+                            <i class="bi bi-list"></i> Serviços
+                        </button>
+
+                        <!--Botão Sanduíche Quando Estiver em Responsividade-->
+
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                    </div>
+
+                    <!--Menus da Página Home-->
+
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav mx-auto">
+                            <li class="nav-item"><a class="nav-link" href="../index.html">Início</a></li>
+                            <li class="nav-item"><a class="nav-link nav-link-active" href="avaliacao.html">Avaliações</a></li>
+                            <li class="nav-item"><a class="nav-link" href="contatoSite.html">Contato</a></li>
+                            <li class="nav-item"><a class="nav-link" href="faqSite.html">FAQ</a></li>
+                        </ul>
+
+                        <!--Número de Telefone da Página Home-->
+
+                        <ul class="navbar-nav ms-auto align-items-lg-center">
+                            <li class="nav-item d-flex align-items-center me-3">
+                                <span class="nav-link p-0 d-none d-lg-block">(18) 99999-9999</span>
+                            </li>
+
+                            <!--Botões de Login e Cadastro da Página Home-->
+
+                            <li class="nav-item mb-2 mb-lg-0 me-2"><a class="btn btn-dark login" href="login.html">Login</a></li>
+                            <li class="nav-item"><a class="btn btn-warning cadastro" href="cadastro.html">Cadastro</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <!--Define a Estrutura da Barra de Títulos do Menu Lateral durante a Resposnividade-->
+        <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasServices"
+            aria-labelledby="offcanvasServicesLabel">
+            <div class="offcanvas-header bg-primary text-white" style="background-color: #146ADB !important;">
+                <h5 class="offcanvas-title" id="offcanvasServicesLabel">Categorias de Serviço</h5>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+
+            <!--Conteúdo apresentado no Menu Lateral durante a Resposnividade-->
+            <div class="offcanvas-body">
+                <ul class="navbar-nav justify-content-start flex-grow-1 pe-3">
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="#">Saúde</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="#">Beleza</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="#">Manutenção Predial</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="#">TI</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="#">Lazer</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="#">Alimentação</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="#">Design</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="#">Segurança</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="#">Logística</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="#">Consultoria</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="#">Construção</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!--Barra de Links de Serviços da Página Principal-->
+        <div class="servicos">
+            <div class="text-center mb-5 d-none d-lg-block">
+                <div class="p-2 filter-pill mx-auto d-inline-block">
+                    <a href="#" class="px-3 border-end">Saúde</a>
+                    <a href="#" class="px-3 border-end">Beleza</a>
+                    <a href="#" class="px-3 border-end">Manutenção Predial</a>
+                    <a href="#" class="px-3 border-end">TI</a>
+                    <a href="#" class="px-3 border-end">Lazer</a>
+                    <a href="#" class="px-3 border-end">Alimentação</a>
+                    <a href="#" class="px-3 border-end">Design</a>
+                    <a href="#" class="px-3 border-end">Segurança</a>
+                    <a href="#" class="px-3 border-end">Logística</a>
+                    <a href="#" class="px-3 border-end">Consultoria</a>
+                    <a href="#" class="px-3">Construção</a>
+                </div>
+            </div>
+        </div>
+
+        <main class="container1">       
+            <div class="review-card">
+                <div class="rating">
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                </div>
+                <p class="review-text">"O serviço de jardinagem foi impecável! O Sr. João é muito profissional, pontual e deixou meu jardim maravilhoso. Recomendo 100%!"</p>
+                <div class="reviewer-info">
+                    <span class="reviewer-name">Ana M.</span>
+                    <span class="service-provider">Prestador: João da Silva (Jardinagem)</span>
+                </div>
+            </div>
+
+            <div class="review-card">
+                <div class="rating">
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                </div>
+                <p class="review-text">"Pintura do apartamento feita com perfeição! A Maria é detalhista, organizada e entregou tudo no prazo combinado. Ótima profissional!"</p>
+                <div class="reviewer-info">
+                    <span class="reviewer-name">Carlos R.</span>
+                    <span class="service-provider">Prestador: Maria P. (Pintura)</span>
+                </div>
+            </div>
+
+            <div class="review-card">
+                <div class="rating">
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                </div>
+                <p class="review-text">"Contratei o Marcos para manutenção elétrica. Rápido, honesto e resolveu o problema de forma definitiva. Excelente atendimento!"</p>
+                <div class="reviewer-info">
+                    <span class="reviewer-name">Fernanda D.</span>
+                    <span class="service-provider">Prestador: Marcos A. (Eletricista)</span>
+                </div>
+            </div>
+
+            <div class="review-card">
+                <div class="rating">
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star"></i>
+                    <i class="bi bi-star"></i>
+                </div>
+                <p class="review-text">"O serviço de montagem de móveis foi ok, mas a pontualidade do Pedro precisa melhorar. O trabalho final ficou bom, porém atrasou o meu dia."</p>
+                <div class="reviewer-info">
+                    <span class="reviewer-name">Roberto F.</span>
+                    <span class="service-provider">Prestador: Pedro S. (Montador de Móveis)</span>
+                </div>
+            </div>
+
+            <div class="review-card">
+                <div class="rating">
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                </div>
+                <p class="review-text">"A faxina pesada da Dona Sônia superou minhas expectativas! Casa brilhando e cheirosa, com atenção a todos os detalhes. Contratarei novamente sem dúvidas!"</p>
+                <div class="reviewer-info">
+                    <span class="reviewer-name">Juliana L.</span>
+                    <span class="service-provider">Prestador: Sônia B. (Diarista)</span>
+                </div>
+            </div>
+
+            <div class="review-card">
+                <div class="rating">
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star-fill filled"></i>
+                    <i class="bi bi-star"></i>
+                </div>
+                <p class="review-text">"Conserto de vazamento feito pelo Tiago. O preço foi justo e o problema foi resolvido rapidamente. A comunicação foi excelente."</p>
+                <div class="reviewer-info">
+                    <span class="reviewer-name">André P.</span>
+                    <span class="service-provider">Prestador: Tiago V. (Encanador)</span>
+                </div>
+            </div>
+        </main>
+
+        <!--FIM DO MAIN-->
+
+        <!--NEWSLATTER-->
+
+        <div class="container-footer">
+            <div class="container text-center">
+                <h2 class="fw-light">Receba Conteúdos Exclusivos</h2>
+                <p class="text-conteudo">Assine nossa newsletter e receba em primeira mão artigos, tendências e novidades
+                    do mundo de prestação de serviços.
+                </p>
+                <form class="d-flex justify-content-center mt-4">
+                    <input class="form-control me-2" type="email" placeholder="Digite seu e-mail"
+                        style="max-width: 300px;" aria-label="E-mail">
+                    <button class="btn btn-warning" type="submit">Cadastrar</button>
+                </form>
+            </div>
+        </div>
+
+        <!--FIM - NEWSLATTER-->   
+
+        <!------------------------------------------ INÍCIO DO RODAPÉ ------------------------------------------------>
+
+        <footer class="bg-dark text-white pt-5 pb-4" style="background-color: var(--rodape-fundo) !important;">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-3 mb-4">
+                        <a class="navbar-footer" href="#">
+                            <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
+                        </a>
+                        <p class="small text-muted">Análise, inovação e conteúdo de valor.</p>
+                        <div class="d-flex social-icons-custom">
+                            <a href="#" class="text-white me-3"><i class="bi bi-linkedin"></i></a>
+                            <a href="#" class="text-white me-3"><i class="bi bi-instagram"></i></a>
+                            <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Links Rápidos</h5>
+                        <ul class="list-unstyled">
+                            <li><a href="#" class="text-white-50 text-decoration-none">Quem Somos</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Serviços</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Fale Conosco</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Nossos Serviços</h5>
+                        <ul class="list-unstyled">
+                            <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Contato</h5>
+                        <p class="small text-white-50"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</p>
+                        <p class="small text-white-50"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</p>
+                        <p class="small text-white-50"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</p>
+                        <a href="#" class="small text-decoration-none text-warning">Trabalhe Conosco</a>
+                    </div>
+                </div>
+                <hr class="text-white-50">
+                <div class="text-center small text-white-50">
+                    © 2025 ServGo! Todos os direitos reservados.
+                </div>
+            </div>
+        </footer>
+
+        <!-------------------------------------------- FIM DO RODAPÉ ------------------------------------------------>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="/js/script.js" defer></script>
+    </body>
+
+</html>

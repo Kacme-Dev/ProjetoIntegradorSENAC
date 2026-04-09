@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ServGo! - Agendar Serviço</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">        
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="/css/estiloServGo.css">
+    </head>
+
+    <body>
+
+        <!--INÍCIO DO CABEÇALHO DA PÁGINA-->
+        <header>
+
+            <!--TOPO DA PÁGINA-->
+
+            <!--Trabalha sobre os Menus (links)-->
+            <nav class="navbar navbar-expand-lg">
+
+                <div class="container menu"> <!--Altera o conteúdo dos Menus (links)-->
+
+                    <!--Propriedades do Logo (Topo da Página) + Clicar no Logo volta para página Home-->
+                    <a class="navbar-brand" href="/index.html">
+                        <span class="serv-part">Serv</span><span class="go-part">Go!</span>
+                    </a>
+
+                    <!--Botão Serviços Quando Estiver em Responsividade-->
+                    <div class="d-flex order-lg-3">
+                        <button class="btn btn-primary d-lg-none me-2" type="button" data-bs-toggle="offcanvas"
+                            data-bs-target="#offcanvasServices" aria-controls="offcanvasServices">
+                            <i class="bi bi-list"></i> Serviços
+                        </button>
+
+                        <!--Botão Sanduíche Quando Estiver em Responsividade-->
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                    </div>
+
+                    <!--Menus da Página-->
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav mx-auto">
+                            <li class="nav-item"><a class="nav-link nav-link-active" href="/index.html">Início</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/paginasSite/avaliacao.html">Avaliações</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/paginasSite/contatoSite.html">Contato</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/paginasSite/faqSite.html">FAQ</a></li>
+                        </ul>                       
+                    </div>
+                </div>
+            </nav>
+        </header>
+        <!--FIM DO CABEÇALHO DA PÁGINA-->
+
+        <main class="agendar-main">
+            <h1>Agendar Serviço</h1>
+            <p class="agendar-subtitulo">Selecione um prestador e verifique horários disponíveis (simulado).</p>
+
+            <label class="agendar-label">Tipo de Serviço</label>
+                <select class="agendar-select">
+                    <option>Montagem de Móveis</option>
+                    <option>Reparo de Portas</option>
+                    <option>Restauro</option>
+                </select>
+
+            <label class="agendar-label">Lista de Prestadores</label>
+                <select class="agendar-select">
+                    <option></option>
+                </select>
+
+            <div class="card">                               
+                <div class="agendar-row" style="margin-top:16px;">
+                    <div>
+                        <label class="proximo-horario">Próximo horário disponível</label>
+                        <div class="agendar-info-bloco">Seg, 10:00 — Duração estimada: 1h — Tempo de deslocamento: 15 min</div>
+                    </div>
+                    <div>
+                        <label class="contato-prestador">Contato do Prestador</label>
+                        <div class="agendar-info-bloco">joao@carpintaria.com — (18) 9xxxx-xxxx</div>
+                    </div>
+                </div>
+
+                <div class="agendar-acoes">
+                    <button class="cta">Solicitar Agendamento</button>
+                    <a class="agendar-link" href="/paginasPrestador/prestadorHotsite.html">Ver Hotsite</a>
+                </div>
+            </div>
+        </main>
+
+        <!------------------------------------------ INÍCIO DO RODAPÉ ------------------------------------------------>
+        <footer>
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-3 mb-4">
+                        <a class="navbar-footer" href="index.html">
+                            <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
+                        </a>
+                        <p class="small text-muted">Análise, inovação e conteúdo de valor.</p>
+                        <div class="d-flex social-icons-custom">
+                            <a href="#" class="text-white me-3"><i class="bi bi-linkedin"></i></a>
+                            <a href="#" class="text-white me-3"><i class="bi bi-instagram"></i></a>
+                            <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Links Rápidos</h5>
+                        <ul class="list-unstyled">
+                            <li><a href="#" class="text-white-50 text-decoration-none">Quem Somos</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Serviços</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                            <li><a href="./RealContato.html" class="text-white-50 text-decoration-none">Fale Conosco</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Nossos Serviços</h5>
+                        <ul class="list-unstyled">
+                            <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Contato</h5>
+                        <p class="small text-white-50"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</p>
+                        <p class="small text-white-50"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</p>
+                        <p class="small text-white-50"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</p>
+                        <a href="#" class="small text-decoration-none text-warning">Trabalhe Conosco</a>
+                    </div>
+                </div>
+                <hr class="text-white-50">
+                <div class="text-center small text-white-50">
+                    © 2025 ServGo! Todos os direitos reservados.
+                </div>
+            </div>
+        </footer>
+        <!-------------------------------------------- FIM DO RODAPÉ ------------------------------------------------>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="/js/script.js" defer></script>
+    </body>
+</html>

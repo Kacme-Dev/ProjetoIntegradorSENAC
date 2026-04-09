@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServGo! - Configurar Agenda</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/estiloServGo.css">
+</head>
+
+<body>
+
+       <!-- NAVBAR -->
+    <header>
+        <nav class="navbar navbar-expand-lg">
+            <div class="container menu">
+                <a class="navbar-brand" href="/index.html">
+                    <span class="serv-part">Serv</span><span class="go-part">Go!</span>
+                </a>
+                <div class="d-flex order-lg-3">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                </div>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav mx-auto">
+                        <li class="nav-item"><a class="nav-link nav-link-active" href="/index.html">Início</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/paginasSite/avaliacao.html">Avaliações</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/paginasSite/contatoSite.html">Contato</a></li>
+                        <li class="nav-item"><a class="nav-link" href="/paginasSite/faqSite.html">FAQ</a></li>
+                    </ul>                    
+                </div>
+
+                <li class="nav-item"><a class="nav-link" href="/paginasPrestador/prestadorAreaExclusiva.html">Área Exclusiva | Admin</a></li>
+
+            </div>
+        </nav>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="conf-agenda-main">
+        <h1>Configuração da Agenda e Disponibilidade</h1>
+        <p class="conf-agenda-subtitulo">Defina seus horários regulares de atendimento e as regras de agendamento para o seu Hot Site.</p>
+
+        <div class="card">
+            <form>
+                <!-- SEÇÃO: HORÁRIOS -->
+                <div class="conf-secao">
+                    <h3>Horários de Atendimento Padrão</h3>
+
+                    <div class="conf-dias-grid-header">
+                        <span>Dia da Semana</span>
+                        <span>Início</span>
+                        <span>Fim</span>
+                        <span style="text-align:center;">Ativo?</span>
+                    </div>
+
+                    <div class="conf-dias-grid">
+                        <label class="conf-dias-label">Segunda</label>
+                        <input class="conf-time-input" type="time" id="segunda-inicio" value="08:00">
+                        <input class="conf-time-input" type="time" id="segunda-fim" value="17:00">
+                        <div class="conf-checkbox-wrap"><input type="checkbox" checked></div>
+                    </div>
+                    <div class="conf-dias-grid">
+                        <label class="conf-dias-label">Terça</label>
+                        <input class="conf-time-input" type="time" id="terca-inicio" value="08:00">
+                        <input class="conf-time-input" type="time" id="terca-fim" value="17:00">
+                        <div class="conf-checkbox-wrap"><input type="checkbox" checked></div>
+                    </div>
+                    <div class="conf-dias-grid">
+                        <label class="conf-dias-label">Quarta</label>
+                        <input class="conf-time-input" type="time" id="quarta-inicio" value="08:00">
+                        <input class="conf-time-input" type="time" id="quarta-fim" value="17:00">
+                        <div class="conf-checkbox-wrap"><input type="checkbox" checked></div>
+                    </div>
+                    <div class="conf-dias-grid">
+                        <label class="conf-dias-label">Quinta</label>
+                        <input class="conf-time-input" type="time" id="quinta-inicio" value="08:00">
+                        <input class="conf-time-input" type="time" id="quinta-fim" value="17:00">
+                        <div class="conf-checkbox-wrap"><input type="checkbox" checked></div>
+                    </div>
+                    <div class="conf-dias-grid">
+                        <label class="conf-dias-label">Sexta</label>
+                        <input class="conf-time-input" type="time" id="sexta-inicio" value="08:00">
+                        <input class="conf-time-input" type="time" id="sexta-fim" value="17:00">
+                        <div class="conf-checkbox-wrap"><input type="checkbox" checked></div>
+                    </div>
+                    <div class="conf-dias-grid">
+                        <label class="conf-dias-label">Sábado</label>
+                        <input class="conf-time-input" type="time" id="sabado-inicio" value="08:00">
+                        <input class="conf-time-input" type="time" id="sabado-fim" value="12:00">
+                        <div class="conf-checkbox-wrap"><input type="checkbox" checked></div>
+                    </div>
+                    <div class="conf-dias-grid">
+                        <label class="conf-dias-label">Domingo</label>
+                        <span class="conf-fechado-label">Fechado</span>
+                        <div class="conf-checkbox-wrap"><input type="checkbox" disabled></div>
+                    </div>
+                </div>
+
+                <!-- SEÇÃO: REGRAS -->
+                <div class="conf-secao">
+                    <h3>Regras de Agendamento</h3>
+
+                    <div class="conf-regra-grupo">
+                        <label for="duracao-servico">Duração padrão dos serviços (em minutos):</label>
+                        <input class="conf-regra-input" type="number" id="duracao-servico" value="120" min="30" step="30">
+                        <p class="conf-regra-dica">Isso define a duração dos blocos que os clientes podem reservar (Ex: 120 minutos = 2 horas).</p>
+                    </div>
+
+                    <div class="conf-regra-grupo">
+                        <label for="antecedencia">Mínimo de antecedência para agendamento (em horas):</label>
+                        <input class="conf-regra-input" type="number" id="antecedencia" value="24" min="1">
+                        <p class="conf-regra-dica">Impede agendamentos com menos de 24 horas de aviso.</p>
+                    </div>
+
+                    <div class="conf-regra-grupo">
+                        <label for="intervalo">Intervalo entre agendamentos (em minutos):</label>
+                        <select class="conf-select" id="intervalo">
+                            <option value="0">0 minutos (sem intervalo)</option>
+                            <option value="15" selected>15 minutos</option>
+                            <option value="30">30 minutos</option>
+                        </select>
+                        <p class="conf-regra-dica">Tempo extra para deslocamento ou preparo.</p>
+                    </div>
+                </div>
+
+                <!-- RODAPÉ AÇÕES -->
+                <div class="conf-rodape-acoes">
+                    <a href="prestadorGerenciarAgenda.html" class="conf-btn-voltar"><i class="bi bi-arrow-left"></i> Voltar para Agenda</a>
+                    <button type="submit" class="conf-btn-salvar"><i class="bi bi-floppy me-1"></i> Salvar Configurações</button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container" style="padding-top: 40px; padding-bottom: 32px;">
+            <div class="row">
+                <div class="col-md-3 mb-4">
+                    <a class="navbar-footer" href="#">
+                        <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
+                    </a>
+                    <p class="small text-muted mt-2">Análise, inovação e conteúdo de valor.</p>
+                    <div class="d-flex social-icons-custom mt-2">
+                        <a href="#" class="text-white me-3"><i class="bi bi-linkedin"></i></a>
+                        <a href="#" class="text-white me-3"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Links Rápidos</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50 text-decoration-none">Quem Somos</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Serviços</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Fale Conosco</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Nossos Serviços</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Contato</h5>
+                    <p class="small text-white-50"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</p>
+                    <p class="small text-white-50"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</p>
+                    <p class="small text-white-50"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</p>
+                    <a href="#" class="small text-decoration-none text-warning">Trabalhe Conosco</a>
+                </div>
+            </div>
+            <hr class="text-white-50">
+            <div class="text-center small text-white-50">
+                © 2025 ServGo! Todos os direitos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/script.js" defer></script>
+</body>
+</html>

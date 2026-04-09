@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServGo! - Painel Administrativo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/css/estiloServGo.css">
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <header>
+        <nav class="navbar navbar-expand-lg">
+            <div class="container-fluid" style="max-width:1400px; margin:0 auto; padding:0 16px;">
+                <a class="navbar-brand" href="/index.html">
+                    <span class="serv-part">Serv</span><span class="go-part">Go!</span>
+                </a>
+                <span class="navbar-logada-info">Admin: Gerenciamento Total</span>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+                        <li class="nav-item mb-2 mb-lg-0 me-2">
+                            <a class="btn btn-danger" href="/index.html">Sair (Admin)</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- WRAPPER SIDEBAR + CONTEÚDO -->
+    <div class="prest-wrapper">
+
+        <!-- SIDEBAR -->
+        <nav class="prest-sidebar">
+            <ul>
+                <li><a href="/paginasSite/dashboardAdmin.html" class="prest-nav-ativo"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+                <li><a href="#"><i class="bi bi-people"></i> Usuários</a></li>
+                <li><a href="#"><i class="bi bi-person-check"></i> Prestadores</a></li>
+                <li><a href="#"><i class="bi bi-ticket-detailed"></i> Suporte</a></li>
+                <li><a href="#"><i class="bi bi-bar-chart"></i> Relatórios</a></li>
+                <li><a href="#"><i class="bi bi-gear"></i> Configurações</a></li>
+            </ul>
+        </nav>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="prest-main">
+            <h1 class="prest-page-titulo">Área do Admin</h1>
+
+            <!-- CARDS ESTATÍSTICAS -->
+            <div class="prest-stat-grid">
+                <div class="prest-stat-card destaque-azul">
+                    <div class="prest-stat-titulo">Cadastros Ativos</div>
+                    <div class="prest-stat-valor">1.250</div>
+                    <div class="prest-stat-info azul"><i class="bi bi-arrow-up"></i> +12% Último Mês</div>
+                </div>
+                <div class="prest-stat-card destaque-amarelo">
+                    <div class="prest-stat-titulo">Prestadores Novos</div>
+                    <div class="prest-stat-valor">52</div>
+                    <div class="prest-stat-info amarelo"><i class="bi bi-person-fill-add"></i> Para Aprovação</div>
+                </div>
+                <div class="prest-stat-card destaque-vermelho">
+                    <div class="prest-stat-titulo">Tickets de Suporte</div>
+                    <div class="prest-stat-valor">7</div>
+                    <div class="prest-stat-info vermelho"><i class="bi bi-ticket-detailed"></i> Abertos</div>
+                </div>
+                <div class="prest-stat-card destaque-azul">
+                    <div class="prest-stat-titulo">Receita Média (Simulada)</div>
+                    <div class="prest-stat-valor">R$ 5.400</div>
+                    <div class="prest-stat-info azul"><i class="bi bi-graph-up"></i> Mês Atual</div>
+                </div>
+            </div>
+
+            <!-- TABELA DE USUÁRIOS -->
+            <div class="prest-card">
+                <div class="prest-card-cabecalho">Gerenciamento Rápido de Usuários</div>
+                <div class="prest-card-corpo" style="padding: 0; overflow-x: auto;">
+                    <table class="prest-tabela">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>E-mail</th>
+                                <th>Tipo</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>101</td>
+                                <td>Alice Silva</td>
+                                <td>alice@email.com</td>
+                                <td>Prestador</td>
+                                <td><span class="prest-badge ativo">Ativo</span></td>
+                                <td><a href="#" class="cta" style="padding: 4px 12px; font-size:0.8rem;">Ver</a></td>
+                            </tr>
+                            <tr>
+                                <td>102</td>
+                                <td>Bruno Mendes</td>
+                                <td>bruno@email.com</td>
+                                <td>Cliente</td>
+                                <td><span class="prest-badge pendente">Pendente</span></td>
+                                <td><a href="#" class="cta" style="padding: 4px 12px; font-size:0.8rem;">Ver</a></td>
+                            </tr>
+                            <tr>
+                                <td>103</td>
+                                <td>Carla Vales</td>
+                                <td>carla@email.com</td>
+                                <td>Prestador</td>
+                                <td><span class="prest-badge suspenso">Suspenso</span></td>
+                                <td><a href="#" class="cta" style="padding: 4px 12px; font-size:0.8rem;">Ver</a></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container" style="padding-top: 40px; padding-bottom: 32px;">
+            <div class="row">
+                <div class="col-md-3 mb-4">
+                    <a class="navbar-footer" href="#">
+                        <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
+                    </a>
+                    <p class="small text-muted mt-2">Análise, inovação e conteúdo de valor.</p>
+                    <div class="d-flex social-icons-custom mt-2">
+                        <a href="#" class="text-white me-3"><i class="bi bi-linkedin"></i></a>
+                        <a href="#" class="text-white me-3"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Links Rápidos</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50 text-decoration-none">Quem Somos</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Serviços</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Fale Conosco</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Nossos Serviços</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Contato</h5>
+                    <p class="small text-white-50"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</p>
+                    <p class="small text-white-50"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</p>
+                    <p class="small text-white-50"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</p>
+                    <a href="#" class="small text-decoration-none text-warning">Trabalhe Conosco</a>
+                </div>
+            </div>
+            <hr class="text-white-50">
+            <div class="text-center small text-white-50">
+                © 2026 ServGo! Todos os direitos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/script.js" defer></script>
+</body>
+</html>
