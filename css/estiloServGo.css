@@ -15,6 +15,7 @@
     --card-bg:             #ffffff;
     --branco:              #ffffff;
     --texto-muted:         #6c757d;
+    --contraste-principal: #EB9524;
 }
 
 /* -------------------------------------------------------
@@ -2080,3 +2081,33 @@ footer {
     .cli-banner-cta { flex-direction: column; align-items: flex-start; }
     .agendar-row { flex-direction: column; }
 }
+
+  
+.botão-imagem {
+  background: transparent; /* Deixa o fundo transparente */
+  border: none;            /* Remove a borda padrão do botão */
+  padding: 0;              /* Remove o espaçamento interno */
+  cursor: pointer;         /* Muda o cursor para a "mãozinha" de clique */
+}
+ 
+.review-card-reverse {
+    background-color: var(--branco);
+    border-radius: 10px;
+    padding: 24px 28px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border-right: 5px solid var(--contraste-principal); /* O vermelho vai para a direita */
+    border-left: none; /* Adicione isso caso a borda esquerda continue aparecendo */
+   
+}
+ 
+.review-card-reverse  .rating {
+    margin-bottom: 10px;
+}
+.review-card-reverse .rating i {
+    font-size: 1.1rem;
+    color: #ccc;
+}
+.review-card-reverse .rating i.filled {
+    color: #ffc107 !important;
+}
+ 
