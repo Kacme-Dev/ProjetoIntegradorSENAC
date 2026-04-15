@@ -291,9 +291,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Usuários fixos (demo/admin) — mantidos conforme lógica original
         const usuariosFixos = {
-            'prestador@servgo.com': { senha: 'senha123', tipo: 'prestador' },
-            'cliente@servgo.com':   { senha: 'senha456', tipo: 'cliente'   },
-            'admin@servgo.com':     { senha: 'admin',    tipo: 'admin'     }
+            'prestador@servgo.com': { senha: 'senha123', tipo: 'prestador', nome: 'Prestador Demo' },
+            'cliente@servgo.com':   { senha: 'senha456', tipo: 'cliente',   nome: 'Cliente Demo'   },
+            'admin@servgo.com':     { senha: 'admin',    tipo: 'admin',     nome: 'Administrador'  }
         };
 
         formLogin.addEventListener('submit', function (event) {
@@ -309,6 +309,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // 1. Verifica usuários fixos
             if (usuariosFixos[email] && usuariosFixos[email].senha === senha) {
+                salvarUsuarioLogado(email, usuariosFixos[email].nome, usuariosFixos[email].tipo);
                 redirecionarPorTipo(usuariosFixos[email].tipo);
                 return;
             }
@@ -316,6 +317,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // 2. Verifica usuários cadastrados via formulário
             const usuariosCadastrados = obterUsuariosCadastrados();
             if (usuariosCadastrados[email] && usuariosCadastrados[email].senha === senha) {
+                salvarUsuarioLogado(email, usuariosCadastrados[email].nome, usuariosCadastrados[email].tipo);
                 redirecionarPorTipo(usuariosCadastrados[email].tipo);
                 return;
             }
@@ -358,10 +360,325 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    /**
+     * Salva os dados do usuário logado no localStorage.
+     */
+    function salvarUsuarioLogado(email, nome, tipo) {
+        localStorage.setItem('usuarioLogado', JSON.stringify({ email, nome, tipo }));
+    }
+
+    // =====================================================
+    // ÁREA EXCLUSIVA DO CLIENTE (clienteAreaExclusiva.html)
+    // =====================================================
+    function inicializarClienteAreaExclusiva() {
+        const pedidosList = document.querySelector('.cli-pedidos-lista');
+        if (!pedidosList) return;
+
+        const AVALIACOES_KEY = 'avaliacoesSalvas';
+
+        // --- Exibe saudação com nome do usuário logado ---
+        const spanOla = document.querySelector('.navbar-logada-info');
+        if (spanOla) {
+            try {
+                const usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+                if (usuarioLogado && usuarioLogado.nome) {
+                    spanOla.textContent = 'Olá, ' + usuarioLogado.nome + '!';
+                }
+            } catch (e) { /* mantém texto padrão */ }
+        }
+
+        // --- Helpers de storage ---
+        function obterAvaliacoes() {
+            try { return JSON.parse(localStorage.getItem(AVALIACOES_KEY) || '[]'); }
+            catch (e) { return []; }
+        }
+        function salvarAvaliacoes(arr) {
+            localStorage.setItem(AVALIACOES_KEY, JSON.stringify(arr));
+        }
+        function obterAvaliacaoPorPedido(pedidoId) {
+            return obterAvaliacoes().find(function (a) { return a.pedidoId === pedidoId; }) || null;
+        }
+
+        // --- Interação de estrelas ---
+        function initStarRating(container, hiddenInput) {
+            if (!container || !hiddenInput) return;
+            var stars = container.querySelectorAll('i');
+            stars.forEach(function (star, index) {
+                star.addEventListener('click', function () {
+                    var nota = index + 1;
+                    hiddenInput.value = nota;
+                    stars.forEach(function (s, i) {
+                        if (i < nota) {
+                            s.classList.remove('bi-star');
+                            s.classList.add('bi-star-fill', 'filled');
+                            s.style.color = '#ffc107';
+                        } else {
+                            s.classList.remove('bi-star-fill', 'filled');
+                            s.classList.add('bi-star');
+                            s.style.color = '#ccc';
+                        }
+                    });
+                });
+                star.addEventListener('mouseover', function () {
+                    stars.forEach(function (s, i) {
+                        s.style.color = i <= index ? '#ffc107' : '#ccc';
+                    });
+                });
+                star.addEventListener('mouseout', function () {
+                    var current = parseInt(hiddenInput.value) || 0;
+                    stars.forEach(function (s, i) {
+                        s.style.color = i < current ? '#ffc107' : '#ccc';
+                    });
+                });
+            });
+        }
+
+        function renderizarEstrelas(container, hiddenInput, nota) {
+            var stars = container.querySelectorAll('i');
+            stars.forEach(function (s, i) {
+                if (i < nota) {
+                    s.classList.remove('bi-star');
+                    s.classList.add('bi-star-fill', 'filled');
+                    s.style.color = '#ffc107';
+                } else {
+                    s.classList.remove('bi-star-fill', 'filled');
+                    s.classList.add('bi-star');
+                    s.style.color = '#ccc';
+                }
+            });
+            hiddenInput.value = nota;
+        }
+
+        function resetarEstrelas(container, hiddenInput) {
+            renderizarEstrelas(container, hiddenInput, 0);
+        }
+
+        var starsContainer    = document.getElementById('modal-estrelas');
+        var notaInput         = document.getElementById('modal-nota-valor');
+        var starsEditContainer = document.getElementById('modal-editar-estrelas');
+        var notaEditarInput   = document.getElementById('modal-editar-nota-valor');
+
+        initStarRating(starsContainer, notaInput);
+        initStarRating(starsEditContainer, notaEditarInput);
+
+        var pedidoAtual = null;
+
+        // --- Botão AVALIAR ---
+        pedidosList.querySelectorAll('.btn-avaliar').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var item = btn.closest('.cli-pedidos-item');
+                pedidoAtual = item.dataset.pedidoId;
+
+                document.getElementById('modal-prestador-info').innerHTML =
+                    '<strong>Serviço:</strong> ' + item.dataset.servico +
+                    ' &nbsp;|&nbsp; <strong>Profissional:</strong> ' + item.dataset.profissional;
+
+                resetarEstrelas(starsContainer, notaInput);
+                document.getElementById('modal-comentario').value = '';
+
+                new bootstrap.Modal(document.getElementById('modalAvaliar')).show();
+            });
+        });
+
+        // --- Salvar nova avaliação ---
+        var btnSalvar = document.getElementById('btn-salvar-avaliacao');
+        if (btnSalvar) {
+            btnSalvar.addEventListener('click', function () {
+                var nota = parseInt(notaInput.value) || 0;
+                var comentario = document.getElementById('modal-comentario').value.trim();
+
+                if (nota === 0) { alert('Por favor, selecione uma nota de 1 a 5!'); return; }
+                if (!comentario) { alert('Por favor, escreva um comentário!'); return; }
+
+                var item = pedidosList.querySelector('[data-pedido-id="' + pedidoAtual + '"]');
+                var avaliacoes = obterAvaliacoes();
+                var idx = avaliacoes.findIndex(function (a) { return a.pedidoId === pedidoAtual; });
+
+                var hoje = new Date();
+                var dataFormatada = hoje.toLocaleDateString('pt-BR');
+
+                var usuarioLogado = {};
+                try { usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || '{}'); } catch (e) {}
+
+                var novaAvaliacao = {
+                    id: pedidoAtual + '_' + Date.now(),
+                    pedidoId: pedidoAtual,
+                    servico: item.dataset.servico,
+                    profissional: item.dataset.profissional,
+                    nota: nota,
+                    comentario: comentario,
+                    data: dataFormatada,
+                    clienteNome: usuarioLogado.nome || 'Cliente'
+                };
+
+                if (idx >= 0) { avaliacoes[idx] = novaAvaliacao; }
+                else { avaliacoes.push(novaAvaliacao); }
+
+                salvarAvaliacoes(avaliacoes);
+
+                bootstrap.Modal.getInstance(document.getElementById('modalAvaliar')).hide();
+                alert('Avaliação salva com sucesso! Ela aparecerá na página de Avaliações.');
+            });
+        }
+
+        // --- Botão EDITAR ---
+        pedidosList.querySelectorAll('.btn-editar').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var item = btn.closest('.cli-pedidos-item');
+                var pedidoId = item.dataset.pedidoId;
+                var avaliacao = obterAvaliacaoPorPedido(pedidoId);
+
+                if (!avaliacao) {
+                    alert('Nenhuma avaliação encontrada para este serviço. Clique em "Avaliar" para criar uma.');
+                    return;
+                }
+
+                pedidoAtual = pedidoId;
+                document.getElementById('modal-editar-info').innerHTML =
+                    '<strong>Serviço:</strong> ' + avaliacao.servico +
+                    ' &nbsp;|&nbsp; <strong>Profissional:</strong> ' + avaliacao.profissional;
+
+                renderizarEstrelas(starsEditContainer, notaEditarInput, avaliacao.nota);
+                document.getElementById('modal-editar-comentario').value = avaliacao.comentario;
+
+                new bootstrap.Modal(document.getElementById('modalEditar')).show();
+            });
+        });
+
+        // --- Salvar edição ---
+        var btnSalvarEdicao = document.getElementById('btn-salvar-edicao');
+        if (btnSalvarEdicao) {
+            btnSalvarEdicao.addEventListener('click', function () {
+                var nota = parseInt(notaEditarInput.value) || 0;
+                var comentario = document.getElementById('modal-editar-comentario').value.trim();
+
+                if (nota === 0) { alert('Por favor, selecione uma nota de 1 a 5!'); return; }
+                if (!comentario) { alert('Por favor, escreva um comentário!'); return; }
+
+                var avaliacoes = obterAvaliacoes();
+                var idx = avaliacoes.findIndex(function (a) { return a.pedidoId === pedidoAtual; });
+
+                if (idx >= 0) {
+                    avaliacoes[idx].nota = nota;
+                    avaliacoes[idx].comentario = comentario;
+                    salvarAvaliacoes(avaliacoes);
+                    bootstrap.Modal.getInstance(document.getElementById('modalEditar')).hide();
+                    alert('Avaliação atualizada com sucesso!');
+                }
+            });
+        }
+
+        // --- Botão EXCLUIR ---
+        pedidosList.querySelectorAll('.btn-excluir').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var item = btn.closest('.cli-pedidos-item');
+                var pedidoId = item.dataset.pedidoId;
+                var avaliacao = obterAvaliacaoPorPedido(pedidoId);
+
+                if (!avaliacao) {
+                    alert('Nenhuma avaliação encontrada para este serviço. Clique em "Avaliar" para criar uma.');
+                    return;
+                }
+
+                if (confirm('Tem certeza que deseja excluir a avaliação de "' + avaliacao.servico + '"?')) {
+                    var avaliacoes = obterAvaliacoes().filter(function (a) { return a.pedidoId !== pedidoId; });
+                    salvarAvaliacoes(avaliacoes);
+                    alert('Avaliação excluída com sucesso!');
+                }
+            });
+        });
+    }
+
+    // =====================================================
+    // AVALIAÇÕES RECEBIDAS (prestadorAvaliacoesRecebidas / clienteAvaliacoesRecebidas)
+    // =====================================================
+    function inicializarAvaliacoesRecebidas() {
+        var container = document.querySelector('.container1');
+        if (!container) return;
+
+        var AVALIACOES_KEY = 'avaliacoesSalvas';
+
+        function obterAvaliacoes() {
+            try { return JSON.parse(localStorage.getItem(AVALIACOES_KEY) || '[]'); }
+            catch (e) { return []; }
+        }
+
+        var avaliacoes = obterAvaliacoes();
+        if (avaliacoes.length === 0) return;
+
+        // Cabeçalho da seção dinâmica
+        var headerDiv = document.createElement('div');
+        headerDiv.id = 'dynamic-reviews-header';
+        headerDiv.style.cssText = 'font-size:1rem; font-weight:700; color:var(--azul-principal,#146ADB); padding-bottom:8px; border-bottom:2px solid var(--azul-principal,#146ADB); margin-bottom:4px;';
+        headerDiv.innerHTML = '<i class="bi bi-star-fill me-2" style="color:#ffc107"></i>Minhas Avaliações Feitas';
+        container.insertBefore(headerDiv, container.firstChild);
+
+        // Insere cards das avaliações salvas (mais recente primeiro)
+        var avaliacoesRevertidas = avaliacoes.slice().reverse();
+        var anchor = headerDiv.nextSibling;
+
+        avaliacoesRevertidas.forEach(function (av) {
+            var stars = '';
+            for (var i = 1; i <= 5; i++) {
+                stars += i <= av.nota
+                    ? '<i class="bi bi-star-fill filled" style="color:#ffc107"></i>'
+                    : '<i class="bi bi-star" style="color:#ccc"></i>';
+            }
+
+            var card = document.createElement('div');
+            card.className = 'review-card';
+            card.dataset.pedidoId = av.pedidoId;
+            card.innerHTML =
+                '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                    '<h5 class="mb-0">Profissional: ' + av.profissional + ' (' + av.servico + ')</h5>' +
+                    '<span class="text-muted"><small>Data ' + av.data + '</small></span>' +
+                '</div>' +
+                '<div class="rating">' + stars +
+                    '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6>' +
+                '</div>' +
+                '<p class="review-text">"' + av.comentario + '"</p>' +
+                '<button type="button" class="btn btn-danger btn-excluir-dinamico me-2" data-pedido-id="' + av.pedidoId + '">Excluir Avaliação</button>';
+
+            container.insertBefore(card, anchor);
+        });
+
+        // Delegação de evento para excluir avaliações dinâmicas
+        container.addEventListener('click', function (e) {
+            if (!e.target.classList.contains('btn-excluir-dinamico')) return;
+            var pedidoId = e.target.dataset.pedidoId;
+            if (!confirm('Tem certeza que deseja excluir esta avaliação?')) return;
+
+            var lista = obterAvaliacoes().filter(function (a) { return a.pedidoId !== pedidoId; });
+            localStorage.setItem(AVALIACOES_KEY, JSON.stringify(lista));
+            e.target.closest('.review-card').remove();
+
+            if (!container.querySelector('.review-card[data-pedido-id]')) {
+                var h = document.getElementById('dynamic-reviews-header');
+                if (h) h.remove();
+            }
+        });
+    }
+
+    // =====================================================
+    // BOTÃO VOLTAR (clientePerfilAdm.html e outros)
+    // =====================================================
+    function inicializarBotaoVoltar() {
+        document.querySelectorAll('button').forEach(function (btn) {
+            if (btn.textContent.trim() === 'Voltar') {
+                btn.addEventListener('click', function () {
+                    window.history.back();
+                });
+            }
+        });
+    }
+
     // =====================================================
     // INICIALIZAÇÃO GERAL
     // =====================================================
     inicializarHome();
     inicializarCadastro();
     inicializarLogin();
+    inicializarClienteAreaExclusiva();
+    inicializarAvaliacoesRecebidas();
+    inicializarBotaoVoltar();
 });

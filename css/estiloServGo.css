@@ -366,6 +366,7 @@ body {
     padding: 20px;
     border-radius: 10px;
     box-shadow: 2px 2px 5px 5px rgba(0.1,0.1,0.1,0.1);
+    overflow-x: hidden;
 }
 
 /* Badges */
@@ -1948,10 +1949,46 @@ footer {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     white-space: nowrap;
+    align-self: center;
+    text-align: center;
 }
 .cli-badge.em-andamento { background-color: #cff4fc; color: #055160; }
 .cli-badge.concluido    { background-color: #d1fae5; color: #065f46; }
 .cli-badge.cancelado    { background-color: #fee2e2; color: #991b1b; }
+
+/* Grupo de ações (botões) dos pedidos — alinhados à direita */
+.cli-pedidos-acoes {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* Saudação do usuário logado na navbar */
+.navbar-logada-info {
+    font-weight: 600;
+    color: #212529;
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
+/* Estrelas interativas do modal de avaliação */
+.modal-estrelas {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 4px;
+}
+.modal-estrelas i {
+    font-size: 1.6rem;
+    color: #ccc;
+    cursor: pointer;
+    transition: color 0.1s;
+}
+.modal-estrelas i.filled {
+    color: #ffc107;
+}
 
 /* -------------------------------------------------------
    AGENDAR SERVIÇO — FORMULÁRIO (clienteAgendarServicos)
@@ -2110,4 +2147,3 @@ footer {
 .review-card-reverse .rating i.filled {
     color: #ffc107 !important;
 }
- 
