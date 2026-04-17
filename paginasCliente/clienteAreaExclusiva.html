@@ -8,45 +8,73 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/css/estiloServGo.css">
+    <style>
+        /* Responsividade padrão igual ao index.html: a navbar usa o collapse nativo
+           do Bootstrap (breakpoint lg = 992px). No mobile, a sidebar também vira
+           um bloco full-width acima do main e seu estado é sincronizado com o
+           collapse da navbar (via classe .cli-sidebar-show). */
+        @media (max-width: 991.98px) {
+            .cli-wrapper { flex-direction: column; }
+            .cli-sidebar {
+                width: 100%;
+                min-width: unset;
+                border-right: none;
+                border-bottom: 1px solid var(--borda);
+                padding: 12px 0;
+                display: none;
+            }
+            .cli-sidebar.cli-sidebar-show { display: block; }
+        }
+    </style>
 </head>
 
 <body>
 
+    <!--INÍCIO DO CABEÇALHO DA PÁGINA-->
     <header>
         <nav class="navbar navbar-expand-lg">
             <div class="container-fluid" style="max-width:1140px; margin:0 auto; padding:0 16px;">
                 <a class="navbar-brand" href="index.html">
                     <span class="serv-part">Serv</span><span class="go-part">Go!</span>
                 </a>
-                <span class="navbar-logada-info">Olá, Cliente!</span> 
+                <span class="navbar-logada-info">Olá, Cliente!</span>
+
+                <!--Botão Sanduíche Quando Estiver em Responsividade (padrão index.html)-->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!--Menus da Página-->
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto align-items-lg-center">
                         <li class="nav-item mb-2 mb-lg-0">
+                            <button id="btn-voltar" type="button" class="btn btn-outline-secondary">Voltar</button>
                             <a class="btn btn-danger" href="/index.html">Sair</a>
                         </li>
                     </ul>
-                </div>   
+                </div>
             </div>
         </nav>
     </header>
+    <!--FIM DO CABEÇALHO DA PÁGINA-->
 
     <div class="cli-wrapper">
 
-        <!-- SIDEBAR -->
         <nav class="cli-sidebar">
             <ul>
-                <li><a class="cli-nav-ativo" href="clienteAreaExclusiva.html"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li><a class="cli-nav-ativo" href="/paginasCliente/clienteAreaExclusiva.html"><i class="bi bi-house-door"></i> Dashboard</a></li>
                 <li><a href="/paginasCliente/clientePerfilAdm.html"><i class="bi bi-person-circle"></i> Meu Perfil</a></li>
-                <li><a href="/paginasCliente/clienteAvaliacoesRecebidas.html" class="text-black"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
-                <li><a href="/paginasCliente/clienteContatoSite.html"><i class="bi bi-chat-text"></i> Suporte</a></li>
+                <li><a href="/paginasCliente/clienteAgendarServicos.html"><i class="bi bi-calendar-check"></i> Agendar Serviços</a></li>
+                <li><a href="/paginasCliente/clienteAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Realizadas</a></li>
+                <li><a href="/paginasCliente/clienteAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
+                <li><a href="/paginasCliente/clienteContatoSite.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
             </ul>
         </nav>
 
-        <!-- CONTEÚDO PRINCIPAL -->
         <main class="cli-main">
             <h1 class="cli-page-titulo">ÁREA DO CLIENTE</h1>
 
-            <!-- Banner chamada para ação -->
             <div class="cli-banner-cta">
                 <div class="cli-banner-cta-texto">
                     <h5>Pronto para contratar?</h5>
@@ -55,7 +83,6 @@
                 <a href="clienteAgendarServicos.html" class="cta cta-amarelo"><i class="bi bi-search"></i> Buscar Serviço</a>
             </div>
 
-            <!-- Stat Cards -->
             <div class="cli-stat-grid">
                 <div class="cli-stat-card destaque-azul">
                     <div class="cli-stat-titulo">Pedidos em Aberto</div>
@@ -74,7 +101,6 @@
                 </div>
             </div>
 
-            <!-- Lista de pedidos recentes -->
             <div class="cli-card">
                 <div class="cli-card-cabecalho">Status dos Últimos Pedidos</div>
                 <ul class="cli-pedidos-lista">
@@ -157,18 +183,17 @@
         </div>
     </footer>
 
-    <!-- Modal: Avaliar Prestador -->
     <div class="modal fade" id="modalAvaliar" tabindex="-1" aria-labelledby="modalAvaliarLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header" style="background-color: #146ADB; color: white;">
                     <h5 class="modal-title" id="modalAvaliarLabel"><i class="bi bi-star me-2"></i>Avaliar Prestador</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="modal-prestador-info" class="mb-3 p-2 bg-light rounded"></div>
+                    <div id="modal-prestador-info" class="mb-3 p-2 bg-light rounded text-dark"></div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Nota:</label>
+                        <label class="form-label fw-bold text-dark">Nota:</label>
                         <div class="modal-estrelas" id="modal-estrelas">
                             <i class="bi bi-star" data-nota="1"></i>
                             <i class="bi bi-star" data-nota="2"></i>
@@ -179,8 +204,8 @@
                         <input type="hidden" id="modal-nota-valor" value="0">
                     </div>
                     <div class="mb-3">
-                        <label for="modal-comentario" class="form-label fw-bold">Comentário:</label>
-                        <textarea class="form-control" id="modal-comentario" rows="4" placeholder="Deixe seu comentário sobre o serviço prestado..."></textarea>
+                        <label for="modal-comentario" class="form-label fw-bold text-dark">Comentário:</label>
+                        <textarea class="form-control" id="modal-comentario" rows="4" maxlength="1000" style="resize: none; overflow-y: auto;" placeholder="Deixe seu comentário sobre o serviço prestado..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -191,18 +216,17 @@
         </div>
     </div>
 
-    <!-- Modal: Editar Avaliação -->
     <div class="modal fade" id="modalEditar" tabindex="-1" aria-labelledby="modalEditarLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header" style="background-color: #146ADB; color: white;">
                     <h5 class="modal-title" id="modalEditarLabel"><i class="bi bi-pencil-square me-2"></i>Editar Avaliação</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
                 <div class="modal-body">
-                    <div id="modal-editar-info" class="mb-3 p-2 bg-light rounded"></div>
+                    <div id="modal-editar-info" class="mb-3 p-2 bg-light rounded text-dark"></div>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Nota:</label>
+                        <label class="form-label fw-bold text-dark">Nota:</label>
                         <div class="modal-estrelas" id="modal-editar-estrelas">
                             <i class="bi bi-star" data-nota="1"></i>
                             <i class="bi bi-star" data-nota="2"></i>
@@ -213,8 +237,8 @@
                         <input type="hidden" id="modal-editar-nota-valor" value="0">
                     </div>
                     <div class="mb-3">
-                        <label for="modal-editar-comentario" class="form-label fw-bold">Comentário:</label>
-                        <textarea class="form-control" id="modal-editar-comentario" rows="4"></textarea>
+                        <label for="modal-editar-comentario" class="form-label fw-bold text-dark">Comentário:</label>
+                        <textarea class="form-control" id="modal-editar-comentario" rows="4" maxlength="1000" style="resize: none; overflow-y: auto;"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

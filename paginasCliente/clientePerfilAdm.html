@@ -8,169 +8,187 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/css/estiloServGo.css">
+    <style>
+        /* Responsividade padrão igual ao index.html: breakpoint lg (992px). */
+        @media (max-width: 991.98px) {
+            .cli-wrapper { flex-direction: column; }
+            .cli-sidebar {
+                width: 100%;
+                min-width: unset;
+                border-right: none;
+                border-bottom: 1px solid var(--borda);
+                padding: 12px 0;
+                display: none;
+            }
+            .cli-sidebar.cli-sidebar-show { display: block; }
+        }
+    </style>
 </head>
 
 <body>
 
-    <!-- NAVBAR -->
+    <!--INÍCIO DO CABEÇALHO DA PÁGINA-->
     <header>
         <nav class="navbar navbar-expand-lg">
-            <div class="container menu">
-                <a class="navbar-brand" href="/index.html">
+            <div class="container-fluid" style="max-width:1140px; margin:0 auto; padding:0 16px;">
+                <a class="navbar-brand" href="index.html">
                     <span class="serv-part">Serv</span><span class="go-part">Go!</span>
                 </a>
-                <div class="d-flex order-lg-3">
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                </div>
+                <span class="navbar-logada-info">Olá, Cliente!</span>
+
+                <!--Botão Sanduíche Quando Estiver em Responsividade (padrão index.html)-->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!--Menus da Página-->
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav mx-auto align-items-lg-center"> 
-                        <li class="nav-item me-4">
-                            <a href="/paginasCliente/clienteAreaExclusiva.html" class="btn" style="background-color: #2B2B2B; color: #fff; border-color: #2B2B2B;">
-                                <i class="bi bi-briefcase"></i> Meus Pedidos
-                            </a>
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+                        <li class="nav-item mb-2 mb-lg-0">
+                            <button id="btn-voltar" type="button" class="btn btn-outline-secondary">Voltar</button>
+                            <a class="btn btn-danger" href="/index.html">Sair</a>
                         </li>
-                        <li class="nav-item me-4">
-                            <a href="/paginasCliente/clienteAvaliacoesRecebidas.html" class="btn" style="background-color: #FFC300; color: #000; border-color: #FFC300;">
-                                <i class="bi bi-star"></i> Minhas Avaliações
-                            </a>
-                        </li>                        
                     </ul>
                 </div>
-
-                <button type="button" class="btn btn-outline-secondary">Voltar</button> 
-                <button type="button" class="btn btn-danger" href="/index.html">Sair</button>   
-          
-                
-
             </div>
         </nav>
     </header>
+    <!--FIM DO CABEÇALHO DA PÁGINA-->
 
-    <!-- CONTEÚDO PRINCIPAL -->
-    <main class="container">
-        <h1 class="hotsiteadm-titulo-pagina">Administração do Perfil — Cliente</h1>
+    <div class="cli-wrapper">
 
-        <div class="hotsiteadm-layout">
+        <nav class="cli-sidebar">
+            <ul>
+                <li><a href="/paginasCliente/clienteAreaExclusiva.html"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li><a class="cli-nav-ativo" href="/paginasCliente/clientePerfilAdm.html"><i class="bi bi-person-circle"></i> Meu Perfil</a></li>
+                <li><a href="/paginasCliente/clienteAgendarServicos.html"><i class="bi bi-calendar-check"></i> Agendar Serviços</a></li>
+                <li><a href="/paginasCliente/clienteAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Realizadas</a></li>
+                <li><a href="/paginasCliente/clienteAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
+                <li><a href="/paginasCliente/clienteContatoSite.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+            </ul>
+        </nav>
 
-            <!-- PAINEL DE CONTROLES -->
-            <aside class="hotsiteadm-controles">
-                <h3><i class="bi bi-sliders me-2"></i>Dados do Cliente</h3>
+        <main class="cli-main">
+            <div class="container">
+                <h1 class="hotsiteadm-titulo-pagina">Administração do Perfil — Cliente</h1>
 
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-nome">Nome Completo</label>
-                    <input class="hotsiteadm-input" type="text" id="adm-nome" value="">
-                </div>
+                <div class="hotsiteadm-layout">
 
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-cpf">CPF</label>
-                    <input class="hotsiteadm-input" type="text" id="adm-cpf" value="">
-                </div>
+                    <aside class="hotsiteadm-controles">
+                        <h3><i class="bi bi-sliders me-2"></i>Dados do Cliente</h3>
 
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-cidade">Cidade</label>
-                    <input class="hotsiteadm-input" type="text" id="adm-cidade" value="">
-                </div>
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-nome">Nome Completo</label>
+                            <input class="hotsiteadm-input" type="text" id="adm-nome" value="">
+                        </div>
 
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-endereco">Endereço</label>
-                    <input class="hotsiteadm-input" type="text" id="adm-endereco" value="">
-                </div>
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-cpf">CPF</label>
+                            <input class="hotsiteadm-input" type="text" id="adm-cpf" value="" maxlength="14" placeholder="000.000.000-00">
+                        </div>
 
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-email">Email</label>
-                    <input class="hotsiteadm-input" type="email" id="adm-email" value="">
-                </div>
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-cidade">Cidade</label>
+                            <input class="hotsiteadm-input" type="text" id="adm-cidade" value="">
+                        </div>
 
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-tel">Telefone</label>
-                    <input class="hotsiteadm-input" type="text" id="adm-tel" value="">
-                </div>
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-endereco">Endereço</label>
+                            <input class="hotsiteadm-input" type="text" id="adm-endereco" value="">
+                        </div>
 
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-foto">Foto de Perfil</label>
-                    <input type="file" id="adm-foto" accept="image/*" class="hotsiteadm-input" style="padding: 5px;">
-                </div>
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-email">Email</label>
+                            <input class="hotsiteadm-input" type="email" id="adm-email" value="">
+                        </div>
 
-                <div class="hotsiteadm-botoes">
-                    <a href="clienteAreaExclusiva.html" class="conf-btn-voltar">Cancelar</a>
-                    <button type="button" class="conf-btn-salvar"><i class="bi bi-floppy me-1"></i> Salvar Perfil</button>
-                </div>
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-tel">Telefone</label>
+                            <input class="hotsiteadm-input" type="text" id="adm-tel" value="">
+                        </div>
 
-                <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 4px;">
-                    <div style="font-size:0.88rem; font-weight:700; color:var(--texto-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom: 10px;">Configurações</div>
-                    <a class="cta" href="clienteAlterarSenha.html" style="width: 100%; text-align: center; background-color: var(--rodape-fundo);">
-                        <i class="bi bi-lock me-1"></i> Alterar Senha
-                    </a>
-                </div>
-            </aside>
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-foto">Foto de Perfil</label>
+                            <input type="file" id="adm-foto" accept="image/*" class="hotsiteadm-input" style="padding: 5px;">
+                        </div>
 
-            <!-- PREVIEW DO PERFIL -->
-            <div class="hotsiteadm-preview">
-                <div class="hotsiteadm-indicador-edicao">
-                    <i class="bi bi-pencil-square me-1"></i> Você está em Modo de Edição / Preview
-                </div>
+                        <div class="hotsiteadm-botoes" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <a href="clienteAreaExclusiva.html" class="conf-btn-voltar" style="background-color: red; color: white; border-color: red; flex: 1; text-align: center;">Cancelar</a>
+                            <button type="button" id="btn-limpar-perfil" style="background-color: #6c757d; color: white; border: none; border-radius: 4px; font-weight: bold; padding: 10px 15px; cursor: pointer; flex: 1;">Limpar</button>
+                            <button type="button" class="conf-btn-salvar" id="btn-salvar-perfil" style="flex: 1 1 100%; margin-top: 8px;"><i class="bi bi-floppy me-1"></i> Salvar Perfil</button>
+                        </div>
 
-                <!-- CARD PERFIL PREVIEW -->
-                <div class="hotsiteadm-preview-perfil">
-                    <div class="hotsite-avatar" style="margin-bottom: 12px;">AS</div>
-                    <div class="hotsite-nome"></div>
-                    <div class="hotsite-meta-info">
-                        Cliente &nbsp;·&nbsp; Membro desde
-                    </div>
-                    <div class="hotsite-atende" style="margin-top: 8px;">
-                        <i class="bi bi-geo-alt-fill me-1"></i>
-                    </div>
-                    <a class="cta" href="/paginasCliente/clienteAgendarServicos.html" style="margin-top:12px; width:100%; text-align:center;">
-                        <i class="bi bi-search me-1"></i> Buscar Prestadores
-                    </a>
-                </div>
+                        <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 16px;">
+                            <div style="font-size:0.88rem; font-weight:700; color:var(--texto-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom: 10px;">Segurança</div>
+                            <a class="cta" href="#" data-bs-toggle="modal" data-bs-target="#modalAlterarSenha" style="width: 100%; text-align: center; background-color: var(--rodape-fundo); cursor: pointer;">
+                                <i class="bi bi-lock me-1"></i> Alterar Senha
+                            </a>
+                        </div>
+                    </aside>
 
-                <!-- CARD CONTEÚDO PREVIEW -->
-                <div class="hotsiteadm-preview-conteudo">
+                    <div class="hotsiteadm-preview">
+                        <div class="hotsiteadm-indicador-edicao">
+                            <i class="bi bi-pencil-square me-1"></i> Você está em Modo de Edição / Preview
+                        </div>
 
-                    <div class="hotsite-cabecalho-bloco">
-                        <div>
-                            <div class="hotsite-secao-titulo">Dados Pessoais</div>
-                            <p class="hotsite-desc">
-                                <i class="bi bi-envelope me-1"></i>
-                                &nbsp;&nbsp;
-                                <i class="bi bi-telephone me-1"></i>
-                                <br>
-                                <i class="bi bi-house me-1"></i>
-                            </p>
+                        <div class="hotsiteadm-preview-perfil">
+                            <div class="hotsite-avatar" style="margin-bottom: 12px; background-color: #ccc;">AS</div>
+                            <div class="hotsite-nome"></div>
+                            <div class="hotsite-meta-info">
+                                Cliente &nbsp;·&nbsp; Membro desde
+                            </div>
+                            <div class="hotsite-atende" style="margin-top: 8px;">
+                                <i class="bi bi-geo-alt-fill me-1"></i>
+                            </div>
+                            <a class="cta" href="/paginasCliente/clienteAgendarServicos.html" style="margin-top:12px; width:100%; text-align:center;">
+                                <i class="bi bi-search me-1"></i> Buscar Prestadores
+                            </a>
+                        </div>
+
+                        <div class="hotsiteadm-preview-conteudo">
+
+                            <div class="hotsite-cabecalho-bloco">
+                                <div>
+                                    <div class="hotsite-secao-titulo">Dados Pessoais</div>
+                                    <p class="hotsite-desc">
+                                        <i class="bi bi-envelope me-1"></i>
+                                        &nbsp;&nbsp;
+                                        <i class="bi bi-telephone me-1"></i>
+                                        <br>
+                                        <i class="bi bi-house me-1"></i>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="hotsite-secao-titulo" style="margin-top: 14px;"></div>
+                            <div class="hotsite-depoimento">
+                                <i class="bi bi-tools me-1"></i> <strong></strong> &nbsp;·&nbsp;
+                            </div>
+                            <div class="hotsite-depoimento">
+                                <i class="bi bi-lightning me-1"></i> <strong></strong> &nbsp;·&nbsp;
+                            </div>
+
+                            <div class="hotsite-secao-titulo" style="margin-top: 14px;">Avaliações Realizadas</div>
+                            <div class="hotsite-depoimento"></div>
+
+                            <div class="hotsite-secao-titulo" style="margin-top: 14px;">Agendamentos Pendentes</div>
+                            <div class="placeholder" style="margin-bottom: 16px;">
+                                Próximo agendamento: <strong></strong>
+                            </div>
+
+                            <div class="hotsite-secao-titulo">[Ações do Cliente]</div>
+                            <div class="hotsiteadm-acoes-admin">
+                                <a class="cta cta-amarelo" href="/paginasCliente/clienteHistoricoServicos.html"><i class="bi bi-clock-history me-1"></i> Ver Histórico Completo</a>
+                            </div>
+
                         </div>
                     </div>
-
-                    <div class="hotsite-secao-titulo" style="margin-top: 14px;"></div>
-                    <div class="hotsite-depoimento">
-                        <i class="bi bi-tools me-1"></i> <strong></strong> &nbsp;·&nbsp;
-                    </div>
-                    <div class="hotsite-depoimento">
-                        <i class="bi bi-lightning me-1"></i> <strong></strong> &nbsp;·&nbsp;
-                    </div>
-
-                    <div class="hotsite-secao-titulo" style="margin-top: 14px;">Avaliações Realizadas</div>
-                    <div class="hotsite-depoimento"></div>
-
-                    <div class="hotsite-secao-titulo" style="margin-top: 14px;">Agendamentos Pendentes</div>
-                    <div class="placeholder" style="margin-bottom: 16px;">
-                        Próximo agendamento: <strong></strong>
-                    </div>
-
-                    <div class="hotsite-secao-titulo">[Ações do Cliente]</div>
-                    <div class="hotsiteadm-acoes-admin">
-                        <a class="cta cta-amarelo" href="/paginasCliente/clienteHistoricoServicos.html"><i class="bi bi-clock-history me-1"></i> Ver Histórico Completo</a>
-                    </div>
-
                 </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
-    <!-- FOOTER -->
     <footer>
         <div class="container" style="padding-top: 40px; padding-bottom: 32px;">
             <div class="row">
@@ -217,6 +235,37 @@
             </div>
         </div>
     </footer>
+
+    <div class="modal fade" id="modalAlterarSenha" tabindex="-1" aria-labelledby="modalAlterarSenhaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #2B2B2B; color: white;">
+                    <h5 class="modal-title" id="modalAlterarSenhaLabel"><i class="bi bi-lock me-2"></i>Alterar Senha</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="senha-atual" class="form-label fw-bold">Senha Atual:</label>
+                        <input type="password" class="form-control" id="senha-atual">
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label for="nova-senha" class="form-label fw-bold">Nova Senha:</label>
+                        <input type="password" class="form-control" id="nova-senha">
+                        <small class="text-muted d-block mt-1">Mínimo 8 caracteres, incluindo letras, números e caracteres especiais (Case Sensitive).</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="repita-nova-senha" class="form-label fw-bold">Repita a Nova Senha:</label>
+                        <input type="password" class="form-control" id="repita-nova-senha">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btn-salvar-senha"><i class="bi bi-floppy me-1"></i>Salvar Nova Senha</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/script.js" defer></script>

@@ -1,0 +1,199 @@
+Faça a leitura e a análise de todos os arquivos anexados e compreenda o contexto do projeto.
+Não faça nenhuma alteração no código, layout ou estrutura do projeto a não ser que seja solcitado.
+Ao ser solicitada alguma impolementação ou ajuste, executar somente o que for pedido.
+Nunca modificar o que não for citado. Se não for pedido algo, mantenha como está.
+O seu foco é aplicar os ajustes solicitados abaixo, garantido a correta implementação do que está sendo pedido e a sua execução de acordo com o que é esperado.
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Na página prestadorHotsiteAdm.html na parte do código
+
+  <!-- CONTEÚDO PRINCIPAL -->
+    <main class="container">
+        <h1 class="hotsiteadm-titulo-pagina">Administração do Hot Site — Serviços</h1>
+
+        <div class="hotsiteadm-layout">
+
+            <!-- PAINEL DE CONTROLES -->
+            <aside class="hotsiteadm-controles">
+                <h3><i class="bi bi-sliders me-2"></i>Controles do Hot Site</h3>
+
+                <div class="hotsiteadm-grupo">
+                    <label for="adm-nome">Nome do Prestador</label>
+                    <input class="hotsiteadm-input" type="text" id="adm-nome" value="">
+                </div>
+
+                <div class="hotsiteadm-grupo">
+                    <label for="adm-cnpj">CPF/CNPJ</label>        
+                    <input class="hotsiteadm-input" type="text" id="adm-cnpj" value="">
+                </div>
+
+                <div class="hotsiteadm-grupo">
+                    <label for="adm-categoria">Categoria Principal</label>
+                    <select class="hotsiteadm-select" id="adm-categoria">
+                        <option value="" selected></option>
+                    </select>
+                </div>
+
+                <div class="hotsiteadm-grupo">
+                    <label for="adm-cidade">Atende em</label>
+                    <input class="hotsiteadm-input" type="text" id="adm-cidade" value="">
+                </div>
+
+                <div class="hotsiteadm-grupo">
+                    <label for="adm-descricao">Descrição dos Serviços</label>
+                    <textarea class="caixa-mensagem-fixa" id="adm-descricao" rows="6"></textarea>
+                </div>
+
+                <div class="hotsiteadm-grupo">
+                    <label for="adm-email">Email de Contato</label>
+                    <input class="hotsiteadm-input" type="email" id="adm-email" value="">
+                </div>
+
+                <div class="hotsiteadm-grupo">
+                    <label for="adm-tel">Telefone</label>
+                    <input class="hotsiteadm-input" type="text" id="adm-tel" value="">
+                </div>
+
+                <div class="hotsiteadm-grupo">
+                    <label for="adm-galeria">Gerenciar Galeria</label>
+                    <input type="file" id="adm-galeria" multiple accept="image/*,video/*" class="hotsiteadm-input" style="padding: 5px;">
+                </div>
+
+                <div class="hotsiteadm-botoes">
+                    <a href="prestadorAreaExclusiva.html" class="conf-btn-voltar">Cancelar</a>
+                    <button type="button" class="conf-btn-salvar"><i class="bi bi-floppy me-1"></i> Salvar &amp; Publicar</button>
+                </div>
+
+                <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 4px;">
+                    <div style="font-size:0.88rem; font-weight:700; color:var(--texto-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom: 10px;">Configurações</div>
+                    <a class="cta" href="prestadorConfigurarAgenda.html" style="width: 100%; text-align: center; background-color: var(--rodape-fundo);">
+                        <i class="bi bi-calendar3 me-1"></i> Configurar Agenda
+                    </a>
+                </div>
+            </aside>
+			
+Incluir o cmapo para Endereço do Prestador
+
+Na parte do código
+
+<div class="hotsiteadm-grupo">
+                    <label for="adm-descricao">Descrição dos Serviços</label>
+                    <textarea class="caixa-mensagem-fixa" id="adm-descricao" rows="6"></textarea>
+                </div>
+
+Ajustar a lógica no javascript (arquivo script.js) para que por padrão (default), os campos correspondentes ao cadastro (nome e e-mail), já apareçam preenchidos, pois já foram informados pelo prestador no cadastro.
+	Os demeis campos, ao serem preenchidos, permita que sejam salvos os dados ao ser clicado no botão "Salvar & Publicar".
+	Altere a cor do botão "Cancelar" para vermelho e o texto "Cancelar do botão" para branco.
+	Implemente um botão limpar, para que o prestador possa limpar os dados de cadastro, exceto os dados "nome e E-mail" já informados no cadastro.
+	Defina a quantidade de caracteres para o campo CPF/CNPJ para aceitar o cadastro de CPF ou CNPJ e, ajuste para que quando o usuário digitar os números, já sejam incluídos automaticamente os pontos e o traço conforme o padrão Brasileiro.
+	
+Implemente o ajuste para que quando o usuário clicar no botão "Procuar", em "Foto de Perfil", ao selecionar o arquivo da foto, essa foto seja mostrada em <div class="hotsite-avatar" style="margin-bottom: 12px;">AS</div>
+	Essa foto é o avatar do cliente
+Alterar as cores dos botões "Salvar & Publicar" e "Agendar Serviço" para a cor #FFC300
+Alterar as cores do título "Controles do Hotsite" e do cArd do avatar para a cor #FFC300
+Alterar a cor do botão "Cancelar" para vermelho e com o texto na cor branca (white)
+Ajustar a lógica no javascript (arquivo script.js) para que ao ser clicado no botão "Procurar" em "Gerenciar Galeria", ao ser selcionada uma imagem, que a imagem preencha o card do Avatar do Prestador com a imagem/foto escolhida em-andamento<!-- CARD PERFIL PREVIEW -->
+                <div class="hotsiteadm-preview-perfil">
+                    <div class="hotsite-avatar" style="margin-bottom: 12px;">JC</div>
+                    <div class="hotsite-nome"></div>
+                    <div class="hotsite-meta-info">
+                        Serviço Prestado &nbsp;·&nbsp; ★★★★☆ &nbsp;0.0 &nbsp;·&nbsp; 0 avaliações
+                    </div>
+                    <div class="hotsite-atende" style="margin-top: 8px;">
+                        <i class="bi bi-geo-alt-fill me-1"></i> Atende em:
+                    </div>
+                    <a class="cta" href="prestadorServicosAgendados.html" style="margin-top:12px; width:100%; text-align:center;">
+                        <i class="bi bi-calendar-check me-1"></i> Agendar Serviço
+                    </a>
+                </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Nas páginas clientePerfilAdm.html
+            clienteAvaliacoesRecebidas.html
+            clienteContatoSite.html
+            clienteAgendarServicos.html
+Ajustar a lógica no javascript (arquivo script.js) para que seja apresentada a mensagem Olá, nome do cliente logado em <span class="navbar-logada-info">Olá, Cliente!</span> 
+para que fiquem todas no mesmo padrão da página clienteAreaExclusiva.html
+Ajustar a lógica no javascript (arquivo script.js) para que nessa parte do código
+<!-- Stat Cards -->
+            <div class="cli-stat-grid">
+                <div class="cli-stat-card destaque-azul">
+                    <div class="cli-stat-titulo">Pedidos em Aberto</div>
+                    <div class="cli-stat-valor">1</div>
+                    <div class="cli-stat-info azul"><i class="bi bi-hourglass"></i> Aguardando Confirmação</div>
+                </div>
+                <div class="cli-stat-card destaque-amarelo">
+                    <div class="cli-stat-titulo">Serviços Pendentes de Pagamento</div>
+                    <div class="cli-stat-valor">R$ 250,00</div>
+                    <div class="cli-stat-info amarelo"><i class="bi bi-currency-dollar"></i> Ver detalhes</div>
+                </div>
+                <div class="cli-stat-card destaque-azul">
+                    <div class="cli-stat-titulo">Serviços Concluídos (Total)</div>
+                    <div class="cli-stat-valor">8</div>
+                    <div class="cli-stat-info azul"><i class="bi bi-patch-check"></i> Ver Histórico</div>
+                </div>
+            </div>
+
+sejam apresentadas em tela as informações referentes aos agendamentos realizados pelo cliente
+Ajustar a lógica no javascript (arquivo script.js) para que nessa parte do código <div class="cli-stat-info azul"><i class="bi bi-hourglass"></i> Aguardando Confirmação</div>
+onde Aguardando Confirmação seja um hipoerlink que ao ser clicado, crie e abra um modal mostrando ao cliente logado os seus agendamentos aguardando confirmação pelo prestador
+Ajustar a lógica no javascript (arquivo script.js) para que nessa parte do código <div class="cli-stat-info amarelo"><i class="bi bi-currency-dollar"></i> Ver detalhes</div>
+onde Ver Detalhes seja um hiperlink que ao ser clicado, crie e abra um modal mostrando ao cliente logado os seus pagamentos realizados ao (s) prestador (s) para os serviçoes contratados e concluídos (pagos). Exiba o total no painel e no modal exiba individualmente cada serviço realizado.
+Ajustar a lógica no javascript (arquivo script.js) para que nessa parte do código <div class="cli-stat-info azul"><i class="bi bi-patch-check"></i> Ver Histórico</div>
+onde Ver Histórico seja um hiperlink que ao ser clicado, crie e abra um modal mostrando ao cliente logado cada serviço realizado com Data/Hora, nome do Prestador, Tipo de serviço realizado e valor pago.
+
+
+
+Na página clienteAreaExclusiva.html
+Ajustar a lógica no javascript (arquivo script.js) para que seja apresentada a mensagem Olá, nome do cliente logado em <span class="navbar-logada-info">Olá, Cliente!</span> 
+    Ao clicar em <button type="button" class="btn btn-primary">Avaliar</button> Criar e Abrir o modal de avaliação do prestador de serviços e registrar a avaliação para ser mostrada na página prestadorAvaliacoesRecebidas.html
+    Ao clicar em <button type="button" class="btn btn-warning">Editar</button> Permitir a edição do comentário feito
+    Ao clicar em <button type="button" class="btn btn-danger">Excluir</button> Permitir a exclusão do comentário feito
+No CSS, ajustar o alinhamento dos botões para fiquem à direita da página no margin rigth e um à frente do outro com espaço mínimo
+Centralizar as informações <span class="cli-badge em-andamento">Em Andamento</span>
+                           <span class="cli-badge concluido">Concluído</span>
+                           <span class="cli-badge cancelado">Cancelado</span>
+para que fiquem alinhados ao dentro da linha
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Na página clientePerfilAdm.html
+Alterar em
+            <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav mx-auto align-items-lg-center"> 
+                        <li class="nav-item me-4"><a href="/paginasCliente/clienteAreaExclusiva.html" class="text-black"><i class="bi bi-briefcase"></i> Meus Pedidos</a></li>
+                        <li class="nav-item me-4"><a href="/paginasCliente/clienteAvaliacoesRecebidas.html" class="text-black"><i class="bi bi-star"></i> Minhas Avaliações</a></li>
+                    </ul>
+            </div>
+onde <li class="nav-item me-4"><a href="/paginasCliente/clienteAreaExclusiva.html" class="text-black"><i class="bi bi-briefcase"></i> Meus Pedidos</a></li>
+e    <li class="nav-item me-4"><a href="/paginasCliente/clienteAvaliacoesRecebidas.html" class="text-black"><i class="bi bi-star"></i> Minhas Avaliações</a></li>
+para dois botões de nome Botão 1 - Meus Pedidos (na cor 
+#2B2B2B)
+                         Botão 2 - Minhas Avaliações (na cor 
+#FFC300)
+e manter as referências linkadas para as páginas correspondentes
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Ajustar a lógica no javascript (arquivo script.js) para que sempre que for clicado em <button type="button" class="btn btn-outline-secondary">Voltar</button>
+retornar para a página anterior ao acesso à página atual
+
+ao concluir, disponibilize todoas os arquivos completos e atualizados com as solicitações implementadas
+
+
+
+
+
+
+
+Ao concluir, disponibilize todos os códigos que foram ajustados, completos e prontos, de acordo com o que foi solicitado.

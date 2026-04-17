@@ -12,35 +12,53 @@
 
 <body>
 
-       <!-- NAVBAR -->
+<style>
+        /* Responsividade padrão igual ao index.html: breakpoint lg (992px). */
+        @media (max-width: 991.98px) {
+            .cli-wrapper { flex-direction: column; }
+            .cli-sidebar {
+                width: 100%;
+                min-width: unset;
+                border-right: none;
+                border-bottom: 1px solid var(--borda);
+                padding: 12px 0;
+                display: none;
+            }
+            .cli-sidebar.cli-sidebar-show { display: block; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!--INÍCIO DO CABEÇALHO DA PÁGINA-->
     <header>
         <nav class="navbar navbar-expand-lg">
-            <div class="container menu">
-                <a class="navbar-brand" href="/index.html">
+            <div class="container-fluid" style="max-width:1140px; margin:0 auto; padding:0 16px;">
+                <a class="navbar-brand" href="index.html">
                     <span class="serv-part">Serv</span><span class="go-part">Go!</span>
                 </a>
-                <div class="d-flex order-lg-3">
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                </div>
+                <span class="navbar-logada-info">Olá, Cliente!</span>
+
+                <!--Botão Sanduíche Quando Estiver em Responsividade (padrão index.html)-->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!--Menus da Página-->
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav mx-auto">
-                        <li class="nav-item"><a class="nav-link nav-link-active" href="/index.html">Início</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/paginasSite/avaliacao.html">Avaliações</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/paginasSite/contatoSite.html">Contato</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/paginasSite/faqSite.html">FAQ</a></li>
-                    </ul>                    
-                </div>
-
-                    <ul class="navbar-nav mx-auto">
-                        <li class="nav-item"><a class="nav-link" href="prestadorAreaExclusiva.html" class="text-black"><i class="bi bi-gear"></i> Área Exclusiva</a></li>
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+                        <li class="nav-item mb-2 mb-lg-0">
+                            <button id="btn-voltar" type="button" class="btn btn-outline-secondary">Voltar</button>
+                            <a class="btn btn-danger" href="/index.html">Sair</a>
+                        </li>
                     </ul>
-
+                </div>
             </div>
         </nav>
     </header>
+    <!--FIM DO CABEÇALHO DA PÁGINA-->
 
     <!-- CONTEÚDO PRINCIPAL -->
     <main class="container">

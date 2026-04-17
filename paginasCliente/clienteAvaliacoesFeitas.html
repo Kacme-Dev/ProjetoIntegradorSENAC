@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ServGo! - Contato</title>
+    <title>ServGo! - Minhas Avaliações Realizadas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/css/estiloServGo.css">
     <style>
         /* Responsividade padrão igual ao index.html: breakpoint lg (992px). */
@@ -63,53 +63,57 @@
                 <li><a href="/paginasCliente/clienteAreaExclusiva.html"><i class="bi bi-house-door"></i> Dashboard</a></li>
                 <li><a href="/paginasCliente/clientePerfilAdm.html"><i class="bi bi-person-circle"></i> Meu Perfil</a></li>
                 <li><a href="/paginasCliente/clienteAgendarServicos.html"><i class="bi bi-calendar-check"></i> Agendar Serviços</a></li>
-                <li><a href="/paginasCliente/clienteAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Realizadas</a></li>
+                <li><a class="cli-nav-ativo" href="/paginasCliente/clienteAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Realizadas</a></li>
                 <li><a href="/paginasCliente/clienteAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
-                <li><a class="cli-nav-ativo" href="/paginasCliente/clienteContatoSite.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+                <li><a href="/paginasCliente/clienteContatoSite.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
             </ul>
         </nav>
 
         <main class="cli-main">
-            <div class="contato-main">
+            <div class="container1" id="container-avaliacoes-feitas">
+                <!-- As avaliações feitas pelo cliente (para prestadores) serão renderizadas dinamicamente via script.js -->
 
-                <div class="contato-info">
-                    <h2>Contato</h2>
-                    <h5><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</h5>
-                    <h5><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</h5>
-                    <h5><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</h5>
+                <div class="d-flex justify-content-center">
+                    <button type="button" class="btn btn-warning">
+                        Carregar Mais Avaliações
+                    </button>
                 </div>
-
-                <div class="contato-form">
-                    <div class="mb-3">
-                        <label for="nome" class="form-label">Nome</label>
-                        <input type="text" class="form-control" id="nome" required>
-                        <div class="invalid-feedback">Por favor, insira seu nome.</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="email" class="form-label">E-mail</label>
-                        <div class="input-group">
-                            <span class="input-group-text">@</span>
-                            <input type="email" class="form-control" id="email" placeholder="Digite o e-mail" required>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="arquivo" class="form-label">Enviar arquivo</label>
-                        <input class="form-control" type="file" id="arquivo">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="mensagem" class="form-label">Mensagem</label>
-                        <textarea class="caixa-mensagem-fixa" id="mensagem" rows="3" required placeholder="Entre em contato conosco"></textarea>
-                        <div class="invalid-feedback">Por favor, insira uma mensagem.</div>
-                    </div>
-
-                    <button class="contato-enviar-btn" type="button">Enviar</button>
-                </div>
-
             </div>
         </main>
+    </div>
+
+    <!-- Modal: Editar Avaliação Feita -->
+    <div class="modal fade" id="modalEditarFeita" tabindex="-1" aria-labelledby="modalEditarFeitaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #146ADB; color: white;">
+                    <h5 class="modal-title" id="modalEditarFeitaLabel"><i class="bi bi-pencil-square me-2"></i>Editar Avaliação</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modal-editar-feita-info" class="mb-3 p-2 bg-light rounded text-dark"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Nota:</label>
+                        <div class="modal-estrelas" id="modal-editar-feita-estrelas">
+                            <i class="bi bi-star" data-nota="1"></i>
+                            <i class="bi bi-star" data-nota="2"></i>
+                            <i class="bi bi-star" data-nota="3"></i>
+                            <i class="bi bi-star" data-nota="4"></i>
+                            <i class="bi bi-star" data-nota="5"></i>
+                        </div>
+                        <input type="hidden" id="modal-editar-feita-nota-valor" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal-editar-feita-comentario" class="form-label fw-bold text-dark">Comentário:</label>
+                        <textarea class="form-control" id="modal-editar-feita-comentario" rows="4" maxlength="1000" style="resize: none; overflow-y: auto;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btn-salvar-edicao-feita"><i class="bi bi-floppy me-1"></i>Salvar Alterações</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!--NEWSLATTER-->
@@ -174,7 +178,7 @@
             </div>
             <hr class="text-white-50">
             <div class="text-center small text-white-50">
-                © 2025 ServGo! Todos os direitos reservados.
+                © 2026 ServGo! Todos os direitos reservados.
             </div>
         </div>
     </footer>
