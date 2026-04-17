@@ -1571,6 +1571,188 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // =====================================================
+    // ADMINISTRAÇÃO DO HOT SITE DO PRESTADOR
+    // (prestadorHotsiteAdm.html)
+    // =====================================================
+    function inicializarHotsitePrestador() {
+        // Só inicializa se estiver na tela do HotSite Adm do Prestador
+        // (identificada pela presença do campo CPF/CNPJ específico dessa tela)
+        var inputCnpj = document.getElementById('adm-cnpj');
+        if (!inputCnpj) return;
+
+        var inputNome = document.getElementById('adm-nome');
+        var inputCategoria = document.getElementById('adm-categoria');
+        var inputCidade = document.getElementById('adm-cidade');
+        var inputDescricao = document.getElementById('adm-descricao');
+        var inputEndereco = document.getElementById('adm-endereco');
+        var inputEmail = document.getElementById('adm-email');
+        var inputTel = document.getElementById('adm-tel');
+        var inputGaleria = document.getElementById('adm-galeria');
+        var btnSalvar = document.getElementById('btn-salvar-hotsite');
+        var btnLimpar = document.getElementById('btn-limpar-hotsite');
+        var avatarDiv = document.querySelector('.hotsite-avatar');
+
+        var HOTSITE_STORAGE_KEY = 'hotsitePrestadorDados';
+
+        // Carrega os dados do usuário logado (do cadastro)
+        var usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || '{}');
+        var emailLogado = usuarioLogado.email || '';
+        var usuariosCadastrados = obterUsuariosCadastrados();
+        var dadosUsuario = usuariosCadastrados[emailLogado] || {};
+
+        // Carrega dados previamente salvos do hotsite (se existirem)
+        var dadosHotsiteSalvos = {};
+        try {
+            var hotsiteStore = JSON.parse(localStorage.getItem(HOTSITE_STORAGE_KEY) || '{}');
+            dadosHotsiteSalvos = hotsiteStore[emailLogado] || {};
+        } catch (e) { dadosHotsiteSalvos = {}; }
+
+        // 1. Preenche por padrão os campos do cadastro (nome e e-mail)
+        inputNome.value = dadosUsuario.nome || usuarioLogado.nome || '';
+        inputEmail.value = emailLogado || '';
+
+        // Preenche demais campos, caso já tenham sido salvos anteriormente
+        if (inputCnpj) inputCnpj.value = dadosHotsiteSalvos.cnpj || '';
+        if (inputCategoria && dadosHotsiteSalvos.categoria) inputCategoria.value = dadosHotsiteSalvos.categoria;
+        if (inputCidade) inputCidade.value = dadosHotsiteSalvos.cidade || '';
+        if (inputDescricao) inputDescricao.value = dadosHotsiteSalvos.descricao || '';
+        if (inputEndereco) inputEndereco.value = dadosHotsiteSalvos.endereco || '';
+        if (inputTel) inputTel.value = dadosHotsiteSalvos.tel || '';
+
+        // Foto salva anteriormente (avatar)
+        if (dadosHotsiteSalvos.foto && avatarDiv) {
+            avatarDiv.style.backgroundImage = 'url(' + dadosHotsiteSalvos.foto + ')';
+            avatarDiv.style.backgroundSize = 'cover';
+            avatarDiv.style.backgroundPosition = 'center';
+            avatarDiv.textContent = '';
+            avatarDiv.dataset.base64 = dadosHotsiteSalvos.foto;
+        } else if (avatarDiv && inputNome.value) {
+            // Usa as iniciais do nome como placeholder
+            var partes = inputNome.value.trim().split(/\s+/);
+            var iniciais = '';
+            if (partes.length >= 2) {
+                iniciais = (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+            } else if (partes.length === 1 && partes[0].length > 0) {
+                iniciais = partes[0].substring(0, 2).toUpperCase();
+            }
+            if (iniciais) avatarDiv.textContent = iniciais;
+        }
+
+        // 2. Máscara automática CPF/CNPJ (padrão Brasileiro)
+        // Aceita 11 dígitos (CPF: 000.000.000-00) ou 14 dígitos (CNPJ: 00.000.000/0000-00)
+        if (inputCnpj) {
+            inputCnpj.setAttribute('maxlength', '18'); // 14 dígitos + 4 separadores
+            inputCnpj.setAttribute('placeholder', '000.000.000-00 ou 00.000.000/0000-00');
+
+            inputCnpj.addEventListener('input', function (e) {
+                var v = e.target.value.replace(/\D/g, '');
+
+                // Limita a 14 dígitos (tamanho do CNPJ)
+                if (v.length > 14) v = v.substring(0, 14);
+
+                if (v.length <= 11) {
+                    // Formatação de CPF: 000.000.000-00
+                    v = v.replace(/^(\d{3})(\d)/, '$1.$2');
+                    v = v.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
+                    v = v.replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');
+                } else {
+                    // Formatação de CNPJ: 00.000.000/0000-00
+                    v = v.replace(/^(\d{2})(\d)/, '$1.$2');
+                    v = v.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+                    v = v.replace(/\.(\d{3})(\d)/, '.$1/$2');
+                    v = v.replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+                }
+
+                e.target.value = v;
+            });
+        }
+
+        // 3. Ao selecionar uma imagem em "Gerenciar Galeria",
+        //    usar a primeira imagem selecionada como avatar do prestador
+        if (inputGaleria && avatarDiv) {
+            inputGaleria.addEventListener('change', function (e) {
+                var files = e.target.files;
+                if (!files || files.length === 0) return;
+
+                // Procura o primeiro arquivo de imagem
+                var imagem = null;
+                for (var i = 0; i < files.length; i++) {
+                    if (files[i].type && files[i].type.indexOf('image/') === 0) {
+                        imagem = files[i];
+                        break;
+                    }
+                }
+                if (!imagem) return;
+
+                var reader = new FileReader();
+                reader.onload = function (event) {
+                    avatarDiv.style.backgroundImage = 'url(' + event.target.result + ')';
+                    avatarDiv.style.backgroundSize = 'cover';
+                    avatarDiv.style.backgroundPosition = 'center';
+                    avatarDiv.textContent = '';
+                    avatarDiv.dataset.base64 = event.target.result;
+                };
+                reader.readAsDataURL(imagem);
+            });
+        }
+
+        // 4. Botão Salvar & Publicar
+        if (btnSalvar) {
+            btnSalvar.addEventListener('click', function () {
+                var dadosSalvar = {
+                    nome: inputNome.value,
+                    email: inputEmail.value,
+                    cnpj: inputCnpj ? inputCnpj.value : '',
+                    categoria: inputCategoria ? inputCategoria.value : '',
+                    cidade: inputCidade ? inputCidade.value : '',
+                    descricao: inputDescricao ? inputDescricao.value : '',
+                    endereco: inputEndereco ? inputEndereco.value : '',
+                    tel: inputTel ? inputTel.value : '',
+                    foto: (avatarDiv && avatarDiv.dataset.base64) || dadosHotsiteSalvos.foto || ''
+                };
+
+                var store = {};
+                try {
+                    store = JSON.parse(localStorage.getItem(HOTSITE_STORAGE_KEY) || '{}');
+                } catch (e) { store = {}; }
+
+                store[emailLogado] = dadosSalvar;
+                localStorage.setItem(HOTSITE_STORAGE_KEY, JSON.stringify(store));
+
+                alert('Dados do Hot Site salvos e publicados com sucesso!');
+            });
+        }
+
+        // 5. Botão Limpar (limpa tudo, exceto nome e e-mail)
+        if (btnLimpar) {
+            btnLimpar.addEventListener('click', function () {
+                if (inputCnpj) inputCnpj.value = '';
+                if (inputCategoria) inputCategoria.value = '';
+                if (inputCidade) inputCidade.value = '';
+                if (inputDescricao) inputDescricao.value = '';
+                if (inputEndereco) inputEndereco.value = '';
+                if (inputTel) inputTel.value = '';
+                if (inputGaleria) inputGaleria.value = '';
+
+                // Restaura avatar para as iniciais do nome
+                if (avatarDiv) {
+                    avatarDiv.style.backgroundImage = '';
+                    var partes = (inputNome.value || '').trim().split(/\s+/);
+                    var iniciais = '';
+                    if (partes.length >= 2) {
+                        iniciais = (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+                    } else if (partes.length === 1 && partes[0].length > 0) {
+                        iniciais = partes[0].substring(0, 2).toUpperCase();
+                    }
+                    avatarDiv.textContent = iniciais || 'JC';
+                    delete avatarDiv.dataset.base64;
+                }
+            });
+        }
+    }
+
+
+    // =====================================================
     // FUNÇÃO: SINCRONIZAR SIDEBAR COM COLLAPSE (RESPONSIVIDADE)
     // Faz com que o botão hambúrguer (que aciona o collapse do Bootstrap
     // sobre #navbarNav) também controle a exibição da sidebar em telas
@@ -1604,5 +1786,6 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarAvaliacoesRecebidas();
     inicializarBotaoVoltar();
     inicializarPerfilCliente();
+    inicializarHotsitePrestador();
     inicializarSidebarResponsiva();
 });

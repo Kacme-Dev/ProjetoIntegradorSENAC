@@ -68,7 +68,7 @@
 
             <!-- PAINEL DE CONTROLES -->
             <aside class="hotsiteadm-controles">
-                <h3><i class="bi bi-sliders me-2"></i>Controles do Hot Site</h3>
+                <h3 style="color:#FFC300;"><i class="bi bi-sliders me-2"></i>Controles do Hot Site</h3>
 
                 <div class="hotsiteadm-grupo">
                     <label for="adm-nome">Nome do Prestador</label>
@@ -98,6 +98,11 @@
                 </div>
 
                 <div class="hotsiteadm-grupo">
+                    <label for="adm-endereco">Endereço do Prestador</label>
+                    <input class="hotsiteadm-input" type="text" id="adm-endereco" value="">
+                </div>
+
+                <div class="hotsiteadm-grupo">
                     <label for="adm-email">Email de Contato</label>
                     <input class="hotsiteadm-input" type="email" id="adm-email" value="">
                 </div>
@@ -113,8 +118,9 @@
                 </div>
 
                 <div class="hotsiteadm-botoes">
-                    <a href="prestadorAreaExclusiva.html" class="conf-btn-voltar">Cancelar</a>
-                    <button type="button" class="conf-btn-salvar"><i class="bi bi-floppy me-1"></i> Salvar &amp; Publicar</button>
+                    <a href="prestadorAreaExclusiva.html" class="conf-btn-voltar" style="background-color:#dc3545; color:#fff; border-color:#dc3545;">Cancelar</a>
+                    <button type="button" id="btn-limpar-hotsite" class="conf-btn-voltar"><i class="bi bi-eraser me-1"></i> Limpar</button>
+                    <button type="button" id="btn-salvar-hotsite" class="conf-btn-salvar" style="background-color:#FFC300; color:#000;"><i class="bi bi-floppy me-1"></i> Salvar &amp; Publicar</button>
                 </div>
 
                 <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 4px;">
@@ -133,7 +139,7 @@
 
                 <!-- CARD PERFIL PREVIEW -->
                 <div class="hotsiteadm-preview-perfil">
-                    <div class="hotsite-avatar" style="margin-bottom: 12px;">JC</div>
+                    <div class="hotsite-avatar" style="margin-bottom: 12px; background-color:#FFC300; color:#000;">JC</div>
                     <div class="hotsite-nome"></div>
                     <div class="hotsite-meta-info">
                         Serviço Prestado &nbsp;·&nbsp; ★★★★☆ &nbsp;0.0 &nbsp;·&nbsp; 0 avaliações
@@ -141,7 +147,7 @@
                     <div class="hotsite-atende" style="margin-top: 8px;">
                         <i class="bi bi-geo-alt-fill me-1"></i> Atende em:
                     </div>
-                    <a class="cta" href="prestadorServicosAgendados.html" style="margin-top:12px; width:100%; text-align:center;">
+                    <a class="cta" href="prestadorServicosAgendados.html" style="margin-top:12px; width:100%; text-align:center; background-color:#FFC300; color:#000;">
                         <i class="bi bi-calendar-check me-1"></i> Agendar Serviço
                     </a>
                 </div>
