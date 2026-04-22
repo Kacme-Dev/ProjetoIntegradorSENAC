@@ -1775,6 +1775,226 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // =====================================================
+    // ÁREA EXCLUSIVA DO PRESTADOR (prestadorAreaExclusiva.html)
+    // =====================================================
+    function inicializarPrestadorAreaExclusiva() {
+        var historicoLista = document.getElementById('prest-historico-lista');
+        if (!historicoLista) return;
+
+        var AVALIACOES_PREST_KEY = 'avaliacoesPrestadorSalvas';
+
+        function obterAvaliacoes() {
+            try { return JSON.parse(localStorage.getItem(AVALIACOES_PREST_KEY) || '[]'); }
+            catch (e) { return []; }
+        }
+        function salvarAvaliacoes(arr) {
+            localStorage.setItem(AVALIACOES_PREST_KEY, JSON.stringify(arr));
+        }
+        function obterAvaliacaoPorPedido(pedidoId) {
+            return obterAvaliacoes().find(function (a) { return a.pedidoId === pedidoId; }) || null;
+        }
+
+        // --- Modal do próximo agendamento (link "Amanhã, 10:00h") ---
+        var linkProximo = document.getElementById('link-proximo-agendamento');
+        if (linkProximo) {
+            linkProximo.addEventListener('click', function (e) {
+                e.preventDefault();
+                // Dados simulados do próximo agendamento confirmado
+                var proximoAgendamento = {
+                    titulo: document.getElementById('prest-proximo-titulo') ? document.getElementById('prest-proximo-titulo').textContent : 'Limpeza de Filtro',
+                    dataHora: 'Amanhã, 10:00h',
+                    cliente: 'Carlos Mendes',
+                    local: 'Rua das Acácias, 45 — Centro',
+                    status: 'Confirmado'
+                };
+
+                var conteudo =
+                    '<table class="table table-bordered align-middle">' +
+                    '<tbody>' +
+                    '<tr><th>Serviço</th><td>' + proximoAgendamento.titulo + '</td></tr>' +
+                    '<tr><th>Data / Hora</th><td>' + proximoAgendamento.dataHora + '</td></tr>' +
+                    '<tr><th>Cliente</th><td>' + proximoAgendamento.cliente + '</td></tr>' +
+                    '<tr><th>Local</th><td>' + proximoAgendamento.local + '</td></tr>' +
+                    '<tr><th>Status</th><td><span class="badge" style="background:#28a745;">' + proximoAgendamento.status + '</span></td></tr>' +
+                    '</tbody></table>';
+
+                // Reutiliza a função criarModal se existir, senão cria diretamente
+                var idModal = 'modalProximoAgendamento';
+                var modalExistente = document.getElementById(idModal);
+                if (modalExistente) modalExistente.remove();
+
+                var modal = document.createElement('div');
+                modal.className = 'modal fade';
+                modal.id = idModal;
+                modal.setAttribute('tabindex', '-1');
+                modal.setAttribute('aria-hidden', 'true');
+                modal.innerHTML =
+                    '<div class="modal-dialog">' +
+                        '<div class="modal-content">' +
+                            '<div class="modal-header" style="background-color:#FFC300; color:#000;">' +
+                                '<h5 class="modal-title"><i class="bi bi-calendar-check me-2"></i>Próximo Agendamento Confirmado</h5>' +
+                                '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>' +
+                            '</div>' +
+                            '<div class="modal-body">' + conteudo + '</div>' +
+                            '<div class="modal-footer">' +
+                                '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>' +
+                                '<a href="prestadorServicosAgendados.html" class="btn btn-warning"><i class="bi bi-calendar3 me-1"></i>Ver Todos os Agendamentos</a>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+
+                document.body.appendChild(modal);
+                new bootstrap.Modal(modal).show();
+            });
+        }
+
+        // --- Interação de estrelas ---
+        function initStarRating(container, hiddenInput) {
+            if (!container || !hiddenInput) return;
+            var stars = container.querySelectorAll('i');
+            stars.forEach(function (star, index) {
+                star.addEventListener('click', function () {
+                    var nota = index + 1;
+                    hiddenInput.value = nota;
+                    stars.forEach(function (s, i) {
+                        if (i < nota) { s.classList.remove('bi-star'); s.classList.add('bi-star-fill', 'filled'); s.style.color = '#ffc107'; }
+                        else { s.classList.remove('bi-star-fill', 'filled'); s.classList.add('bi-star'); s.style.color = '#ccc'; }
+                    });
+                });
+                star.addEventListener('mouseover', function () {
+                    stars.forEach(function (s, i) { s.style.color = i <= index ? '#ffc107' : '#ccc'; });
+                });
+                star.addEventListener('mouseout', function () {
+                    var current = parseInt(hiddenInput.value) || 0;
+                    stars.forEach(function (s, i) { s.style.color = i < current ? '#ffc107' : '#ccc'; });
+                });
+            });
+        }
+
+        function renderizarEstrelas(container, hiddenInput, nota) {
+            if (!container || !hiddenInput) return;
+            var stars = container.querySelectorAll('i');
+            stars.forEach(function (s, i) {
+                if (i < nota) { s.classList.remove('bi-star'); s.classList.add('bi-star-fill', 'filled'); s.style.color = '#ffc107'; }
+                else { s.classList.remove('bi-star-fill', 'filled'); s.classList.add('bi-star'); s.style.color = '#ccc'; }
+            });
+            hiddenInput.value = nota;
+        }
+
+        var starsAvaliarContainer  = document.getElementById('modal-prest-estrelas');
+        var notaAvaliarInput       = document.getElementById('modal-prest-nota-valor');
+        var starsEditarContainer   = document.getElementById('modal-prest-editar-estrelas');
+        var notaEditarInput        = document.getElementById('modal-prest-editar-nota-valor');
+
+        initStarRating(starsAvaliarContainer, notaAvaliarInput);
+        initStarRating(starsEditarContainer, notaEditarInput);
+
+        var pedidoAtual = null;
+
+        // --- Botão AVALIAR ---
+        historicoLista.querySelectorAll('.btn-prest-avaliar').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var item = btn.closest('.prest-historico-item');
+                pedidoAtual = item.dataset.pedidoId;
+                var av = obterAvaliacaoPorPedido(pedidoAtual);
+
+                document.getElementById('modal-prest-avaliar-info').innerHTML =
+                    '<strong>Serviço:</strong> ' + item.dataset.servico +
+                    ' &nbsp;|&nbsp; <strong>Cliente:</strong> ' + item.dataset.cliente;
+
+                if (starsAvaliarContainer) {
+                    var stars = starsAvaliarContainer.querySelectorAll('i');
+                    stars.forEach(function (s) { s.classList.remove('bi-star-fill','filled'); s.classList.add('bi-star'); s.style.color = '#ccc'; });
+                }
+                if (notaAvaliarInput) notaAvaliarInput.value = 0;
+                var comentarioInput = document.getElementById('modal-prest-comentario');
+                if (comentarioInput) comentarioInput.value = av ? av.comentario : '';
+                if (av && av.nota) renderizarEstrelas(starsAvaliarContainer, notaAvaliarInput, av.nota);
+
+                new bootstrap.Modal(document.getElementById('modalPrestAvaliar')).show();
+            });
+        });
+
+        // --- Salvar nova avaliação ---
+        var btnSalvar = document.getElementById('btn-prest-salvar-avaliacao');
+        if (btnSalvar) {
+            btnSalvar.addEventListener('click', function () {
+                var nota = parseInt(notaAvaliarInput.value) || 0;
+                var comentario = document.getElementById('modal-prest-comentario').value.trim();
+                if (nota === 0) { alert('Por favor, selecione uma nota de 1 a 5!'); return; }
+                if (!comentario) { alert('Por favor, escreva um comentário!'); return; }
+
+                var item = historicoLista.querySelector('[data-pedido-id="' + pedidoAtual + '"]');
+                var avaliacoes = obterAvaliacoes();
+                var idx = avaliacoes.findIndex(function (a) { return a.pedidoId === pedidoAtual; });
+                var hoje = new Date();
+                var novaAv = {
+                    id: pedidoAtual + '_' + Date.now(),
+                    pedidoId: pedidoAtual,
+                    servico: item.dataset.servico,
+                    cliente: item.dataset.cliente,
+                    nota: nota,
+                    comentario: comentario,
+                    data: hoje.toLocaleDateString('pt-BR')
+                };
+                if (idx >= 0) avaliacoes[idx] = novaAv; else avaliacoes.push(novaAv);
+                salvarAvaliacoes(avaliacoes);
+                bootstrap.Modal.getInstance(document.getElementById('modalPrestAvaliar')).hide();
+                alert('Avaliação salva com sucesso!');
+            });
+        }
+
+        // --- Botão EDITAR ---
+        historicoLista.querySelectorAll('.btn-prest-editar').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var item = btn.closest('.prest-historico-item');
+                pedidoAtual = item.dataset.pedidoId;
+                var av = obterAvaliacaoPorPedido(pedidoAtual);
+                if (!av) { alert('Nenhuma avaliação encontrada. Clique em "Avaliar" para criar uma.'); return; }
+
+                document.getElementById('modal-prest-editar-info').innerHTML =
+                    '<strong>Serviço:</strong> ' + av.servico +
+                    ' &nbsp;|&nbsp; <strong>Cliente:</strong> ' + av.cliente;
+                renderizarEstrelas(starsEditarContainer, notaEditarInput, av.nota);
+                document.getElementById('modal-prest-editar-comentario').value = av.comentario;
+                new bootstrap.Modal(document.getElementById('modalPrestEditar')).show();
+            });
+        });
+
+        // --- Salvar edição ---
+        var btnSalvarEdicao = document.getElementById('btn-prest-salvar-edicao');
+        if (btnSalvarEdicao) {
+            btnSalvarEdicao.addEventListener('click', function () {
+                var nota = parseInt(notaEditarInput.value) || 0;
+                var comentario = document.getElementById('modal-prest-editar-comentario').value.trim();
+                if (nota === 0) { alert('Por favor, selecione uma nota de 1 a 5!'); return; }
+                if (!comentario) { alert('Por favor, escreva um comentário!'); return; }
+                var avaliacoes = obterAvaliacoes();
+                var idx = avaliacoes.findIndex(function (a) { return a.pedidoId === pedidoAtual; });
+                if (idx >= 0) { avaliacoes[idx].nota = nota; avaliacoes[idx].comentario = comentario; salvarAvaliacoes(avaliacoes); }
+                bootstrap.Modal.getInstance(document.getElementById('modalPrestEditar')).hide();
+                alert('Avaliação atualizada com sucesso!');
+            });
+        }
+
+        // --- Botão EXCLUIR ---
+        historicoLista.querySelectorAll('.btn-prest-excluir').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var item = btn.closest('.prest-historico-item');
+                var pedidoId = item.dataset.pedidoId;
+                var av = obterAvaliacaoPorPedido(pedidoId);
+                if (!av) { alert('Nenhuma avaliação encontrada para excluir.'); return; }
+                if (confirm('Tem certeza que deseja excluir a avaliação de "' + av.servico + '"?')) {
+                    var filtradas = obterAvaliacoes().filter(function (a) { return a.pedidoId !== pedidoId; });
+                    salvarAvaliacoes(filtradas);
+                    alert('Avaliação excluída com sucesso!');
+                }
+            });
+        });
+    }
+
+
+    // =====================================================
     // INICIALIZAÇÃO GERAL
     // =====================================================
     inicializarNavbarSaudacao();
@@ -1782,6 +2002,7 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarCadastro();
     inicializarLogin();
     inicializarClienteAreaExclusiva();
+    inicializarPrestadorAreaExclusiva();
     inicializarAvaliacoesFeitas();
     inicializarAvaliacoesRecebidas();
     inicializarBotaoVoltar();

@@ -94,7 +94,8 @@
 
                 <div class="hotsiteadm-grupo">
                     <label for="adm-descricao">Descrição dos Serviços</label>
-                    <textarea class="caixa-mensagem-fixa" id="adm-descricao" rows="6"></textarea>
+                    <textarea class="caixa-mensagem-fixa" id="adm-descricao" rows="6" maxlength="2000" style="resize: none; overflow-y: auto; height: 169px;"></textarea>
+                    <small id="adm-descricao-contador" style="display:block; text-align:right; font-size:0.78rem; color:var(--texto-muted); margin-top:-8px; margin-bottom:8px;">0 / 2000</small>
                 </div>
 
                 <div class="hotsiteadm-grupo">
@@ -113,14 +114,14 @@
                 </div>
 
                 <div class="hotsiteadm-grupo">
-                    <label for="adm-galeria">Gerenciar Galeria</label>
-                    <input type="file" id="adm-galeria" multiple accept="image/*,video/*" class="hotsiteadm-input" style="padding: 5px;">
+                    <label for="adm-foto-perfil">Foto de Perfil (Avatar)</label>
+                    <input type="file" id="adm-galeria" accept="image/*" class="hotsiteadm-input" style="padding: 5px;">
                 </div>
 
-                <div class="hotsiteadm-botoes">
-                    <a href="prestadorAreaExclusiva.html" class="conf-btn-voltar" style="background-color:#dc3545; color:#fff; border-color:#dc3545;">Cancelar</a>
-                    <button type="button" id="btn-limpar-hotsite" class="conf-btn-voltar"><i class="bi bi-eraser me-1"></i> Limpar</button>
-                    <button type="button" id="btn-salvar-hotsite" class="conf-btn-salvar" style="background-color:#FFC300; color:#000;"><i class="bi bi-floppy me-1"></i> Salvar &amp; Publicar</button>
+                <div class="hotsiteadm-botoes" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <a href="prestadorAreaExclusiva.html" class="conf-btn-voltar" style="background-color: #dc3545; color: #fff; border-color: #dc3545; flex: 1; text-align: center;">Cancelar</a>
+                    <button type="button" id="btn-limpar-hotsite" style="background-color: #6c757d; color: white; border: none; border-radius: 4px; font-weight: bold; padding: 10px 15px; cursor: pointer; flex: 1;"><i class="bi bi-eraser me-1"></i> Limpar</button>
+                    <button type="button" id="btn-salvar-hotsite" class="conf-btn-salvar" style="background-color:#FFC300; color:#000; flex: 1 1 100%; margin-top: 8px;"><i class="bi bi-floppy me-1"></i> Salvar &amp; Publicar</button>
                 </div>
 
                 <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 4px;">
@@ -148,7 +149,7 @@
                         <i class="bi bi-geo-alt-fill me-1"></i> Atende em:
                     </div>
                     <a class="cta" href="prestadorServicosAgendados.html" style="margin-top:12px; width:100%; text-align:center; background-color:#FFC300; color:#000;">
-                        <i class="bi bi-calendar-check me-1"></i> Agendar Serviço
+                        <i class="bi bi-calendar-check me-1"></i> Verificar Agendamentos
                     </a>
                 </div>
 
@@ -162,11 +163,15 @@
                     </div>
 
                     <div class="hotsite-secao-titulo" style="margin-top: 14px;">Galeria de Trabalhos</div>
-                    <div class="hotsiteadm-galeria-preview">
-                        <div class="hotsiteadm-thumb-preview"><i class="bi bi-image"></i> Foto 1</div>
-                        <div class="hotsiteadm-thumb-preview"><i class="bi bi-image"></i> Foto 2</div>
-                        <div class="hotsiteadm-thumb-preview"><i class="bi bi-image"></i> Foto 3</div>
-                        <div class="hotsiteadm-thumb-preview"><i class="bi bi-play-circle"></i> Vídeo</div>
+                    <div class="hotsiteadm-galeria-preview" id="galeria-thumbs">
+                        <div class="hotsiteadm-thumb-preview" data-slot="0" style="position:relative;"><i class="bi bi-image"></i> Foto 1<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                        <div class="hotsiteadm-thumb-preview" data-slot="1" style="position:relative;"><i class="bi bi-image"></i> Foto 2<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                        <div class="hotsiteadm-thumb-preview" data-slot="2" style="position:relative;"><i class="bi bi-image"></i> Foto 3<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                        <div class="hotsiteadm-thumb-preview" data-slot="3" style="position:relative;"><i class="bi bi-play-circle"></i> Vídeo<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                    </div>
+                    <div style="margin-top: 8px;">
+                        <label style="font-size:0.82rem; font-weight:600; color:var(--texto-muted); display:block; margin-bottom:4px;">Adicionar mídia à galeria</label>
+                        <input type="file" id="adm-galeria-nova" multiple accept="image/*,video/*" class="hotsiteadm-input" style="padding: 5px;">
                     </div>
 
                     <div class="hotsite-secao-titulo" style="margin-top: 14px;">Depoimentos (Lidos do Sistema)</div>
@@ -183,11 +188,6 @@
                     <div class="hotsite-secao-titulo">Agenda &amp; Disponibilidade</div>
                     <div class="placeholder" style="margin-bottom: 16px;">
                         Próximo horário disponível: <strong></strong> (simulado)
-                    </div>
-
-                    <div class="hotsite-secao-titulo">[Ações do Prestador]</div>
-                    <div class="hotsiteadm-acoes-admin">
-                        <a class="cta cta-amarelo" href="/paginasPrestador/dashboardPrestador.html"><i class="bi bi-bar-chart me-1"></i> Ver Relatórios</a>
                     </div>
                 </div>
             </div>
@@ -245,5 +245,116 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/script.js" defer></script>
+    <script>
+        // --- Contador de caracteres da descrição ---
+        (function () {
+            var ta = document.getElementById('adm-descricao');
+            var contador = document.getElementById('adm-descricao-contador');
+            if (ta && contador) {
+                ta.addEventListener('input', function () {
+                    contador.textContent = ta.value.length + ' / 2000';
+                });
+            }
+        })();
+
+        // --- Avatar: ao escolher imagem no input adm-galeria, exibir no hotsite-avatar ---
+        (function () {
+            var inputAvatar = document.getElementById('adm-galeria');
+            var avatar = document.querySelector('.hotsite-avatar');
+            if (!inputAvatar || !avatar) return;
+
+            inputAvatar.addEventListener('change', function () {
+                var file = this.files[0];
+                if (!file || !file.type.startsWith('image/')) return;
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    avatar.style.backgroundImage = 'url(' + e.target.result + ')';
+                    avatar.style.backgroundSize = 'cover';
+                    avatar.style.backgroundPosition = 'center';
+                    avatar.style.color = 'transparent';
+                    avatar.textContent = '';
+                };
+                reader.readAsDataURL(file);
+            });
+        })();
+
+        // --- Galeria: ao escolher mídia no input adm-galeria-nova, preencher os cards da galeria ---
+        (function () {
+            var inputGaleria = document.getElementById('adm-galeria-nova');
+            if (!inputGaleria) return;
+
+            // Labels padrão de cada slot (para restaurar ao excluir)
+            var labelsDefault = [
+                '<i class="bi bi-image"></i> Foto 1',
+                '<i class="bi bi-image"></i> Foto 2',
+                '<i class="bi bi-image"></i> Foto 3',
+                '<i class="bi bi-play-circle"></i> Vídeo'
+            ];
+
+            function criarBotaoExcluir(slot, slotIdx) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn-galeria-excluir';
+                btn.title = 'Excluir mídia';
+                btn.innerHTML = '&times;';
+                btn.style.cssText = 'position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;z-index:10;';
+                btn.addEventListener('click', function () {
+                    // Restaura o slot para o estado vazio padrão
+                    slot.innerHTML = labelsDefault[slotIdx] + '<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button>';
+                    slot.style.padding = '';
+                    slot.style.overflow = '';
+                    // Rebinda o botão X que foi recriado (mas estará oculto pois sem mídia)
+                });
+                return btn;
+            }
+
+            inputGaleria.addEventListener('change', function () {
+                var slots = document.querySelectorAll('#galeria-thumbs .hotsiteadm-thumb-preview');
+                var files = Array.from(this.files);
+                files.forEach(function (file, idx) {
+                    if (idx >= slots.length) return;
+                    var slot = slots[idx];
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        slot.innerHTML = '';
+                        slot.style.position = 'relative';
+                        if (file.type.startsWith('image/')) {
+                            var img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.style.cssText = 'width:100%; height:100%; object-fit:cover; border-radius:6px; display:block;';
+                            slot.style.padding = '0';
+                            slot.style.overflow = 'hidden';
+                            slot.appendChild(img);
+                        } else if (file.type.startsWith('video/')) {
+                            var vid = document.createElement('video');
+                            vid.src = e.target.result;
+                            vid.controls = true;
+                            vid.style.cssText = 'width:100%; height:100%; object-fit:cover; border-radius:6px; display:block;';
+                            slot.style.padding = '0';
+                            slot.style.overflow = 'hidden';
+                            slot.appendChild(vid);
+                        }
+                        // Adiciona botão X visível sobre a mídia
+                        slot.appendChild(criarBotaoExcluir(slot, parseInt(slot.dataset.slot)));
+                    };
+                    reader.readAsDataURL(file);
+                });
+                // Limpa o input para permitir reselecionar os mesmos arquivos
+                inputGaleria.value = '';
+            });
+
+            // Delegação para botões X já existentes no HTML (ocultos por padrão)
+            document.getElementById('galeria-thumbs').addEventListener('click', function(e) {
+                var btn = e.target.closest('.btn-galeria-excluir');
+                if (!btn) return;
+                var slot = btn.closest('.hotsiteadm-thumb-preview');
+                if (!slot) return;
+                var slotIdx = parseInt(slot.dataset.slot);
+                slot.innerHTML = labelsDefault[slotIdx] + '<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button>';
+                slot.style.padding = '';
+                slot.style.overflow = '';
+            });
+        })();
+    </script>
 </body>
 </html>

@@ -8,6 +8,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/css/estiloServGo.css">
+    <style>
+        .prest-historico-item { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--borda, #eee); }
+        .prest-historico-item:last-child { border-bottom: none; }
+        .prest-historico-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+    </style>
 </head>
 
 <body>
@@ -41,7 +46,9 @@
                 <li><a href="prestadorServicosAgendados.html"><i class="bi bi-calendar-check"></i> Meus Agendamentos</a></li>
                 <li><a href="prestadorConfigurarAgenda.html"><i class="bi bi-calendar3"></i> Gerenciar Agenda</a></li>
                 <li><a href="prestadorHotsiteAdm.html"><i class="bi bi-globe"></i> Meu Hot Site</a></li>
-                <li><a href="/paginasPrestador/prestadorAvaliacoes.html"><i class="bi bi-star"></i> Minas Avaliações</a></li>
+                <li><a href="/paginasPrestador/prestadorAvaliacoes.html"><i class="bi bi-star"></i> Avaliações Feitas</a></li>
+                <li><a href="/paginasPrestador/prestadorAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
+                <li><a href="/paginasCliente/clienteContatoSite.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
             </ul>
         </nav>
 
@@ -53,9 +60,9 @@
             <div class="prest-stat-grid">
                 <div class="prest-stat-card destaque-amarelo">
                     <div class="prest-stat-titulo">Próximo Agendamento</div>
-                    <div class="prest-stat-valor" style="font-size:1.2rem;">Limpeza de Filtro</div>
+                    <div class="prest-stat-valor" style="font-size:1.2rem;" id="prest-proximo-titulo">Limpeza de Filtro</div>
                     <div class="prest-stat-info amarelo">
-                        <i class="bi bi-clock"></i> Amanhã, 10:00h
+                        <i class="bi bi-clock"></i> <a href="#" id="link-proximo-agendamento" style="color:inherit; text-decoration:underline; cursor:pointer;">Amanhã, 10:00h</a>
                     </div>
                 </div>
                 <div class="prest-stat-card destaque-azul">
@@ -77,23 +84,102 @@
             <!-- HISTÓRICO -->
             <div class="prest-card">
                 <div class="prest-card-cabecalho">Seu Histórico</div>
-                <ul class="prest-historico-lista">
-                    <li class="prest-historico-item">
-                        <span>Troca de Válvula</span>
+                <ul class="prest-historico-lista" id="prest-historico-lista">
+                    <li class="prest-historico-item" data-pedido-id="prest-pedido-1" data-cliente="Maria da Silva" data-servico="Troca de Válvula">
+                        <span><strong>Serviço:</strong> Troca de Válvula &nbsp;|&nbsp; <strong>Cliente:</strong> Maria da Silva</span>
                         <span class="prest-badge concluido">Concluído</span>
-                        <span><button type="button" class="btn btn-outline-secondary">Fazer a avaliação</button></span>
+                        <div class="prest-historico-acoes">
+                            <button type="button" class="btn btn-primary btn-prest-avaliar">Avaliar</button>
+                            <button type="button" class="btn btn-warning btn-prest-editar">Editar</button>
+                            <button type="button" class="btn btn-danger btn-prest-excluir">Excluir</button>
+                        </div>
                     </li>
-                    <li class="prest-historico-item">
-                        <span>Revisão Elétrica</span>
+                    <li class="prest-historico-item" data-pedido-id="prest-pedido-2" data-cliente="Pedro Souza" data-servico="Revisão Elétrica">
+                        <span><strong>Serviço:</strong> Revisão Elétrica &nbsp;|&nbsp; <strong>Cliente:</strong> Pedro Souza</span>
                         <span class="prest-badge pendente">Pendente</span>
-                        <span><button type="button" class="btn btn-outline-secondary">Fazer a avaliação</button></span>
+                        <div class="prest-historico-acoes">
+                            <button type="button" class="btn btn-primary btn-prest-avaliar">Avaliar</button>
+                            <button type="button" class="btn btn-warning btn-prest-editar">Editar</button>
+                            <button type="button" class="btn btn-danger btn-prest-excluir">Excluir</button>
+                        </div>
                     </li>
-                    <li class="prest-historico-item">
-                        <span>Limpeza Completa</span>
+                    <li class="prest-historico-item" data-pedido-id="prest-pedido-3" data-cliente="Ana Lúcia" data-servico="Limpeza Completa">
+                        <span><strong>Serviço:</strong> Limpeza Completa &nbsp;|&nbsp; <strong>Cliente:</strong> Ana Lúcia</span>
                         <span class="prest-badge cancelado">Cancelado</span>
-                        <span><button type="button" class="btn btn-outline-secondary">Fazer a avaliação</button></span>
+                        <div class="prest-historico-acoes">
+                            <button type="button" class="btn btn-primary btn-prest-avaliar">Avaliar</button>
+                            <button type="button" class="btn btn-warning btn-prest-editar">Editar</button>
+                            <button type="button" class="btn btn-danger btn-prest-excluir">Excluir</button>
+                        </div>
                     </li>
                 </ul>
+            </div>
+
+            <!-- MODAIS DO PRESTADOR -->
+            <div class="modal fade" id="modalPrestAvaliar" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#FFC300; color:#000;">
+                            <h5 class="modal-title"><i class="bi bi-star me-2"></i>Avaliar Serviço</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="modal-prest-avaliar-info" class="mb-3 p-2 bg-light rounded text-dark"></div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-dark">Nota:</label>
+                                <div class="modal-estrelas" id="modal-prest-estrelas">
+                                    <i class="bi bi-star" data-nota="1"></i>
+                                    <i class="bi bi-star" data-nota="2"></i>
+                                    <i class="bi bi-star" data-nota="3"></i>
+                                    <i class="bi bi-star" data-nota="4"></i>
+                                    <i class="bi bi-star" data-nota="5"></i>
+                                </div>
+                                <input type="hidden" id="modal-prest-nota-valor" value="0">
+                            </div>
+                            <div class="mb-3">
+                                <label for="modal-prest-comentario" class="form-label fw-bold text-dark">Comentário:</label>
+                                <textarea class="form-control" id="modal-prest-comentario" rows="4" maxlength="1000" style="resize:none;" placeholder="Comentário sobre o serviço/cliente..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-warning" id="btn-prest-salvar-avaliacao"><i class="bi bi-floppy me-1"></i>Salvar Avaliação</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="modalPrestEditar" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#FFC300; color:#000;">
+                            <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Editar Avaliação</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="modal-prest-editar-info" class="mb-3 p-2 bg-light rounded text-dark"></div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-dark">Nota:</label>
+                                <div class="modal-estrelas" id="modal-prest-editar-estrelas">
+                                    <i class="bi bi-star" data-nota="1"></i>
+                                    <i class="bi bi-star" data-nota="2"></i>
+                                    <i class="bi bi-star" data-nota="3"></i>
+                                    <i class="bi bi-star" data-nota="4"></i>
+                                    <i class="bi bi-star" data-nota="5"></i>
+                                </div>
+                                <input type="hidden" id="modal-prest-editar-nota-valor" value="0">
+                            </div>
+                            <div class="mb-3">
+                                <label for="modal-prest-editar-comentario" class="form-label fw-bold text-dark">Comentário:</label>
+                                <textarea class="form-control" id="modal-prest-editar-comentario" rows="4" maxlength="1000" style="resize:none;"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-warning" id="btn-prest-salvar-edicao"><i class="bi bi-floppy me-1"></i>Salvar Alterações</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
