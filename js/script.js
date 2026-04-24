@@ -1042,6 +1042,458 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         });
+
+        // =====================================================================
+        // CHAT: CLIENTE <-> PRESTADOR (área do cliente)
+        // ---------------------------------------------------------------------
+        // Espelho da lógica de chat do prestador (inicializarPrestadorServicosAgendados).
+        // A ideia é manter UMA conversa por pedido, identificada por (prestadorId + clienteId),
+        // persistida em localStorage — assim, o prestador e o cliente enxergam o mesmo histórico
+        // de mensagens, cada um a partir do seu próprio ponto de vista ("remetente").
+        //
+        // Convenções de chave:
+        //   prestChatMensagens_<prestadorId>_<clienteId>
+        //
+        // Como esta área é a do cliente, derivamos o "clienteId" do usuário logado (ou um fallback)
+        // e o "prestadorId" do nome do profissional de cada pedido (slugificado) — as mesmas regras
+        // usadas no lado do prestador, de modo que ambas as pontas apontem para a mesma chave.
+        //
+        // Controle de "mensagens não lidas":
+        //   Guardamos em prestChatUltimaLeitura_<prestadorId>_<clienteId> o timestamp da última
+        //   vez que o cliente abriu a conversa. Uma mensagem do prestador é considerada NÃO LIDA
+        //   se sua data for posterior à última leitura do cliente.
+        // =====================================================================
+        var CHAT_MSGS_PREFIX_CLI      = 'prestChatMensagens_';
+        var CHAT_LEITURA_PREFIX_CLI   = 'prestChatUltimaLeituraCli_';
+
+        // Referências DOM do modal de chat do cliente (resolvidas na primeira abertura)
+        var cliModalChatEl, cliModalChatInstance, cliChatHistoricoEl, cliChatTextareaEl,
+            cliChatInfoEl, cliChatPrestNomeEl, cliChatContadorEl,
+            btnCliChatLimpar, btnCliChatEditar, btnCliChatCancelar, btnCliChatEnviar;
+        var cliChatPedidoAtual   = null;  // Elemento <li> do pedido selecionado
+        var cliChatPrestadorId   = null;  // slug estável do prestador
+        var cliChatClienteId     = null;  // id estável do cliente logado
+        var cliChatOrigemFoco    = null;  // botão que abriu o modal (retorno de foco)
+        var cliChatHandlersRegistrados = false;
+
+        // Gera um slug a partir de uma string qualquer (nome do prestador/cliente)
+        function slugificarCli(str) {
+            return String(str || '')
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
+        // Retorna o id estável do cliente logado (fallback: slug do nome, ou "cli-demo")
+        function obterClienteIdLogado() {
+            var dados = {};
+            try { dados = JSON.parse(localStorage.getItem('usuarioLogado') || '{}'); } catch (e) {}
+            if (dados && dados.id)    return String(dados.id);
+            if (dados && dados.email) return 'cli-' + slugificarCli(dados.email);
+            if (dados && dados.nome)  return 'cli-' + slugificarCli(dados.nome);
+            return 'cli-demo';
+        }
+
+        // Id do prestador a partir do nome exibido no item do pedido
+        function obterPrestadorIdDoItem(item) {
+            var nome = item.dataset.profissional || '';
+            if (!nome || nome === 'N/A') return null;
+            // Mesmo formato usado no lado do prestador: o id é essencialmente o slug do nome,
+            // prefixado com "prest-" para evitar colisão com outros domínios.
+            return 'prest-' + slugificarCli(nome);
+        }
+
+        // Chave do localStorage para o histórico da conversa
+        function obterChaveChatCli(prestadorId, clienteId) {
+            return CHAT_MSGS_PREFIX_CLI + prestadorId + '_' + clienteId;
+        }
+        // Chave do localStorage para o timestamp da última leitura (pelo cliente)
+        function obterChaveLeituraCli(prestadorId, clienteId) {
+            return CHAT_LEITURA_PREFIX_CLI + prestadorId + '_' + clienteId;
+        }
+
+        // Leitura defensiva do histórico
+        function carregarHistoricoChatCli(prestadorId, clienteId) {
+            if (!prestadorId || !clienteId) return [];
+            try {
+                var raw = localStorage.getItem(obterChaveChatCli(prestadorId, clienteId));
+                if (!raw) return [];
+                var arr = JSON.parse(raw);
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                console.warn('Histórico de chat (cliente) corrompido — zerando.', e);
+                return [];
+            }
+        }
+        function salvarHistoricoChatCli(prestadorId, clienteId, mensagens) {
+            try {
+                localStorage.setItem(obterChaveChatCli(prestadorId, clienteId), JSON.stringify(mensagens));
+            } catch (e) {
+                console.error('Não foi possível salvar o histórico de chat:', e);
+            }
+        }
+
+        // Marca a conversa como lida pelo cliente (agora)
+        function marcarConversaComoLidaCli(prestadorId, clienteId) {
+            if (!prestadorId || !clienteId) return;
+            try {
+                localStorage.setItem(obterChaveLeituraCli(prestadorId, clienteId), new Date().toISOString());
+            } catch (e) { /* silencioso */ }
+        }
+
+        // Conta quantas mensagens do prestador ainda não foram lidas pelo cliente
+        function contarNaoLidasNoPedido(prestadorId, clienteId) {
+            if (!prestadorId || !clienteId) return 0;
+            var ultimaLeitura = null;
+            try { ultimaLeitura = localStorage.getItem(obterChaveLeituraCli(prestadorId, clienteId)); } catch (e) {}
+
+            var mensagens = carregarHistoricoChatCli(prestadorId, clienteId);
+            return mensagens.filter(function (m) {
+                if (m.remetente !== 'prestador') return false; // só contam mensagens DO prestador
+                if (!ultimaLeitura) return true;               // nunca leu → tudo é não lida
+                return m.data > ultimaLeitura;
+            }).length;
+        }
+
+        // Formatador simples de hora/data para as bolhas de mensagem
+        function formatarHoraChatCli(isoString) {
+            var d = new Date(isoString);
+            if (isNaN(d.getTime())) return '';
+            var hoje = new Date();
+            var mesmoDia = d.toDateString() === hoje.toDateString();
+            var hh = String(d.getHours()).padStart(2, '0');
+            var mm = String(d.getMinutes()).padStart(2, '0');
+            if (mesmoDia) return 'Hoje, ' + hh + ':' + mm;
+            var dd = String(d.getDate()).padStart(2, '0');
+            var mo = String(d.getMonth() + 1).padStart(2, '0');
+            return dd + '/' + mo + ' ' + hh + ':' + mm;
+        }
+
+        function escaparHtmlCli(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Renderiza o histórico no modal do cliente. As mensagens do cliente aparecem à
+        // direita (classe .prest reaproveitada para "sou eu") e as do prestador à esquerda
+        // (classe .cliente reaproveitada para "outro"). Apesar dos nomes das classes se
+        // referirem ao lado do prestador, isso é apenas um estilo visual: aqui o "remetente
+        // do usuário atual" (cliente) ocupa o lado azul/à direita.
+        function renderizarHistoricoChatCli(mensagens) {
+            if (!cliChatHistoricoEl) return;
+
+            if (!mensagens || mensagens.length === 0) {
+                cliChatHistoricoEl.innerHTML =
+                    '<div class="agenda-chat-vazio">' +
+                        '<i class="bi bi-chat-square-text"></i>' +
+                        '<div>Nenhuma mensagem ainda.</div>' +
+                        '<small>Envie a primeira mensagem ao prestador.</small>' +
+                    '</div>';
+                return;
+            }
+
+            var html = '';
+            mensagens.forEach(function (m) {
+                // No modal do cliente, as MINHAS mensagens ficam estilizadas como "prest"
+                // (lado direito, azul) e as do outro lado (prestador) como "cliente".
+                var classe = (m.remetente === 'cliente') ? 'prest' : 'cliente';
+                html +=
+                    '<div class="agenda-chat-msg ' + classe + '">' +
+                        escaparHtmlCli(m.texto) +
+                        '<span class="agenda-chat-msg-hora">' + formatarHoraChatCli(m.data) + '</span>' +
+                    '</div>';
+            });
+            cliChatHistoricoEl.innerHTML = html;
+            cliChatHistoricoEl.scrollTop = cliChatHistoricoEl.scrollHeight;
+        }
+
+        function atualizarContadorChatCli() {
+            if (!cliChatTextareaEl || !cliChatContadorEl) return;
+            cliChatContadorEl.textContent = cliChatTextareaEl.value.length;
+        }
+
+        // Liga os 4 botões + textarea do modal de chat do cliente (uma única vez)
+        function registrarHandlersChatCli() {
+            if (cliChatHandlersRegistrados) return;
+            cliChatHandlersRegistrados = true;
+
+            // LIMPAR — só zera o rascunho
+            btnCliChatLimpar.addEventListener('click', function () {
+                if (!cliChatTextareaEl) return;
+                cliChatTextareaEl.readOnly = false;
+                cliChatTextareaEl.value = '';
+                atualizarContadorChatCli();
+                cliChatTextareaEl.focus();
+            });
+
+            // EDITAR — reabre o campo para digitação
+            btnCliChatEditar.addEventListener('click', function () {
+                if (!cliChatTextareaEl) return;
+                cliChatTextareaEl.readOnly = false;
+                cliChatTextareaEl.focus();
+                var len = cliChatTextareaEl.value.length;
+                try { cliChatTextareaEl.setSelectionRange(len, len); } catch (e) {}
+            });
+
+            // CANCELAR — fecha o modal
+            btnCliChatCancelar.addEventListener('click', function () {
+                if (cliModalChatInstance) cliModalChatInstance.hide();
+            });
+
+            // ENVIAR — adiciona mensagem nova e persiste
+            btnCliChatEnviar.addEventListener('click', function () {
+                if (!cliChatPrestadorId || !cliChatClienteId) return;
+                var texto = (cliChatTextareaEl.value || '').trim();
+                if (!texto) {
+                    alert('Digite uma mensagem antes de enviar.');
+                    cliChatTextareaEl.focus();
+                    return;
+                }
+
+                var msg = {
+                    id: 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+                    remetente: 'cliente',
+                    texto: texto,
+                    data: new Date().toISOString(),
+                    pedidoId: cliChatPedidoAtual ? cliChatPedidoAtual.dataset.pedidoId : null
+                };
+
+                var hist = carregarHistoricoChatCli(cliChatPrestadorId, cliChatClienteId);
+                hist.push(msg);
+                salvarHistoricoChatCli(cliChatPrestadorId, cliChatClienteId, hist);
+
+                // Como eu acabei de interagir com a conversa, marco TUDO como lido
+                marcarConversaComoLidaCli(cliChatPrestadorId, cliChatClienteId);
+
+                renderizarHistoricoChatCli(hist);
+                cliChatTextareaEl.value = '';
+                atualizarContadorChatCli();
+                cliChatTextareaEl.focus();
+
+                // Reavalia badges / aviso de mensagens não lidas
+                atualizarIndicadoresMsgsNaoLidas();
+            });
+
+            cliChatTextareaEl.addEventListener('input', atualizarContadorChatCli);
+
+            // Atalho Ctrl/Cmd + Enter → envio rápido
+            cliChatTextareaEl.addEventListener('keydown', function (e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    btnCliChatEnviar.click();
+                }
+            });
+
+            // Ao fechar (X, ESC, clique fora, Cancelar), devolve o foco ao botão de origem
+            cliModalChatEl.addEventListener('hidden.bs.modal', function () {
+                if (cliChatOrigemFoco && typeof cliChatOrigemFoco.focus === 'function') {
+                    try { cliChatOrigemFoco.focus(); } catch (e) {}
+                }
+            });
+        }
+
+        // Abre o modal de chat para um determinado item de pedido (<li>)
+        function abrirModalChatCli(itemPedido) {
+            // Lazy-init do DOM (cachear referências)
+            if (!cliModalChatEl) {
+                cliModalChatEl      = document.getElementById('modalChatPrestador');
+                if (!cliModalChatEl) return;
+                cliChatHistoricoEl  = document.getElementById('modal-chat-cli-historico');
+                cliChatTextareaEl   = document.getElementById('modal-chat-cli-texto');
+                cliChatInfoEl       = document.getElementById('modal-chat-cli-info');
+                cliChatPrestNomeEl  = document.getElementById('modal-chat-prestador-nome');
+                cliChatContadorEl   = document.getElementById('modal-chat-cli-contador');
+                btnCliChatLimpar    = document.getElementById('btn-chat-cli-limpar');
+                btnCliChatEditar    = document.getElementById('btn-chat-cli-editar');
+                btnCliChatCancelar  = document.getElementById('btn-chat-cli-cancelar');
+                btnCliChatEnviar    = document.getElementById('btn-chat-cli-enviar');
+                cliModalChatInstance = new bootstrap.Modal(cliModalChatEl);
+                registrarHandlersChatCli();
+            }
+
+            var prestadorNome = itemPedido.dataset.profissional || 'Prestador';
+            if (!prestadorNome || prestadorNome === 'N/A') {
+                alert('Este pedido ainda não tem um prestador atribuído — não é possível abrir um chat.');
+                return;
+            }
+
+            cliChatPedidoAtual  = itemPedido;
+            cliChatPrestadorId  = obterPrestadorIdDoItem(itemPedido);
+            cliChatClienteId    = obterClienteIdLogado();
+            cliChatOrigemFoco   = document.activeElement;
+
+            if (cliChatPrestNomeEl) cliChatPrestNomeEl.textContent = prestadorNome;
+
+            if (cliChatInfoEl) {
+                cliChatInfoEl.innerHTML =
+                    '<span class="agenda-chat-info-item"><i class="bi bi-person-badge"></i><strong>' +
+                        escaparHtmlCli(prestadorNome) + '</strong></span>' +
+                    '<span class="agenda-chat-info-item"><i class="bi bi-tools"></i>' +
+                        escaparHtmlCli(itemPedido.dataset.servico || '') + '</span>';
+            }
+
+            // Carrega o histórico persistido e renderiza
+            var historico = carregarHistoricoChatCli(cliChatPrestadorId, cliChatClienteId);
+
+            // --- MODO DEMO ---------------------------------------------------
+            // Se for a conversa com Maria Silva (pedido-1) e ainda não houver
+            // mensagens salvas, semeamos uma mensagem do prestador simulando uma
+            // notificação recebida, para que o usuário consiga "ver" a mensagem
+            // não lida sinalizada pelo sininho.
+            if (historico.length === 0 &&
+                itemPedido.dataset.pedidoId === 'pedido-1' &&
+                itemPedido.classList.contains('tem-mensagem-nao-lida')) {
+                historico.push({
+                    id: 'msg-demo-' + Date.now(),
+                    remetente: 'prestador',
+                    texto: 'Olá! Estou a caminho do endereço combinado. Posso precisar confirmar o modelo do disjuntor antes de iniciar o serviço.',
+                    data: new Date().toISOString(),
+                    pedidoId: 'pedido-1'
+                });
+                salvarHistoricoChatCli(cliChatPrestadorId, cliChatClienteId, historico);
+            }
+            // ----------------------------------------------------------------
+
+            renderizarHistoricoChatCli(historico);
+
+            // Ao abrir o modal, o cliente está lendo a conversa → marca como lida
+            marcarConversaComoLidaCli(cliChatPrestadorId, cliChatClienteId);
+
+            cliChatTextareaEl.readOnly = false;
+            cliChatTextareaEl.value = '';
+            atualizarContadorChatCli();
+
+            cliModalChatInstance.show();
+
+            // Foco no textarea após o modal estar 100% visível
+            cliModalChatEl.addEventListener('shown.bs.modal', function _foco() {
+                if (cliChatTextareaEl) cliChatTextareaEl.focus();
+            }, { once: true });
+
+            // Ao fechar, recalcula o estado dos indicadores
+            cliModalChatEl.addEventListener('hidden.bs.modal', function _recalc() {
+                atualizarIndicadoresMsgsNaoLidas();
+            }, { once: true });
+        }
+
+        // ---------------------------------------------------------------
+        // INDICADORES VISUAIS DE MENSAGENS NÃO LIDAS
+        // ---------------------------------------------------------------
+        // Percorre todos os itens da lista de pedidos e:
+        //   • Mostra ou esconde o sininho individual (ao lado de "Avaliar")
+        //     conforme existam mensagens não lidas daquela conversa;
+        //   • Mostra ou esconde o aviso coletivo ("Você possui mensagens
+        //     não lidas") no cabeçalho do card.
+        function atualizarIndicadoresMsgsNaoLidas() {
+            var itens = pedidosList.querySelectorAll('.cli-pedidos-item');
+            var totalNaoLidas = 0;
+
+            itens.forEach(function (item) {
+                var prestadorId = obterPrestadorIdDoItem(item);
+                var clienteId   = obterClienteIdLogado();
+                var qtd = 0;
+                if (prestadorId) qtd = contarNaoLidasNoPedido(prestadorId, clienteId);
+
+                var sino = item.querySelector('.cli-msg-sino');
+
+                if (qtd > 0) {
+                    item.classList.add('tem-mensagem-nao-lida');
+                    totalNaoLidas += qtd;
+
+                    // Se o item ainda não tem sininho no DOM, criamos um on-the-fly.
+                    if (!sino) {
+                        var acoes = item.querySelector('.cli-pedidos-acoes');
+                        if (acoes) {
+                            sino = document.createElement('button');
+                            sino.type = 'button';
+                            sino.className = 'cli-msg-sino';
+                            sino.title = 'Mensagens não lidas de ' + (item.dataset.profissional || 'Prestador');
+                            sino.setAttribute('aria-label', sino.title);
+                            sino.innerHTML = '<i class="bi bi-bell-fill"></i>';
+                            // Inserimos como primeiro filho (à esquerda do botão Avaliar)
+                            acoes.insertBefore(sino, acoes.firstChild);
+                            // Liga o clique do sininho recém-criado
+                            sino.addEventListener('click', function () {
+                                abrirModalChatCli(item);
+                            });
+                        }
+                    } else {
+                        sino.style.display = '';
+                    }
+                } else {
+                    item.classList.remove('tem-mensagem-nao-lida');
+                    if (sino) sino.style.display = 'none';
+                }
+            });
+
+            // Aviso do cabeçalho ("Você possui mensagens não lidas")
+            var aviso = document.getElementById('cli-aviso-msgs-nao-lidas');
+            if (aviso) aviso.style.display = (totalNaoLidas > 0) ? '' : 'none';
+        }
+
+        // Liga cliques nos sininhos que já existem no HTML estático (primeira carga)
+        pedidosList.querySelectorAll('.cli-msg-sino').forEach(function (sino) {
+            sino.addEventListener('click', function () {
+                var item = sino.closest('.cli-pedidos-item');
+                if (item) abrirModalChatCli(item);
+            });
+        });
+
+        // Liga os botões "Chat" de cada pedido
+        pedidosList.querySelectorAll('.btn-chat').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var item = btn.closest('.cli-pedidos-item');
+                if (item) abrirModalChatCli(item);
+            });
+        });
+
+        // Estado inicial: reconcilia os indicadores com o localStorage
+
+        // --- SEED DEMO do chat -----------------------------------------------
+        // Para fins de demonstração, garantimos que ao abrir a área do cliente
+        // pela primeira vez já exista uma mensagem do prestador "Maria Silva"
+        // (pedido-1) aguardando leitura. Isso dá corpo ao sininho vermelho e
+        // ao aviso "Você possui mensagens não lidas" logo de cara. Rodamos
+        // apenas uma vez, controlado por uma flag em localStorage.
+        (function semearMensagemDemoDoPrestadorParaCliente() {
+            try {
+                var FLAG = 'cliChatSeedMsgDemoV1';
+                if (localStorage.getItem(FLAG)) return;
+
+                var itemAlvo = pedidosList.querySelector('.cli-pedidos-item[data-pedido-id="pedido-1"]');
+                if (!itemAlvo) return;
+
+                var prestadorId = obterPrestadorIdDoItem(itemAlvo);
+                var clienteId   = obterClienteIdLogado();
+                if (!prestadorId || !clienteId) return;
+
+                var chave = CHAT_MSGS_PREFIX_CLI + prestadorId + '_' + clienteId;
+                var existente = [];
+                try { existente = JSON.parse(localStorage.getItem(chave) || '[]'); } catch (e) {}
+
+                existente.push({
+                    id: 'msg-demo-' + Date.now(),
+                    remetente: 'prestador',
+                    texto: 'Olá! Estou a caminho do endereço combinado. Posso precisar confirmar o modelo do disjuntor antes de iniciar o serviço.',
+                    data: new Date().toISOString(),
+                    pedidoId: 'pedido-1'
+                });
+                localStorage.setItem(chave, JSON.stringify(existente));
+                localStorage.setItem(FLAG, '1');
+            } catch (e) { /* silencioso — demo não pode quebrar o app */ }
+        })();
+        // ---------------------------------------------------------------------
+
+        atualizarIndicadoresMsgsNaoLidas();
+
+        // Atualiza periodicamente os indicadores — simula "recebimento de novas mensagens"
+        // chegando enquanto o cliente está na página (o prestador pode ter respondido em outra aba).
+        setInterval(atualizarIndicadoresMsgsNaoLidas, 5000);
     }
 
     // =====================================================
@@ -1394,15 +1846,44 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // =====================================================
-    // BOTÃO VOLTAR (clientePerfilAdm.html e outros)
+    // BOTÃO VOLTAR — QUALQUER PÁGINA
+    // -----------------------------------------------------
+    // Captura todos os botões cujo ID seja 'btn-voltar' OU que
+    // possuam o atributo data-action="voltar" OU cuja label seja
+    // exatamente "Voltar". Ao clicar, retorna à página anterior
+    // (window.history.back()). Se não houver histórico, cai em
+    // fallback opcional via data-voltar-fallback="url".
     // =====================================================
     function inicializarBotaoVoltar() {
-        document.querySelectorAll('button').forEach(function (btn) {
-            if (btn.textContent.trim() === 'Voltar' && btn.id === 'btn-voltar') {
-                btn.addEventListener('click', function () {
+        var candidatos = document.querySelectorAll(
+            '#btn-voltar, [data-action="voltar"], button.btn-outline-secondary'
+        );
+
+        candidatos.forEach(function (btn) {
+            // Restringe a casos em que o texto é realmente "Voltar"
+            // OU o próprio botão tem o id/atributo declarado.
+            var textoOk = btn.textContent.trim().toLowerCase().indexOf('voltar') !== -1;
+            var idOk = btn.id === 'btn-voltar';
+            var attrOk = btn.getAttribute('data-action') === 'voltar';
+            if (!textoOk && !idOk && !attrOk) return;
+
+            // Evita múltiplos listeners se a função for chamada mais de uma vez
+            if (btn.dataset.voltarBound === '1') return;
+            btn.dataset.voltarBound = '1';
+
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                if (window.history.length > 1) {
                     window.history.back();
-                });
-            }
+                } else {
+                    var fallback = btn.getAttribute('data-voltar-fallback');
+                    if (fallback) {
+                        window.location.href = fallback;
+                    } else {
+                        irParaRaiz('index.html');
+                    }
+                }
+            });
         });
     }
 
@@ -1754,22 +2235,32 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // =====================================================
     // FUNÇÃO: SINCRONIZAR SIDEBAR COM COLLAPSE (RESPONSIVIDADE)
-    // Faz com que o botão hambúrguer (que aciona o collapse do Bootstrap
-    // sobre #navbarNav) também controle a exibição da sidebar em telas
-    // pequenas, unificando a responsividade dos menus e da sidebar.
+    // -----------------------------------------------------
+    // Em telas pequenas, o botão hambúrguer da navbar (que aciona
+    // o collapse sobre #navbarNav) também controla a exibição das
+    // sidebars — tanto do cliente (.cli-sidebar) quanto do
+    // prestador (.prest-sidebar) — unificando o comportamento de
+    // responsividade entre menus e sidebar, igual ao index.html.
     // =====================================================
     function inicializarSidebarResponsiva() {
         var navbarNav = document.getElementById('navbarNav');
-        var sidebar = document.querySelector('.cli-sidebar');
+        if (!navbarNav) return;
 
-        if (!navbarNav || !sidebar) return;
+        var sidebars = document.querySelectorAll('.cli-sidebar, .prest-sidebar');
+        if (!sidebars.length) return;
 
         navbarNav.addEventListener('show.bs.collapse', function () {
-            sidebar.classList.add('cli-sidebar-show');
+            sidebars.forEach(function (s) {
+                s.classList.add('cli-sidebar-show');
+                s.classList.add('prest-sidebar-show');
+            });
         });
 
         navbarNav.addEventListener('hide.bs.collapse', function () {
-            sidebar.classList.remove('cli-sidebar-show');
+            sidebars.forEach(function (s) {
+                s.classList.remove('cli-sidebar-show');
+                s.classList.remove('prest-sidebar-show');
+            });
         });
     }
 
@@ -1995,6 +2486,1507 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // =====================================================
+    // AVALIAÇÕES FEITAS PELO PRESTADOR
+    // (prestadorAvaliacoesFeitas.html)
+    // -----------------------------------------------------
+    // Mostra as avaliações que o PRESTADOR (usuário logado)
+    // fez sobre seus clientes, com permissão de EDITAR e
+    // EXCLUIR (mantendo a lógica já implementada na Área
+    // Exclusiva do Prestador).
+    // Fonte: localStorage 'avaliacoesPrestadorSalvas'.
+    // =====================================================
+    function inicializarAvaliacoesFeitasPrestador() {
+        var container = document.getElementById('container-prest-avaliacoes-feitas');
+        if (!container) return;
+
+        var AVALIACOES_PREST_KEY = 'avaliacoesPrestadorSalvas';
+
+        function obterAvaliacoes() {
+            try { return JSON.parse(localStorage.getItem(AVALIACOES_PREST_KEY) || '[]'); }
+            catch (e) { return []; }
+        }
+        function salvarAvaliacoes(arr) {
+            localStorage.setItem(AVALIACOES_PREST_KEY, JSON.stringify(arr));
+        }
+
+        // Referências do modal de edição no HTML
+        var modalEditar      = document.getElementById('modalPrestEditarFeita');
+        var starsEditar      = document.getElementById('modal-prest-editar-feita-estrelas');
+        var notaEditarInput  = document.getElementById('modal-prest-editar-feita-nota-valor');
+        var comentarioInput  = document.getElementById('modal-prest-editar-feita-comentario');
+        var infoDiv          = document.getElementById('modal-prest-editar-feita-info');
+        var btnSalvarEdicao  = document.getElementById('btn-prest-salvar-edicao-feita');
+        var pedidoIdAtual    = null;
+
+        function initStarRating(containerStars, hiddenInput) {
+            if (!containerStars || !hiddenInput) return;
+            var stars = containerStars.querySelectorAll('i');
+            stars.forEach(function (star, index) {
+                star.addEventListener('click', function () {
+                    var nota = index + 1;
+                    hiddenInput.value = nota;
+                    stars.forEach(function (s, i) {
+                        if (i < nota) { s.classList.remove('bi-star'); s.classList.add('bi-star-fill', 'filled'); s.style.color = '#ffc107'; }
+                        else { s.classList.remove('bi-star-fill', 'filled'); s.classList.add('bi-star'); s.style.color = '#ccc'; }
+                    });
+                });
+                star.addEventListener('mouseover', function () {
+                    stars.forEach(function (s, i) { s.style.color = i <= index ? '#ffc107' : '#ccc'; });
+                });
+                star.addEventListener('mouseout', function () {
+                    var current = parseInt(hiddenInput.value) || 0;
+                    stars.forEach(function (s, i) { s.style.color = i < current ? '#ffc107' : '#ccc'; });
+                });
+            });
+        }
+
+        function renderizarEstrelasFixas(containerStars, hiddenInput, nota) {
+            if (!containerStars || !hiddenInput) return;
+            var stars = containerStars.querySelectorAll('i');
+            stars.forEach(function (s, i) {
+                if (i < nota) { s.classList.remove('bi-star'); s.classList.add('bi-star-fill', 'filled'); s.style.color = '#ffc107'; }
+                else { s.classList.remove('bi-star-fill', 'filled'); s.classList.add('bi-star'); s.style.color = '#ccc'; }
+            });
+            hiddenInput.value = nota;
+        }
+
+        initStarRating(starsEditar, notaEditarInput);
+
+        function renderizarLista() {
+            var cards = container.querySelectorAll('.review-card-reverse[data-pedido-id]');
+            cards.forEach(function (c) { c.remove(); });
+
+            var headerAntigo = container.querySelector('#header-prest-avaliacoes-feitas');
+            if (headerAntigo) headerAntigo.remove();
+
+            var msgAntiga = container.querySelector('#msg-sem-prest-avaliacoes-feitas');
+            if (msgAntiga) msgAntiga.remove();
+
+            var avaliacoes = obterAvaliacoes();
+            var botaoBloco = container.querySelector('.d-flex.justify-content-center');
+
+            var headerDiv = document.createElement('div');
+            headerDiv.id = 'header-prest-avaliacoes-feitas';
+            headerDiv.style.cssText = 'font-size:1rem; font-weight:700; color:var(--azul-principal,#146ADB); padding-bottom:8px; border-bottom:2px solid var(--azul-principal,#146ADB); margin-bottom:12px;';
+            headerDiv.innerHTML = '<i class="bi bi-star-fill me-2" style="color:#ffc107"></i>Minhas Avaliações Realizadas (aos Clientes)';
+            container.insertBefore(headerDiv, botaoBloco || null);
+
+            if (avaliacoes.length === 0) {
+                var msg = document.createElement('div');
+                msg.id = 'msg-sem-prest-avaliacoes-feitas';
+                msg.className = 'text-center text-muted py-4';
+                msg.innerHTML = '<i class="bi bi-info-circle me-2"></i>Você ainda não realizou nenhuma avaliação.';
+                container.insertBefore(msg, botaoBloco || null);
+                return;
+            }
+
+            var ordenadas = avaliacoes.slice().reverse();
+
+            ordenadas.forEach(function (av) {
+                var stars = '';
+                for (var i = 1; i <= 5; i++) {
+                    stars += i <= av.nota
+                        ? '<i class="bi bi-star-fill filled" style="color:#ffc107"></i>'
+                        : '<i class="bi bi-star" style="color:#ccc"></i>';
+                }
+
+                var card = document.createElement('div');
+                card.className = 'review-card-reverse';
+                card.dataset.pedidoId = av.pedidoId;
+                card.innerHTML =
+                    '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                        '<h5 class="mb-0">Cliente: ' + av.cliente + ' (' + av.servico + ')</h5>' +
+                        '<span class="text-muted"><small>Data ' + av.data + '</small></span>' +
+                    '</div>' +
+                    '<div class="rating">' + stars +
+                        '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6>' +
+                    '</div>' +
+                    '<p class="review-text">"' + av.comentario + '"</p>' +
+                    '<button type="button" class="btn btn-danger btn-prest-excluir-feita" data-pedido-id="' + av.pedidoId + '">Excluir Avaliação</button> ' +
+                    '<button type="button" class="btn btn-primary btn-prest-editar-feita" data-pedido-id="' + av.pedidoId + '">Editar</button>';
+
+                container.insertBefore(card, botaoBloco || null);
+            });
+        }
+
+        // Delegação de clique: Editar / Excluir
+        container.addEventListener('click', function (e) {
+            var btnEditar = e.target.closest('.btn-prest-editar-feita');
+            var btnExcluir = e.target.closest('.btn-prest-excluir-feita');
+
+            if (btnEditar) {
+                pedidoIdAtual = btnEditar.dataset.pedidoId;
+                var av = obterAvaliacoes().find(function (a) { return a.pedidoId === pedidoIdAtual; });
+                if (!av) return;
+
+                if (infoDiv) {
+                    infoDiv.innerHTML =
+                        '<strong>Serviço:</strong> ' + av.servico +
+                        ' &nbsp;|&nbsp; <strong>Cliente:</strong> ' + av.cliente;
+                }
+                renderizarEstrelasFixas(starsEditar, notaEditarInput, av.nota);
+                if (comentarioInput) comentarioInput.value = av.comentario;
+
+                if (modalEditar) {
+                    bootstrap.Modal.getOrCreateInstance(modalEditar).show();
+                }
+                return;
+            }
+
+            if (btnExcluir) {
+                var pedidoIdExcluir = btnExcluir.dataset.pedidoId;
+                var avaliacoesExc = obterAvaliacoes();
+                var alvo = avaliacoesExc.find(function (a) { return a.pedidoId === pedidoIdExcluir; });
+                if (!alvo) return;
+
+                if (!confirm('Tem certeza que deseja excluir esta avaliação?')) return;
+
+                var filtradas = avaliacoesExc.filter(function (a) { return a.pedidoId !== pedidoIdExcluir; });
+                salvarAvaliacoes(filtradas);
+                renderizarLista();
+                alert('Avaliação excluída com sucesso!');
+            }
+        });
+
+        // Salvar edição
+        if (btnSalvarEdicao) {
+            btnSalvarEdicao.addEventListener('click', function () {
+                var nota = parseInt(notaEditarInput.value) || 0;
+                var comentario = (comentarioInput.value || '').trim();
+
+                if (nota === 0) { alert('Por favor, selecione uma nota de 1 a 5!'); return; }
+                if (!comentario) { alert('Por favor, escreva um comentário!'); return; }
+
+                var avaliacoes = obterAvaliacoes();
+                var idx = avaliacoes.findIndex(function (a) { return a.pedidoId === pedidoIdAtual; });
+                if (idx < 0) return;
+
+                avaliacoes[idx].nota = nota;
+                avaliacoes[idx].comentario = comentario;
+                salvarAvaliacoes(avaliacoes);
+
+                if (modalEditar) bootstrap.Modal.getInstance(modalEditar).hide();
+                renderizarLista();
+                alert('Avaliação atualizada com sucesso!');
+            });
+        }
+
+        renderizarLista();
+    }
+
+
+    // =====================================================
+    // AVALIAÇÕES RECEBIDAS PELO PRESTADOR
+    // (prestadorAvaliacoesRecebidas.html)
+    // -----------------------------------------------------
+    // Mostra as avaliações que os CLIENTES fizeram sobre o
+    // prestador (usuário logado). NESTA PÁGINA O PRESTADOR
+    // NÃO PODE EDITAR NEM EXCLUIR — apenas visualizar.
+    // Fonte: localStorage 'avaliacoesSalvas' (mesma chave
+    // usada pelo cliente para avaliar prestadores), mesclada
+    // com uma semente de demonstração.
+    // =====================================================
+    function inicializarAvaliacoesRecebidasPrestador() {
+        var container = document.getElementById('container-prest-avaliacoes-recebidas');
+        if (!container) return;
+
+        // As avaliações que o cliente faz são salvas em 'avaliacoesSalvas'
+        // (chave existente em inicializarClienteAreaExclusiva/inicializarAvaliacoesFeitas)
+        var AVALIACOES_CLIENTE_KEY = 'avaliacoesSalvas';
+        // Semente opcional, caso o prestador queira ver exemplos
+        var SEMENTE_REC_PREST_KEY  = 'avaliacoesRecebidasPrestadorSemente';
+
+        (function semearSeNecessario() {
+            if (localStorage.getItem(SEMENTE_REC_PREST_KEY) !== null) return;
+            var demo = [
+                {
+                    id: 'rec-prest-1',
+                    prestador: 'Pedro S.',
+                    servico: 'Montador de Móveis',
+                    nota: 5,
+                    comentario: 'O serviço de jardinagem foi impecável! O Sr. João é muito profissional, pontual e deixou meu jardim maravilhoso. Recomendo 100%!',
+                    data: '01/01/2023'
+                },
+                {
+                    id: 'rec-prest-2',
+                    prestador: 'Maria P.',
+                    servico: 'Pintura',
+                    nota: 5,
+                    comentario: 'Pintura do apartamento feita com perfeição! A Maria é detalhista, organizada e entregou tudo no prazo combinado. Ótima profissional!',
+                    data: '01/01/2023'
+                },
+                {
+                    id: 'rec-prest-3',
+                    prestador: 'Marcos',
+                    servico: 'Eletricista',
+                    nota: 5,
+                    comentario: 'Contratei o Marcos para manutenção elétrica. Rápido, honesto e resolveu o problema de forma definitiva. Excelente atendimento!',
+                    data: '01/01/2023'
+                }
+            ];
+            localStorage.setItem(SEMENTE_REC_PREST_KEY, JSON.stringify(demo));
+        })();
+
+        function obterAvaliacoesRecebidas() {
+            var lista = [];
+            try {
+                // Avaliações reais feitas pelos clientes na Área Exclusiva
+                var feitasCli = JSON.parse(localStorage.getItem(AVALIACOES_CLIENTE_KEY) || '[]');
+                feitasCli.forEach(function (a) {
+                    lista.push({
+                        id: a.id || a.pedidoId,
+                        prestador: a.profissional || a.cliente || 'Cliente',
+                        servico: a.servico || 'Serviço',
+                        nota: a.nota,
+                        comentario: a.comentario,
+                        data: a.data
+                    });
+                });
+            } catch (e) { /* ignora */ }
+
+            try {
+                var demo = JSON.parse(localStorage.getItem(SEMENTE_REC_PREST_KEY) || '[]');
+                demo.forEach(function (d) { lista.push(d); });
+            } catch (e) { /* ignora */ }
+
+            return lista;
+        }
+
+        function renderizarLista() {
+            // Limpa cards existentes
+            var cards = container.querySelectorAll('.review-card-reverse[data-recebida-id]');
+            cards.forEach(function (c) { c.remove(); });
+
+            var headerAntigo = container.querySelector('#header-prest-avaliacoes-recebidas');
+            if (headerAntigo) headerAntigo.remove();
+
+            var msgAntiga = container.querySelector('#msg-sem-prest-avaliacoes-recebidas');
+            if (msgAntiga) msgAntiga.remove();
+
+            var avaliacoes = obterAvaliacoesRecebidas();
+            var botaoBloco = container.querySelector('.d-flex.justify-content-center');
+
+            var headerDiv = document.createElement('div');
+            headerDiv.id = 'header-prest-avaliacoes-recebidas';
+            headerDiv.style.cssText = 'font-size:1rem; font-weight:700; color:var(--azul-principal,#146ADB); padding-bottom:8px; border-bottom:2px solid var(--azul-principal,#146ADB); margin-bottom:12px;';
+            headerDiv.innerHTML = '<i class="bi bi-star-fill me-2" style="color:#ffc107"></i>Avaliações Recebidas dos Clientes';
+            container.insertBefore(headerDiv, botaoBloco || null);
+
+            if (avaliacoes.length === 0) {
+                var msg = document.createElement('div');
+                msg.id = 'msg-sem-prest-avaliacoes-recebidas';
+                msg.className = 'text-center text-muted py-4';
+                msg.innerHTML = '<i class="bi bi-info-circle me-2"></i>Você ainda não recebeu avaliações de clientes.';
+                container.insertBefore(msg, botaoBloco || null);
+                return;
+            }
+
+            var ordenadas = avaliacoes.slice().reverse();
+
+            ordenadas.forEach(function (av) {
+                var stars = '';
+                for (var i = 1; i <= 5; i++) {
+                    stars += i <= av.nota
+                        ? '<i class="bi bi-star-fill filled" style="color:#ffc107"></i>'
+                        : '<i class="bi bi-star" style="color:#ccc"></i>';
+                }
+
+                var card = document.createElement('div');
+                card.className = 'review-card-reverse';
+                card.dataset.recebidaId = av.id;
+                // SEM botões de editar/excluir — apenas visualização
+                card.innerHTML =
+                    '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                        '<h5 class="mb-0">Cliente: ' + av.prestador + ' (' + av.servico + ')</h5>' +
+                        '<span class="text-muted"><small>Data ' + (av.data || '-') + '</small></span>' +
+                    '</div>' +
+                    '<div class="rating">' + stars +
+                        '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6>' +
+                    '</div>' +
+                    '<p class="review-text">"' + av.comentario + '"</p>';
+
+                container.insertBefore(card, botaoBloco || null);
+            });
+        }
+
+        renderizarLista();
+    }
+
+
+    // =========================================================
+    // PRESTADOR — SERVIÇOS AGENDADOS (SPA com 3 abas + modais)
+    // ---------------------------------------------------------
+    // Esta função controla a página prestadorServicosAgendados.html.
+    // O que faz:
+    //   • Alterna entre as 3 abas via JS (Próximos, Pendentes, Histórico)
+    //   • Na aba Histórico, exibe filtro por período (De/Até)
+    //   • Modal "Detalhes" mostra lembretes, observações e dados do agendamento
+    //   • Modal "Cancelar/Rejeitar" pede motivo (quadro de opções) e
+    //     registra: cancelamento + aviso ao cliente + solicitação de reagendamento
+    //   • Modal "Ver Nota" mostra a avaliação que o cliente deixou
+    //
+    // Persistência: localStorage
+    //   • 'prestAgendamentos'         — base de agendamentos do prestador
+    //   • 'prestAvisosAoCliente'      — avisos/notificações enviadas ao cliente
+    //   • 'prestSolicitacoesReagend'  — solicitações de reagendamento criadas
+    // =========================================================
+    function inicializarPrestadorServicosAgendados() {
+        var containerLista = document.getElementById('agenda-lista');
+        var containerAbas  = document.getElementById('agenda-abas');
+        if (!containerLista || !containerAbas) return;
+
+        var AGENDAMENTOS_KEY  = 'prestAgendamentos';
+        var AVISOS_KEY        = 'prestAvisosAoCliente';
+        var SOLICITACOES_KEY  = 'prestSolicitacoesReagend';
+
+        // -----------------------------------------------------------------
+        // SEED — popula dados de demonstração apenas no 1º acesso
+        // (Em produção, esses dados viriam de uma API/banco.)
+        // -----------------------------------------------------------------
+        function semearAgendamentosSeNecessario() {
+            var existente = localStorage.getItem(AGENDAMENTOS_KEY);
+            if (existente) return;
+
+            var hoje = new Date();
+            function dataRelativa(diasOffset) {
+                var d = new Date(hoje);
+                d.setDate(d.getDate() + diasOffset);
+                return d.toISOString().substring(0, 10); // YYYY-MM-DD
+            }
+            function formatarLabelDia(diasOffset) {
+                if (diasOffset === 0) return 'Hoje';
+                if (diasOffset === 1) return 'Amanhã';
+                var d = new Date(hoje);
+                d.setDate(d.getDate() + diasOffset);
+                var diasSem = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+                var meses  = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+                return diasSem[d.getDay()] + ', ' + String(d.getDate()).padStart(2,'0') + '/' + meses[d.getMonth()];
+            }
+
+            var base = [
+                // PRÓXIMOS (confirmados ou agendados no futuro)
+                {
+                    id: 'ag-001', status: 'confirmado', aba: 'proximos',
+                    data: dataRelativa(0),  diaLabel: formatarLabelDia(0),  horario: '14:00 - 17:00',
+                    cliente: 'Maria da Silva', telefone: '(18) 99123-4567',
+                    servico: 'Montagem de Estante',
+                    endereco: 'Rua das Flores, 123 - Centro',
+                    valor: 180.00, formaPagamento: 'PIX',
+                    observacoes: 'Cliente pediu para trazer parafusos extras. A estante é da Tok&Stok modelo Alfa.',
+                    lembretes: [
+                        'Levar chave de fenda Phillips + furadeira',
+                        'Confirmar presença 1h antes via WhatsApp',
+                        'Cliente mora no 3º andar sem elevador'
+                    ]
+                },
+                {
+                    id: 'ag-003', status: 'confirmado', aba: 'proximos',
+                    data: dataRelativa(3),  diaLabel: formatarLabelDia(3),  horario: '10:00 - 12:00',
+                    cliente: 'Ana Lúcia', telefone: '(18) 98876-5432',
+                    servico: 'Restauração de Móvel Antigo',
+                    endereco: 'Bairro Nobre, 330',
+                    valor: 450.00, formaPagamento: 'Dinheiro',
+                    observacoes: 'Móvel é da família há 60 anos — cliente pediu muito cuidado.',
+                    lembretes: [
+                        'Verificar se há tinta específica para madeira de lei',
+                        'Levar lixa 220 e verniz fosco'
+                    ]
+                },
+                {
+                    id: 'ag-004', status: 'confirmado', aba: 'proximos',
+                    data: dataRelativa(5),  diaLabel: formatarLabelDia(5),  horario: '15:00 - 16:30',
+                    cliente: 'João Pereira', telefone: '(18) 99555-1010',
+                    servico: 'Instalação de Chuveiro Elétrico',
+                    endereco: 'Rua Belo Horizonte, 88 - Jardim América',
+                    valor: 120.00, formaPagamento: 'Cartão de crédito',
+                    observacoes: 'Já tem o chuveiro — só precisa instalar.',
+                    lembretes: ['Confirmar bitola do disjuntor antes de ir']
+                },
+                // PENDENTES (aguardando confirmação do prestador)
+                {
+                    id: 'ag-002', status: 'pendente', aba: 'pendentes',
+                    data: dataRelativa(1),  diaLabel: formatarLabelDia(1),  horario: '09:00 - 11:00',
+                    cliente: 'Pedro Souza', telefone: '(18) 97777-2222',
+                    servico: 'Pequeno Reparo na Porta',
+                    endereco: 'Av. Principal, 500 - Vila Nova',
+                    valor: 90.00, formaPagamento: 'PIX',
+                    observacoes: 'Porta de madeira empenando — cliente acha que pode ser a dobradiça.',
+                    lembretes: ['Levar dobradiças reserva', 'Levar plaina manual']
+                },
+                // HISTÓRICO (concluídos no passado)
+                {
+                    id: 'ag-h01', status: 'concluido', aba: 'historico',
+                    data: dataRelativa(-8),  diaLabel: formatarLabelDia(-8),  horario: '08:00 - 13:00',
+                    cliente: 'Fábio Mello', telefone: '(18) 99111-3344',
+                    servico: 'Instalação de Prateleiras (5)',
+                    endereco: 'Condomínio Residencial',
+                    valor: 280.00, formaPagamento: 'PIX',
+                    observacoes: 'Serviço concluído com êxito.',
+                    lembretes: [],
+                    avaliacao: {
+                        nota: 5,
+                        comentario: 'Excelente profissional! Pontual, caprichoso e muito simpático. Super indico!',
+                        dataAvaliacao: dataRelativa(-7)
+                    }
+                },
+                {
+                    id: 'ag-h02', status: 'concluido', aba: 'historico',
+                    data: dataRelativa(-15), diaLabel: formatarLabelDia(-15), horario: '14:00 - 16:00',
+                    cliente: 'Juliana Ribeiro', telefone: '(18) 98222-5566',
+                    servico: 'Troca de Tomadas (3)',
+                    endereco: 'Rua Acácia, 17',
+                    valor: 95.00, formaPagamento: 'Dinheiro',
+                    observacoes: 'Tomadas queimadas após raio.',
+                    lembretes: [],
+                    avaliacao: {
+                        nota: 4,
+                        comentario: 'Muito bom atendimento, atrasou uns 15 minutos mas fez um ótimo trabalho.',
+                        dataAvaliacao: dataRelativa(-14)
+                    }
+                },
+                {
+                    id: 'ag-h03', status: 'concluido', aba: 'historico',
+                    data: dataRelativa(-30), diaLabel: formatarLabelDia(-30), horario: '09:00 - 12:00',
+                    cliente: 'Roberto Alves', telefone: '(18) 97333-7788',
+                    servico: 'Montagem de Guarda-roupa',
+                    endereco: 'Av. Brasil, 2400',
+                    valor: 220.00, formaPagamento: 'Cartão de crédito',
+                    observacoes: 'Guarda-roupa de 6 portas.',
+                    lembretes: [],
+                    avaliacao: null // ainda não avaliado
+                },
+                {
+                    id: 'ag-h04', status: 'cancelado', aba: 'historico',
+                    data: dataRelativa(-45), diaLabel: formatarLabelDia(-45), horario: '10:00 - 11:00',
+                    cliente: 'Beatriz Nunes', telefone: '(18) 99444-9090',
+                    servico: 'Pintura de Parede Pequena',
+                    endereco: 'Rua Central, 77',
+                    valor: 0,
+                    motivoCancelamento: 'Condições climáticas desfavoráveis',
+                    observacoes: 'Cancelado devido à chuva forte no dia.',
+                    lembretes: [],
+                    avaliacao: null
+                }
+            ];
+
+            localStorage.setItem(AGENDAMENTOS_KEY, JSON.stringify(base));
+        }
+
+        function obterAgendamentos() {
+            try { return JSON.parse(localStorage.getItem(AGENDAMENTOS_KEY) || '[]'); }
+            catch (e) { return []; }
+        }
+        function salvarAgendamentos(arr) {
+            localStorage.setItem(AGENDAMENTOS_KEY, JSON.stringify(arr));
+        }
+
+        function registrarAvisoAoCliente(aviso) {
+            var lista = [];
+            try { lista = JSON.parse(localStorage.getItem(AVISOS_KEY) || '[]'); } catch (e) {}
+            lista.push(aviso);
+            localStorage.setItem(AVISOS_KEY, JSON.stringify(lista));
+        }
+        function registrarSolicitacaoReagendamento(solicitacao) {
+            var lista = [];
+            try { lista = JSON.parse(localStorage.getItem(SOLICITACOES_KEY) || '[]'); } catch (e) {}
+            lista.push(solicitacao);
+            localStorage.setItem(SOLICITACOES_KEY, JSON.stringify(lista));
+        }
+
+        // -----------------------------------------------------------------
+        // RENDERIZAÇÃO
+        // -----------------------------------------------------------------
+        var abaAtiva = 'proximos';      // 'proximos' | 'pendentes' | 'historico'
+        var filtroDataInicio = null;    // string YYYY-MM-DD
+        var filtroDataFim    = null;    // string YYYY-MM-DD
+
+        function atualizarContadores() {
+            var ags = obterAgendamentos();
+            var prox = ags.filter(function (a) { return a.aba === 'proximos';  }).length;
+            var pend = ags.filter(function (a) { return a.aba === 'pendentes'; }).length;
+            var hist = ags.filter(function (a) { return a.aba === 'historico'; }).length;
+            var cProx = document.getElementById('contador-proximos');
+            var cPend = document.getElementById('contador-pendentes');
+            var cHist = document.getElementById('contador-historico');
+            if (cProx) cProx.textContent = prox;
+            if (cPend) cPend.textContent = pend;
+            if (cHist) cHist.textContent = hist;
+        }
+
+        function formatarDataBR(iso) {
+            if (!iso) return '';
+            var partes = iso.split('-');
+            if (partes.length !== 3) return iso;
+            return partes[2] + '/' + partes[1] + '/' + partes[0];
+        }
+
+        function filtrarAgendamentosDaAba() {
+            var ags = obterAgendamentos().filter(function (a) { return a.aba === abaAtiva; });
+
+            // Filtro por período — aplicável SOMENTE no histórico
+            if (abaAtiva === 'historico' && (filtroDataInicio || filtroDataFim)) {
+                ags = ags.filter(function (a) {
+                    if (filtroDataInicio && a.data < filtroDataInicio) return false;
+                    if (filtroDataFim    && a.data > filtroDataFim)    return false;
+                    return true;
+                });
+            }
+
+            // Ordena: próximos/pendentes em ordem crescente, histórico em ordem decrescente
+            ags.sort(function (a, b) {
+                if (abaAtiva === 'historico') return a.data < b.data ? 1 : -1;
+                return a.data > b.data ? 1 : -1;
+            });
+
+            return ags;
+        }
+
+        function renderizarLista() {
+            containerLista.innerHTML = '';
+            var ags = filtrarAgendamentosDaAba();
+
+            if (ags.length === 0) {
+                var vazio = document.createElement('li');
+                vazio.className = 'agenda-lista-vazia';
+                var mensagem = 'Nenhum agendamento encontrado.';
+                if (abaAtiva === 'proximos')  mensagem = 'Você não tem agendamentos futuros no momento.';
+                if (abaAtiva === 'pendentes') mensagem = 'Nenhuma solicitação pendente de confirmação.';
+                if (abaAtiva === 'historico') {
+                    mensagem = (filtroDataInicio || filtroDataFim)
+                        ? 'Nenhum agendamento encontrado no período selecionado.'
+                        : 'Nenhum serviço no histórico.';
+                }
+                vazio.innerHTML = '<i class="bi bi-calendar-x"></i>' + mensagem;
+                containerLista.appendChild(vazio);
+                return;
+            }
+
+            ags.forEach(function (ag) { containerLista.appendChild(criarItemLista(ag)); });
+        }
+
+        function criarItemLista(ag) {
+            var li = document.createElement('li');
+            li.className = 'agenda-prest-item';
+            li.dataset.agendamentoId = ag.id;
+
+            // Coluna 1: Dia / Horário
+            var col1 = document.createElement('div');
+            col1.innerHTML =
+                '<div class="agenda-slot-dia">'   + (ag.diaLabel || formatarDataBR(ag.data)) + '</div>' +
+                '<div class="agenda-slot-tempo">' + ag.horario + '</div>';
+
+            // Coluna 2: Cliente / Serviço / Local
+            var col2 = document.createElement('div');
+            col2.innerHTML =
+                '<div class="agenda-cliente-nome">' + ag.cliente + '</div>' +
+                '<p class="agenda-cliente-servico">Serviço: ' + ag.servico + '</p>' +
+                '<p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>' + ag.endereco + '</p>';
+
+            // Coluna 3: Status + botões de ação
+            var col3 = document.createElement('div');
+            col3.className = 'agenda-status-area';
+            col3.innerHTML = construirBotoesStatus(ag);
+
+            li.appendChild(col1);
+            li.appendChild(col2);
+            li.appendChild(col3);
+
+            // Handlers dos botões (delegação local)
+            li.querySelectorAll('[data-acao]').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var acao = btn.dataset.acao;
+                    tratarAcaoAgendamento(acao, ag);
+                });
+            });
+
+            return li;
+        }
+
+        function construirBotoesStatus(ag) {
+            var tagClass = 'confirmado';
+            var tagTexto = 'Confirmado';
+            if (ag.status === 'pendente')  { tagClass = 'pendente';  tagTexto = 'Pendente';  }
+            if (ag.status === 'concluido') { tagClass = 'concluido'; tagTexto = 'Concluído'; }
+            if (ag.status === 'cancelado') { tagClass = 'cancelado'; tagTexto = 'Cancelado'; }
+
+            var html = '<span class="agenda-status-tag ' + tagClass + '">' + tagTexto + '</span>';
+            html += '<div class="agenda-botoes">';
+
+            // Conta mensagens não lidas desta conversa (enviadas pelo cliente).
+            // Se houver, acrescentamos um pequeno sininho vermelho ao lado do ícone do chat,
+            // indicando que esse agendamento TEM mensagens que o prestador ainda não viu.
+            var naoLidas = contarNaoLidasDoCliente(ag);
+            var sinoHtml = (naoLidas > 0)
+                ? '<span class="agenda-btn-sino" title="' + naoLidas + ' mensagem(ns) não lida(s)">' +
+                      '<i class="bi bi-bell-fill"></i>' +
+                  '</span>'
+                : '';
+
+            if (ag.status === 'confirmado') {
+                html += '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
+                html += '<a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Chat' + sinoHtml + '</a>';
+                html += '<a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a>';
+            } else if (ag.status === 'pendente') {
+                html += '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
+                html += '<a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Chat' + sinoHtml + '</a>';
+                html += '<a href="#" class="agenda-btn confirmar" data-acao="confirmar"><i class="bi bi-check me-1"></i>Confirmar</a>';
+                html += '<a href="#" class="agenda-btn cancelar" data-acao="rejeitar"><i class="bi bi-x me-1"></i>Rejeitar</a>';
+            } else if (ag.status === 'concluido') {
+                html += '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
+                html += '<a href="#" class="agenda-btn" data-acao="ver-nota"><i class="bi bi-file-text me-1"></i>Ver Nota</a>';
+            } else if (ag.status === 'cancelado') {
+                html += '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        // ---------------------------------------------------------------
+        // CONTAGEM DE MENSAGENS NÃO LIDAS — LADO PRESTADOR
+        // ---------------------------------------------------------------
+        // Estrutura espelho da lógica da área do cliente. Controlamos aqui
+        // quantas mensagens do CLIENTE chegaram após a última vez que o
+        // prestador abriu o modal de chat daquela conversa.
+        //
+        // Convenção de chaves:
+        //   prestChatMensagens_<prestadorId>_<clienteId>        → histórico
+        //   prestChatUltimaLeituraPrest_<prestadorId>_<clienteId> → última leitura pelo prestador
+        var CHAT_LEITURA_PREFIX_PREST = 'prestChatUltimaLeituraPrest_';
+
+        function contarNaoLidasDoCliente(ag) {
+            var clienteId = obterClienteIdDoAgendamento(ag);
+            if (!clienteId) return 0;
+
+            var chaveHist    = CHAT_MSGS_PREFIX + CHAT_PREST_ID + '_' + clienteId;
+            var chaveLeitura = CHAT_LEITURA_PREFIX_PREST + CHAT_PREST_ID + '_' + clienteId;
+
+            var mensagens = [];
+            try {
+                var raw = localStorage.getItem(chaveHist);
+                if (raw) mensagens = JSON.parse(raw) || [];
+            } catch (e) { mensagens = []; }
+
+            var ultimaLeitura = null;
+            try { ultimaLeitura = localStorage.getItem(chaveLeitura); } catch (e) {}
+
+            return mensagens.filter(function (m) {
+                if (m.remetente !== 'cliente') return false; // só contam mensagens DO cliente
+                if (!ultimaLeitura) return true;             // nunca leu → tudo é não lida
+                return m.data > ultimaLeitura;
+            }).length;
+        }
+
+        // Marca a conversa desse agendamento como lida pelo prestador (agora)
+        function marcarConversaComoLidaPrest(ag) {
+            var clienteId = obterClienteIdDoAgendamento(ag);
+            if (!clienteId) return;
+            try {
+                localStorage.setItem(
+                    CHAT_LEITURA_PREFIX_PREST + CHAT_PREST_ID + '_' + clienteId,
+                    new Date().toISOString()
+                );
+            } catch (e) { /* silencioso */ }
+        }
+
+        // Soma o total de mensagens não lidas em TODAS as conversas. Usado para decidir
+        // se o aviso "Você possui mensagens não lidas" é exibido ao lado das abas.
+        function totalMsgsNaoLidasPrestador() {
+            var ags = obterAgendamentos();
+            var total = 0;
+            ags.forEach(function (ag) { total += contarNaoLidasDoCliente(ag); });
+            return total;
+        }
+
+        function atualizarAvisoMsgsNaoLidasPrest() {
+            var aviso = document.getElementById('agenda-aviso-msgs-nao-lidas');
+            if (!aviso) return;
+            aviso.style.display = (totalMsgsNaoLidasPrestador() > 0) ? '' : 'none';
+        }
+
+        // -----------------------------------------------------------------
+        // TROCA DE ABA
+        // -----------------------------------------------------------------
+        function ativarAba(nomeAba) {
+            abaAtiva = nomeAba;
+
+            containerAbas.querySelectorAll('a[data-aba]').forEach(function (link) {
+                var ativa = link.dataset.aba === nomeAba;
+                link.classList.toggle('nav-link-active', ativa);
+                link.classList.toggle('agenda-aba-ativa', ativa);
+            });
+
+            // Mostra/esconde filtro de período (somente no histórico)
+            var filtroBox = document.getElementById('agenda-filtro-periodo');
+            if (filtroBox) filtroBox.style.display = (nomeAba === 'historico') ? 'block' : 'none';
+
+            renderizarLista();
+        }
+
+        containerAbas.querySelectorAll('a[data-aba]').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                ativarAba(link.dataset.aba);
+            });
+        });
+
+        // -----------------------------------------------------------------
+        // FILTRO POR PERÍODO (Histórico)
+        // -----------------------------------------------------------------
+        var btnFiltrar = document.getElementById('btn-filtrar-historico');
+        var btnLimpar  = document.getElementById('btn-limpar-filtro');
+        var inputInicio = document.getElementById('filtro-data-inicio');
+        var inputFim    = document.getElementById('filtro-data-fim');
+        var filtroInfo  = document.getElementById('filtro-info-periodo');
+
+        if (btnFiltrar) {
+            btnFiltrar.addEventListener('click', function () {
+                filtroDataInicio = inputInicio && inputInicio.value ? inputInicio.value : null;
+                filtroDataFim    = inputFim    && inputFim.value    ? inputFim.value    : null;
+
+                if (filtroDataInicio && filtroDataFim && filtroDataInicio > filtroDataFim) {
+                    alert('A data inicial não pode ser maior que a data final.');
+                    return;
+                }
+
+                if (filtroInfo) {
+                    if (filtroDataInicio || filtroDataFim) {
+                        filtroInfo.innerHTML =
+                            '<i class="bi bi-funnel-fill me-1"></i>Exibindo agendamentos de ' +
+                            (filtroDataInicio ? formatarDataBR(filtroDataInicio) : 'início') +
+                            ' até ' +
+                            (filtroDataFim    ? formatarDataBR(filtroDataFim)    : 'hoje');
+                    } else {
+                        filtroInfo.textContent = '';
+                    }
+                }
+                renderizarLista();
+            });
+        }
+        if (btnLimpar) {
+            btnLimpar.addEventListener('click', function () {
+                filtroDataInicio = null;
+                filtroDataFim    = null;
+                if (inputInicio) inputInicio.value = '';
+                if (inputFim)    inputFim.value    = '';
+                if (filtroInfo)  filtroInfo.textContent = '';
+                renderizarLista();
+            });
+        }
+
+        // -----------------------------------------------------------------
+        // DESPACHO DE AÇÕES (Detalhes / Cancelar / Rejeitar / Ver Nota / Confirmar)
+        // -----------------------------------------------------------------
+        function tratarAcaoAgendamento(acao, ag) {
+            switch (acao) {
+                case 'detalhes':  abrirModalDetalhes(ag); break;
+                case 'cancelar':  abrirModalCancelamento(ag, 'cancelar'); break;
+                case 'rejeitar':  abrirModalCancelamento(ag, 'rejeitar'); break;
+                case 'ver-nota':  abrirModalVerNota(ag);  break;
+                case 'confirmar': confirmarAgendamento(ag); break;
+                case 'chat':      abrirModalChat(ag); break;
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // MODAL: DETALHES
+        // -----------------------------------------------------------------
+        function abrirModalDetalhes(ag) {
+            var corpo = document.getElementById('modal-detalhes-corpo');
+            if (!corpo) return;
+
+            var lembretesHtml = '<em class="text-muted">Nenhum lembrete registrado.</em>';
+            if (ag.lembretes && ag.lembretes.length > 0) {
+                lembretesHtml = ag.lembretes.map(function (l) {
+                    return '<div class="agenda-detalhe-lembrete"><i class="bi bi-bell me-2"></i>' + l + '</div>';
+                }).join('');
+            }
+
+            var observacaoHtml = ag.observacoes
+                ? '<div class="agenda-detalhe-observacao"><i class="bi bi-chat-left-text me-2"></i>' + ag.observacoes + '</div>'
+                : '<em class="text-muted">Sem observações.</em>';
+
+            var statusTag = '<span class="agenda-status-tag ' + ag.status + '">' +
+                            ag.status.charAt(0).toUpperCase() + ag.status.slice(1) + '</span>';
+
+            var valorFormatado = (typeof ag.valor === 'number' && ag.valor > 0)
+                ? 'R$ ' + ag.valor.toFixed(2).replace('.', ',')
+                : '—';
+
+            corpo.innerHTML =
+                '<div class="agenda-detalhe-secao">' +
+                    '<h6><i class="bi bi-person-circle me-1"></i>Dados do Cliente</h6>' +
+                    '<div class="agenda-detalhe-grid">' +
+                        '<div><strong>Nome</strong><span>' + ag.cliente + '</span></div>' +
+                        '<div><strong>Telefone</strong><span>' + (ag.telefone || '—') + '</span></div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="agenda-detalhe-secao">' +
+                    '<h6><i class="bi bi-calendar-event me-1"></i>Serviço Agendado</h6>' +
+                    '<div class="agenda-detalhe-grid">' +
+                        '<div><strong>Serviço</strong><span>' + ag.servico + '</span></div>' +
+                        '<div><strong>Status</strong><span>' + statusTag + '</span></div>' +
+                        '<div><strong>Data</strong><span>' + formatarDataBR(ag.data) + '</span></div>' +
+                        '<div><strong>Horário</strong><span>' + ag.horario + '</span></div>' +
+                        '<div style="grid-column: 1/-1;"><strong>Endereço</strong><span><i class="bi bi-geo-alt me-1"></i>' + ag.endereco + '</span></div>' +
+                        '<div><strong>Valor</strong><span>' + valorFormatado + '</span></div>' +
+                        '<div><strong>Forma de Pagamento</strong><span>' + (ag.formaPagamento || '—') + '</span></div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="agenda-detalhe-secao">' +
+                    '<h6><i class="bi bi-bell me-1"></i>Lembretes</h6>' +
+                    lembretesHtml +
+                '</div>' +
+                '<div class="agenda-detalhe-secao">' +
+                    '<h6><i class="bi bi-chat-left-text me-1"></i>Observações</h6>' +
+                    observacaoHtml +
+                '</div>' +
+                (ag.motivoCancelamento
+                    ? '<div class="agenda-detalhe-secao">' +
+                        '<h6 style="color:#991b1b;"><i class="bi bi-x-circle me-1"></i>Motivo do Cancelamento</h6>' +
+                        '<div class="agenda-detalhe-observacao" style="background:#fee2e2; border-left-color:#dc3545;">' + ag.motivoCancelamento + '</div>' +
+                      '</div>'
+                    : '');
+
+            new bootstrap.Modal(document.getElementById('modalDetalhesAgendamento')).show();
+        }
+
+        // -----------------------------------------------------------------
+        // MODAL: CANCELAR / REJEITAR (mesma interface, textos adaptados)
+        // -----------------------------------------------------------------
+        var agendamentoEmAcao = null;   // guarda o agendamento atual
+        var tipoAcaoAtual     = null;   // 'cancelar' ou 'rejeitar'
+
+        function abrirModalCancelamento(ag, tipo) {
+            agendamentoEmAcao = ag;
+            tipoAcaoAtual     = tipo;
+
+            var titulo       = document.getElementById('modal-cancelar-titulo');
+            var descricao    = document.getElementById('modal-cancelar-descricao');
+            var infoBox      = document.getElementById('modal-cancelar-info-agendamento');
+            var btnConfirmar = document.getElementById('btn-confirmar-cancelamento');
+
+            if (tipo === 'rejeitar') {
+                if (titulo) titulo.innerHTML = '<i class="bi bi-x-octagon me-2"></i>Rejeitar Solicitação';
+                if (descricao) descricao.innerHTML =
+                    'Selecione abaixo o motivo da rejeição. O cliente será notificado com o motivo ' +
+                    'e receberá uma solicitação para reagendar com outra data/horário.';
+                if (btnConfirmar) btnConfirmar.innerHTML = '<i class="bi bi-send me-1"></i> Rejeitar e Notificar Cliente';
+            } else {
+                if (titulo) titulo.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Cancelar Agendamento';
+                if (descricao) descricao.innerHTML =
+                    'Selecione abaixo o motivo do cancelamento. O cliente receberá um aviso ' +
+                    'com o motivo e uma solicitação de reagendamento.';
+                if (btnConfirmar) btnConfirmar.innerHTML = '<i class="bi bi-send me-1"></i> Confirmar e Notificar Cliente';
+            }
+
+            if (infoBox) {
+                infoBox.innerHTML =
+                    '<strong>' + ag.servico + '</strong><br>' +
+                    '<i class="bi bi-person me-1"></i>' + ag.cliente + ' &nbsp;·&nbsp; ' +
+                    '<i class="bi bi-calendar me-1"></i>' + formatarDataBR(ag.data) + ' ' + ag.horario;
+            }
+
+            // Reset campos
+            var radios = document.querySelectorAll('input[name="motivo-cancelamento"]');
+            radios.forEach(function (r) { r.checked = false; });
+            var obs = document.getElementById('motivo-observacao');
+            if (obs) obs.value = '';
+            var chk = document.getElementById('chk-solicitar-reagendamento');
+            if (chk) chk.checked = true;
+
+            new bootstrap.Modal(document.getElementById('modalCancelarAgendamento')).show();
+        }
+
+        // Handler: Confirmar cancelamento/rejeição
+        var btnConfirmarCancelamento = document.getElementById('btn-confirmar-cancelamento');
+        if (btnConfirmarCancelamento) {
+            btnConfirmarCancelamento.addEventListener('click', function () {
+                if (!agendamentoEmAcao) return;
+
+                var radioSelecionado = document.querySelector('input[name="motivo-cancelamento"]:checked');
+                if (!radioSelecionado) {
+                    alert('Por favor, selecione um motivo antes de prosseguir.');
+                    return;
+                }
+
+                var motivo = radioSelecionado.value;
+                var observacao = (document.getElementById('motivo-observacao').value || '').trim();
+
+                if (motivo === 'outro' && !observacao) {
+                    alert('Você selecionou "Outro motivo". Descreva o motivo no campo de observação.');
+                    return;
+                }
+
+                var motivoFinal = motivo === 'outro' ? observacao : motivo;
+                var observacaoFinal = motivo === 'outro' ? '' : observacao;
+
+                var reagendar = document.getElementById('chk-solicitar-reagendamento');
+                var solicitarReagendamento = reagendar ? reagendar.checked : false;
+
+                // 1) Atualiza o agendamento na base: move para histórico como 'cancelado'
+                var ags = obterAgendamentos();
+                var idx = ags.findIndex(function (a) { return a.id === agendamentoEmAcao.id; });
+                if (idx >= 0) {
+                    ags[idx].status = 'cancelado';
+                    ags[idx].aba    = 'historico';
+                    ags[idx].motivoCancelamento = motivoFinal +
+                        (observacaoFinal ? ' — ' + observacaoFinal : '');
+                    ags[idx].canceladoEm = new Date().toISOString();
+                    ags[idx].tipoAcao    = tipoAcaoAtual; // 'cancelar' ou 'rejeitar'
+                    salvarAgendamentos(ags);
+                }
+
+                // 2) Registra o aviso enviado ao cliente
+                registrarAvisoAoCliente({
+                    agendamentoId: agendamentoEmAcao.id,
+                    cliente: agendamentoEmAcao.cliente,
+                    servico: agendamentoEmAcao.servico,
+                    data: agendamentoEmAcao.data,
+                    horario: agendamentoEmAcao.horario,
+                    tipoAcao: tipoAcaoAtual,
+                    motivo: motivoFinal,
+                    observacao: observacaoFinal,
+                    enviadoEm: new Date().toISOString(),
+                    mensagem: (tipoAcaoAtual === 'rejeitar'
+                        ? 'Sua solicitação de agendamento foi rejeitada. Motivo: '
+                        : 'Seu agendamento foi cancelado pelo prestador. Motivo: ') + motivoFinal
+                });
+
+                // 3) Se marcado, registra a solicitação de reagendamento
+                if (solicitarReagendamento) {
+                    registrarSolicitacaoReagendamento({
+                        agendamentoIdOriginal: agendamentoEmAcao.id,
+                        cliente: agendamentoEmAcao.cliente,
+                        servico: agendamentoEmAcao.servico,
+                        dataOriginal: agendamentoEmAcao.data,
+                        horarioOriginal: agendamentoEmAcao.horario,
+                        criadaEm: new Date().toISOString(),
+                        status: 'aguardando-cliente'
+                    });
+                }
+
+                // 4) Fecha modal, atualiza UI e avisa o prestador
+                var modalEl = document.getElementById('modalCancelarAgendamento');
+                var modalInst = bootstrap.Modal.getInstance(modalEl);
+                if (modalInst) modalInst.hide();
+
+                atualizarContadores();
+                renderizarLista();
+
+                mostrarToast(
+                    (tipoAcaoAtual === 'rejeitar' ? 'Solicitação rejeitada' : 'Agendamento cancelado') +
+                    '. ' +
+                    (solicitarReagendamento
+                        ? 'Cliente foi notificado com o motivo e recebeu solicitação de reagendamento.'
+                        : 'Cliente foi notificado com o motivo.'),
+                    'success'
+                );
+
+                agendamentoEmAcao = null;
+                tipoAcaoAtual     = null;
+            });
+        }
+
+        // -----------------------------------------------------------------
+        // MODAL: VER NOTA (Avaliação do cliente)
+        // -----------------------------------------------------------------
+        function abrirModalVerNota(ag) {
+            var corpo = document.getElementById('modal-ver-nota-corpo');
+            if (!corpo) return;
+
+            if (!ag.avaliacao) {
+                corpo.innerHTML =
+                    '<div class="agenda-nota-sem-avaliacao">' +
+                        '<i class="bi bi-hourglass-split"></i>' +
+                        '<p class="mb-0"><strong>O cliente ainda não avaliou este serviço.</strong></p>' +
+                        '<small class="text-muted">Quando a avaliação for enviada, ela aparecerá aqui.</small>' +
+                    '</div>';
+            } else {
+                var av = ag.avaliacao;
+                var estrelas = '';
+                for (var i = 1; i <= 5; i++) {
+                    estrelas += (i <= av.nota)
+                        ? '<i class="bi bi-star-fill"></i>'
+                        : '<i class="bi bi-star" style="color:#d1d5db;"></i>';
+                }
+
+                corpo.innerHTML =
+                    '<div class="agenda-nota-cabecalho">' +
+                        '<div class="agenda-nota-estrelas">' + estrelas + '</div>' +
+                        '<div class="agenda-nota-valor">' + av.nota.toFixed(1) + '<small> / 5.0</small></div>' +
+                    '</div>' +
+                    '<div class="agenda-detalhe-grid mb-3">' +
+                        '<div><strong>Cliente</strong><span>' + ag.cliente + '</span></div>' +
+                        '<div><strong>Serviço</strong><span>' + ag.servico + '</span></div>' +
+                        '<div><strong>Data do Serviço</strong><span>' + formatarDataBR(ag.data) + '</span></div>' +
+                        '<div><strong>Avaliado em</strong><span>' + formatarDataBR(av.dataAvaliacao) + '</span></div>' +
+                    '</div>' +
+                    '<h6 style="font-size:0.8rem; text-transform:uppercase; color:var(--texto-muted); font-weight:700;">' +
+                        '<i class="bi bi-chat-quote me-1"></i>Comentário do Cliente' +
+                    '</h6>' +
+                    '<div class="agenda-nota-comentario">"' + av.comentario + '"</div>';
+            }
+
+            new bootstrap.Modal(document.getElementById('modalVerNota')).show();
+        }
+
+        // -----------------------------------------------------------------
+        // MODAL: CHAT COM O CLIENTE
+        // -----------------------------------------------------------------
+        // Regras de negócio:
+        //   • Cada conversa é SEMPRE exclusiva entre um prestador e um cliente;
+        //   • O prestador pode ter várias conversas abertas (uma por cliente que
+        //     solicitou agendamento com ele). Cada item da lista abre a conversa
+        //     específica daquele cliente, carregada de localStorage;
+        //   • A chave de persistência inclui o "prestadorId" (identifica o prestador
+        //     logado) e o "clienteId" (derivado do agendamento), garantindo o
+        //     isolamento: nenhuma outra pessoa/prestador vê as mensagens;
+        //   • Os 4 botões do rodapé têm papéis bem distintos:
+        //       - Limpar  → apaga apenas o rascunho (textarea) da nova mensagem
+        //       - Editar  → reabre a textarea para digitação (sai do modo só-leitura)
+        //                   e devolve o foco ao campo; serve tanto para retomar um
+        //                   rascunho quanto para reativar o campo caso o usuário o
+        //                   tenha deixado read-only por algum motivo
+        //       - Cancelar → fecha o modal (preserva rascunho em memória da sessão
+        //                    do modal) e devolve o foco ao botão "Chat" que o abriu
+        //       - Enviar   → adiciona a mensagem ao histórico, persiste e limpa o
+        //                    rascunho; a mensagem vai SOMENTE para aquele cliente.
+        // -----------------------------------------------------------------
+        var CHAT_PREST_ID = 'prestador-demo';        // Em produção: id do prestador logado
+        var CHAT_MSGS_PREFIX = 'prestChatMensagens_'; // Prefixo das chaves no localStorage
+
+        // Referências DOM do modal (resolvidas na primeira abertura)
+        var modalChatEl, modalChatInstance, chatHistoricoEl, chatTextareaEl,
+            chatInfoEl, chatClienteNomeEl, chatContadorEl,
+            btnChatLimpar, btnChatEditar, btnChatCancelar, btnChatEnviar;
+        var chatAgendamentoAtual = null;   // Agendamento (→ cliente) da conversa aberta
+        var chatClienteIdAtual   = null;   // ID estável do cliente para localStorage
+        var chatOrigemFoco       = null;   // Elemento que abriu o modal (retorno do foco)
+        var chatHandlersRegistrados = false; // Garante que bindHandlers só rode uma vez
+
+        // Gera/normaliza um ID estável para o cliente a partir do agendamento.
+        // Em produção esse id viria da própria base; aqui, como fallback, usamos
+        // "clienteId" do objeto OU derivamos do nome (slug) — o objetivo é
+        // identificar UNIVOCAMENTE cada cliente para que o histórico seja carregado
+        // sempre a partir da mesma chave, independente do agendamento clicado.
+        function obterClienteIdDoAgendamento(ag) {
+            if (ag.clienteId) return String(ag.clienteId);
+            if (!ag.cliente)  return 'cli-desconhecido';
+            return 'cli-' + ag.cliente
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+        }
+
+        // Chave do localStorage no formato: prestChatMensagens_<prestadorId>_<clienteId>
+        function obterChaveChat(clienteId) {
+            return CHAT_MSGS_PREFIX + CHAT_PREST_ID + '_' + clienteId;
+        }
+
+        // Leitura segura do histórico (se corromper, zera em vez de quebrar a tela)
+        function carregarHistoricoChat(clienteId) {
+            try {
+                var raw = localStorage.getItem(obterChaveChat(clienteId));
+                if (!raw) return [];
+                var arr = JSON.parse(raw);
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                console.warn('Histórico de chat corrompido — zerando.', e);
+                return [];
+            }
+        }
+
+        function salvarHistoricoChat(clienteId, mensagens) {
+            try {
+                localStorage.setItem(obterChaveChat(clienteId), JSON.stringify(mensagens));
+            } catch (e) {
+                console.error('Não foi possível salvar o histórico de chat:', e);
+            }
+        }
+
+        // Formata o carimbo de hora/data de cada mensagem
+        function formatarHoraChat(isoString) {
+            var d = new Date(isoString);
+            if (isNaN(d.getTime())) return '';
+            var hoje = new Date();
+            var mesmoDia = d.toDateString() === hoje.toDateString();
+            var hh = String(d.getHours()).padStart(2, '0');
+            var mm = String(d.getMinutes()).padStart(2, '0');
+            if (mesmoDia) return 'Hoje, ' + hh + ':' + mm;
+            var dd = String(d.getDate()).padStart(2, '0');
+            var mo = String(d.getMonth() + 1).padStart(2, '0');
+            return dd + '/' + mo + ' ' + hh + ':' + mm;
+        }
+
+        // Escape mínimo para não quebrar o innerHTML com conteúdo vindo do usuário
+        function escaparHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Renderiza o histórico na área de mensagens e rola até o fim
+        function renderizarHistoricoChat(mensagens) {
+            if (!chatHistoricoEl) return;
+
+            if (!mensagens || mensagens.length === 0) {
+                chatHistoricoEl.innerHTML =
+                    '<div class="agenda-chat-vazio">' +
+                        '<i class="bi bi-chat-square-text"></i>' +
+                        '<div>Nenhuma mensagem ainda.</div>' +
+                        '<small>Envie a primeira mensagem ao cliente.</small>' +
+                    '</div>';
+                return;
+            }
+
+            var html = '';
+            mensagens.forEach(function (m) {
+                var classe = (m.remetente === 'prestador') ? 'prest' : 'cliente';
+                html +=
+                    '<div class="agenda-chat-msg ' + classe + '">' +
+                        escaparHtml(m.texto) +
+                        '<span class="agenda-chat-msg-hora">' + formatarHoraChat(m.data) + '</span>' +
+                    '</div>';
+            });
+            chatHistoricoEl.innerHTML = html;
+            // Rolar para a última mensagem
+            chatHistoricoEl.scrollTop = chatHistoricoEl.scrollHeight;
+        }
+
+        // Atualiza o contador de caracteres do textarea
+        function atualizarContadorChat() {
+            if (!chatTextareaEl || !chatContadorEl) return;
+            chatContadorEl.textContent = chatTextareaEl.value.length;
+        }
+
+        // Liga os 4 botões do rodapé + textarea (uma única vez)
+        function registrarHandlersChat() {
+            if (chatHandlersRegistrados) return;
+            chatHandlersRegistrados = true;
+
+            // LIMPAR — apaga só o rascunho (a textarea), preservando o histórico
+            btnChatLimpar.addEventListener('click', function () {
+                if (!chatTextareaEl) return;
+                chatTextareaEl.readOnly = false;
+                chatTextareaEl.value = '';
+                atualizarContadorChat();
+                chatTextareaEl.focus();
+            });
+
+            // EDITAR — tira o modo somente-leitura (se estiver) e dá foco ao campo.
+            // Útil quando o usuário quer retomar um rascunho: basta clicar para
+            // continuar a digitar de onde parou.
+            btnChatEditar.addEventListener('click', function () {
+                if (!chatTextareaEl) return;
+                chatTextareaEl.readOnly = false;
+                chatTextareaEl.focus();
+                // Coloca o cursor no fim do texto (UX: retomar digitação)
+                var len = chatTextareaEl.value.length;
+                try { chatTextareaEl.setSelectionRange(len, len); } catch (e) {}
+            });
+
+            // CANCELAR — fecha o modal e devolve o foco ao ponto de origem
+            btnChatCancelar.addEventListener('click', function () {
+                if (modalChatInstance) modalChatInstance.hide();
+            });
+
+            // ENVIAR — adiciona a mensagem ao histórico e persiste
+            btnChatEnviar.addEventListener('click', function () {
+                if (!chatAgendamentoAtual || !chatClienteIdAtual) return;
+
+                var texto = (chatTextareaEl.value || '').trim();
+                if (!texto) {
+                    mostrarToast('Digite uma mensagem antes de enviar.', 'warning');
+                    chatTextareaEl.focus();
+                    return;
+                }
+
+                var msg = {
+                    id: 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+                    remetente: 'prestador',
+                    texto: texto,
+                    data: new Date().toISOString(),
+                    agendamentoId: chatAgendamentoAtual.id
+                };
+
+                var hist = carregarHistoricoChat(chatClienteIdAtual);
+                hist.push(msg);
+                salvarHistoricoChat(chatClienteIdAtual, hist);
+
+                // Atualiza UI
+                renderizarHistoricoChat(hist);
+                chatTextareaEl.value = '';
+                atualizarContadorChat();
+                chatTextareaEl.focus();
+
+                mostrarToast('Mensagem enviada para ' + chatAgendamentoAtual.cliente + '.', 'success');
+            });
+
+            // Contador ao digitar
+            chatTextareaEl.addEventListener('input', atualizarContadorChat);
+
+            // Atalho: Ctrl/Cmd + Enter → enviar rapidamente
+            chatTextareaEl.addEventListener('keydown', function (e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    btnChatEnviar.click();
+                }
+            });
+
+            // Ao fechar o modal (por qualquer via: X, ESC, clique fora, Cancelar),
+            // devolvemos o foco ao botão que originou a abertura — requisito:
+            // "retornar ao ponto acessado anteriormente"
+            modalChatEl.addEventListener('hidden.bs.modal', function () {
+                if (chatOrigemFoco && typeof chatOrigemFoco.focus === 'function') {
+                    try { chatOrigemFoco.focus(); } catch (e) {}
+                }
+            });
+        }
+
+        // ABERTURA DO MODAL DE CHAT — função invocada pelo botão "Chat" de cada item
+        function abrirModalChat(ag) {
+            // Resolve referências do DOM na primeira chamada (cachear)
+            if (!modalChatEl) {
+                modalChatEl       = document.getElementById('modalChatCliente');
+                if (!modalChatEl) return;
+                chatHistoricoEl   = document.getElementById('modal-chat-historico');
+                chatTextareaEl    = document.getElementById('modal-chat-texto');
+                chatInfoEl        = document.getElementById('modal-chat-info-agendamento');
+                chatClienteNomeEl = document.getElementById('modal-chat-cliente-nome');
+                chatContadorEl    = document.getElementById('modal-chat-contador');
+                btnChatLimpar     = document.getElementById('btn-chat-limpar');
+                btnChatEditar     = document.getElementById('btn-chat-editar');
+                btnChatCancelar   = document.getElementById('btn-chat-cancelar');
+                btnChatEnviar     = document.getElementById('btn-chat-enviar');
+                modalChatInstance = new bootstrap.Modal(modalChatEl);
+                registrarHandlersChat();
+            }
+
+            // Armazena o ponto de retorno (botão "Chat" clicado) para devolver o
+            // foco ao fechar o modal
+            chatOrigemFoco = document.activeElement;
+
+            // Atualiza contexto da conversa
+            chatAgendamentoAtual = ag;
+            chatClienteIdAtual   = obterClienteIdDoAgendamento(ag);
+
+            // Cabeçalho — nome do cliente
+            if (chatClienteNomeEl) chatClienteNomeEl.textContent = ag.cliente || 'Cliente';
+
+            // Faixa de contexto (serviço + data + horário)
+            if (chatInfoEl) {
+                chatInfoEl.innerHTML =
+                    '<span class="agenda-chat-info-item"><i class="bi bi-person-circle"></i><strong>' +
+                        escaparHtml(ag.cliente) + '</strong></span>' +
+                    '<span class="agenda-chat-info-item"><i class="bi bi-tools"></i>' +
+                        escaparHtml(ag.servico) + '</span>' +
+                    '<span class="agenda-chat-info-item"><i class="bi bi-calendar-event"></i>' +
+                        escaparHtml((ag.diaLabel || formatarDataBR(ag.data)) + ' • ' + ag.horario) + '</span>';
+            }
+
+            // Carrega histórico específico do cliente
+            var historico = carregarHistoricoChat(chatClienteIdAtual);
+            renderizarHistoricoChat(historico);
+
+            // O prestador abriu o modal → qualquer mensagem não lida dessa conversa
+            // passa a ser considerada LIDA. Ao fechar, re-renderizamos a lista para
+            // que o sininho some.
+            marcarConversaComoLidaPrest(ag);
+
+            // Prepara a textarea — começa editável, vazia e com contador zerado
+            chatTextareaEl.readOnly = false;
+            chatTextareaEl.value = '';
+            atualizarContadorChat();
+
+            // Exibe o modal e foca na área de digitação
+            modalChatInstance.show();
+            // O foco precisa ir para a textarea só depois que o modal estiver
+            // 100% visível (o Bootstrap dispara 'shown.bs.modal' nesse momento).
+            // Usamos `once: true` para não acumular listeners a cada abertura.
+            modalChatEl.addEventListener('shown.bs.modal', function _foco() {
+                if (chatTextareaEl) chatTextareaEl.focus();
+            }, { once: true });
+
+            // Ao fechar (X, ESC, clique fora, Cancelar), re-renderiza a lista para
+            // atualizar o sininho (some depois de lida) e o aviso do topo.
+            modalChatEl.addEventListener('hidden.bs.modal', function _recalc() {
+                renderizarLista();
+                atualizarAvisoMsgsNaoLidasPrest();
+            }, { once: true });
+        }
+
+        // -----------------------------------------------------------------
+        // CONFIRMAR AGENDAMENTO (move de pendente → próximos)
+        // -----------------------------------------------------------------
+        function confirmarAgendamento(ag) {
+            if (!confirm('Confirmar o agendamento de ' + ag.cliente + ' para ' + ag.servico + '?')) return;
+
+            var ags = obterAgendamentos();
+            var idx = ags.findIndex(function (a) { return a.id === ag.id; });
+            if (idx >= 0) {
+                ags[idx].status = 'confirmado';
+                ags[idx].aba    = 'proximos';
+                ags[idx].confirmadoEm = new Date().toISOString();
+                salvarAgendamentos(ags);
+            }
+
+            atualizarContadores();
+            renderizarLista();
+            mostrarToast('Agendamento confirmado! O cliente foi notificado.', 'success');
+        }
+
+        // -----------------------------------------------------------------
+        // TOAST — notificação rápida de sucesso
+        // -----------------------------------------------------------------
+        function mostrarToast(mensagem, tipo) {
+            var el = document.getElementById('toastNotificacao');
+            var corpo = document.getElementById('toast-mensagem');
+            if (!el || !corpo) { alert(mensagem); return; }
+
+            corpo.textContent = mensagem;
+            el.classList.remove('text-bg-success', 'text-bg-danger', 'text-bg-warning');
+            if (tipo === 'danger')  el.classList.add('text-bg-danger');
+            else if (tipo === 'warning') el.classList.add('text-bg-warning');
+            else                    el.classList.add('text-bg-success');
+
+            var toast = bootstrap.Toast.getOrCreateInstance(el, { delay: 4500 });
+            toast.show();
+        }
+
+        // -----------------------------------------------------------------
+        // BOOT
+        // -----------------------------------------------------------------
+        semearAgendamentosSeNecessario();
+
+        // --- SEED DEMO do chat -----------------------------------------------
+        // Em modo de demonstração, garantimos que pelo menos uma conversa tenha
+        // uma mensagem NOVA vinda do cliente, para que o sininho vermelho e o
+        // aviso "Você possui mensagens não lidas" apareçam imediatamente no
+        // primeiro acesso (sem exigir que o cliente abra outra aba e mande uma
+        // mensagem). Semeamos apenas uma vez (flag em localStorage).
+        (function semearMensagemDemoDoCliente() {
+            try {
+                var FLAG = 'prestChatSeedMsgDemoV1';
+                if (localStorage.getItem(FLAG)) return;
+
+                var ags = obterAgendamentos();
+                if (!ags.length) return;
+
+                // Escolhemos o primeiro agendamento "próximo" como alvo
+                var alvo = ags.find(function (a) { return a.aba === 'proximos'; }) || ags[0];
+                if (!alvo) return;
+
+                var clienteId = obterClienteIdDoAgendamento(alvo);
+                var chave = CHAT_MSGS_PREFIX + CHAT_PREST_ID + '_' + clienteId;
+
+                var existente = [];
+                try { existente = JSON.parse(localStorage.getItem(chave) || '[]'); } catch (e) {}
+
+                existente.push({
+                    id: 'msg-demo-' + Date.now(),
+                    remetente: 'cliente',
+                    texto: 'Olá! Só confirmando se está tudo certo para nosso horário. Precisa de mais alguma informação minha antes?',
+                    data: new Date().toISOString(),
+                    agendamentoId: alvo.id
+                });
+                localStorage.setItem(chave, JSON.stringify(existente));
+                localStorage.setItem(FLAG, '1');
+            } catch (e) { /* silencioso — demo não pode quebrar o app */ }
+        })();
+        // ---------------------------------------------------------------------
+
+        atualizarContadores();
+        atualizarAvisoMsgsNaoLidasPrest(); // sininho no topo
+        ativarAba('proximos');
+
+        // Polling leve: recalcula o aviso/sininhos a cada 5s enquanto a página está aberta.
+        // Isso dá o efeito de "chegou uma mensagem nova" mesmo que o cliente tenha respondido
+        // em outra aba/sessão sem recarregar a página do prestador.
+        setInterval(function () {
+            atualizarAvisoMsgsNaoLidasPrest();
+            // Só re-renderiza a lista se o usuário não estiver com modal aberto,
+            // para não interromper interações em andamento.
+            var algumModalAberto = document.querySelector('.modal.show');
+            if (!algumModalAberto) renderizarLista();
+        }, 5000);
+    }
+
+
+    // =====================================================
+    // ALTERAR SENHA — PRESTADOR (modal em qualquer página)
+    // -----------------------------------------------------
+    // Aciona o modal #modalAlterarSenha. Valida:
+    //  - Senha atual correta (Case Sensitive)
+    //  - Nova senha >= 8 caracteres, com letras, números
+    //    e caracteres especiais (Case Sensitive)
+    //  - Nova senha e repetição devem coincidir
+    // =====================================================
+    function inicializarAlterarSenhaGeral() {
+        var btnSalvar = document.getElementById('btn-salvar-senha-geral');
+        if (!btnSalvar) return;
+
+        btnSalvar.addEventListener('click', function () {
+            var usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || '{}');
+            var emailLogado = (usuarioLogado.email || '').toLowerCase();
+
+            var usuariosCadastrados = obterUsuariosCadastrados();
+            var dadosUsuario = usuariosCadastrados[emailLogado] || null;
+
+            var senhaAtualEl = document.getElementById('senha-atual-geral');
+            var novaSenhaEl  = document.getElementById('nova-senha-geral');
+            var repitaEl     = document.getElementById('repita-nova-senha-geral');
+
+            var senhaAtual = senhaAtualEl ? senhaAtualEl.value : '';
+            var novaSenha  = novaSenhaEl  ? novaSenhaEl.value  : '';
+            var repita     = repitaEl     ? repitaEl.value     : '';
+
+            if (!dadosUsuario) {
+                alert('Usuário logado não encontrado. Faça login novamente.');
+                return;
+            }
+
+            // Case Sensitive
+            if (senhaAtual !== dadosUsuario.senha) {
+                alert('A senha atual está incorreta!');
+                return;
+            }
+
+            var regexSenha = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/;
+            if (!regexSenha.test(novaSenha)) {
+                alert('A nova senha não atende aos requisitos mínimos!\n\nA senha deve ter pelo menos 8 caracteres e incluir letras, números e caracteres especiais.');
+                return;
+            }
+
+            if (novaSenha !== repita) {
+                alert('As novas senhas digitadas não coincidem. Tente novamente.');
+                return;
+            }
+
+            dadosUsuario.senha = novaSenha;
+            usuariosCadastrados[emailLogado] = dadosUsuario;
+            salvarUsuariosCadastrados(usuariosCadastrados);
+
+            alert('Senha atualizada com sucesso!');
+            if (senhaAtualEl) senhaAtualEl.value = '';
+            if (novaSenhaEl)  novaSenhaEl.value  = '';
+            if (repitaEl)     repitaEl.value     = '';
+
+            var modalEl = document.getElementById('modalAlterarSenha');
+            if (modalEl) {
+                var inst = bootstrap.Modal.getInstance(modalEl);
+                if (inst) inst.hide();
+            }
+        });
+    }
+
+
+    // =====================================================
     // INICIALIZAÇÃO GERAL
     // =====================================================
     inicializarNavbarSaudacao();
@@ -2003,10 +3995,14 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarLogin();
     inicializarClienteAreaExclusiva();
     inicializarPrestadorAreaExclusiva();
+    inicializarPrestadorServicosAgendados();
     inicializarAvaliacoesFeitas();
     inicializarAvaliacoesRecebidas();
+    inicializarAvaliacoesFeitasPrestador();
+    inicializarAvaliacoesRecebidasPrestador();
     inicializarBotaoVoltar();
     inicializarPerfilCliente();
     inicializarHotsitePrestador();
+    inicializarAlterarSenhaGeral();
     inicializarSidebarResponsiva();
 });

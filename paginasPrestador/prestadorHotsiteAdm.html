@@ -12,41 +12,26 @@
 
 <body>
 
-<style>
-        /* Responsividade padrão igual ao index.html: breakpoint lg (992px). */
-        @media (max-width: 991.98px) {
-            .cli-wrapper { flex-direction: column; }
-            .cli-sidebar {
-                width: 100%;
-                min-width: unset;
-                border-right: none;
-                border-bottom: 1px solid var(--borda);
-                padding: 12px 0;
-                display: none;
-            }
-            .cli-sidebar.cli-sidebar-show { display: block; }
-        }
-    </style>
-</head>
-
-<body>
-
-    <!--INÍCIO DO CABEÇALHO DA PÁGINA-->
+    <!-- NAVBAR (padrão index.html — responsividade unificada) -->
     <header>
         <nav class="navbar navbar-expand-lg">
-            <div class="container-fluid" style="max-width:1140px; margin:0 auto; padding:0 16px;">
-                <a class="navbar-brand" href="index.html">
+            <div class="container menu">
+                <a class="navbar-brand" href="/index.html">
                     <span class="serv-part">Serv</span><span class="go-part">Go!</span>
                 </a>
-                <span class="navbar-logada-info">Olá, Cliente!</span>
+                <span class="navbar-logada-info">Olá, Prestador Demo!</span>
 
-                <!--Botão Sanduíche Quando Estiver em Responsividade (padrão index.html)-->
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                    aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+                <!-- Botão Sanduíche em Responsividade (padrão index.html) -->
+                <div class="d-flex order-lg-3">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                </div>
 
-                <!--Menus da Página-->
+                <!-- Menus -->
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <!--Menus da Página-->
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto align-items-lg-center">
                         <li class="nav-item mb-2 mb-lg-0">
@@ -55,145 +40,216 @@
                         </li>
                     </ul>
                 </div>
+                </div>
             </div>
         </nav>
     </header>
-    <!--FIM DO CABEÇALHO DA PÁGINA-->
 
-    <!-- CONTEÚDO PRINCIPAL -->
-    <main class="container">
-        <h1 class="hotsiteadm-titulo-pagina">Administração do Hot Site — Serviços</h1>
+    <!-- WRAPPER SIDEBAR + CONTEÚDO -->
+    <div class="prest-wrapper">
 
-        <div class="hotsiteadm-layout">
+        <!-- SIDEBAR -->
+        <nav class="prest-sidebar">
+            <ul>
+                <li><a href="prestadorAreaExclusiva.html"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li><a href="prestadorServicosAgendados.html"><i class="bi bi-calendar-check"></i> Meus Agendamentos</a></li>
+                <li><a href="prestadorConfigurarAgenda.html"><i class="bi bi-calendar3"></i> Gerenciar Agenda</a></li>
+                <li><a href="prestadorHotsiteAdm.html" class="prest-nav-ativo"><i class="bi bi-globe"></i> Meu Hot Site</a></li>
+                <li><a href="prestadorAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Feitas</a></li>
+                <li><a href="prestadorAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
+                <li><a href="prestadorContato.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+            </ul>
+        </nav>
 
-            <!-- PAINEL DE CONTROLES -->
-            <aside class="hotsiteadm-controles">
-                <h3 style="color:#FFC300;"><i class="bi bi-sliders me-2"></i>Controles do Hot Site</h3>
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="prest-main">
+            <div class="container">
+            <h1 class="hotsiteadm-titulo-pagina">Administração do Hot Site — Serviços</h1>
 
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-nome">Nome do Prestador</label>
-                    <input class="hotsiteadm-input" type="text" id="adm-nome" value="">
-                </div>
+            <div class="hotsiteadm-layout">
 
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-cnpj">CPF/CNPJ</label>        
-                    <input class="hotsiteadm-input" type="text" id="adm-cnpj" value="">
-                </div>
+                <!-- PAINEL DE CONTROLES -->
+                <aside class="hotsiteadm-controles">
+                    <h3 style="color:#FFC300;"><i class="bi bi-sliders me-2"></i>Controles do Hot Site</h3>
 
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-categoria">Categoria Principal</label>
-                    <select class="hotsiteadm-select" id="adm-categoria">
-                        <option value="" selected></option>
-                    </select>
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-cidade">Atende em</label>
-                    <input class="hotsiteadm-input" type="text" id="adm-cidade" value="">
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-descricao">Descrição dos Serviços</label>
-                    <textarea class="caixa-mensagem-fixa" id="adm-descricao" rows="6" maxlength="2000" style="resize: none; overflow-y: auto; height: 169px;"></textarea>
-                    <small id="adm-descricao-contador" style="display:block; text-align:right; font-size:0.78rem; color:var(--texto-muted); margin-top:-8px; margin-bottom:8px;">0 / 2000</small>
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-endereco">Endereço do Prestador</label>
-                    <input class="hotsiteadm-input" type="text" id="adm-endereco" value="">
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-email">Email de Contato</label>
-                    <input class="hotsiteadm-input" type="email" id="adm-email" value="">
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-tel">Telefone</label>
-                    <input class="hotsiteadm-input" type="text" id="adm-tel" value="">
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-foto-perfil">Foto de Perfil (Avatar)</label>
-                    <input type="file" id="adm-galeria" accept="image/*" class="hotsiteadm-input" style="padding: 5px;">
-                </div>
-
-                <div class="hotsiteadm-botoes" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <a href="prestadorAreaExclusiva.html" class="conf-btn-voltar" style="background-color: #dc3545; color: #fff; border-color: #dc3545; flex: 1; text-align: center;">Cancelar</a>
-                    <button type="button" id="btn-limpar-hotsite" style="background-color: #6c757d; color: white; border: none; border-radius: 4px; font-weight: bold; padding: 10px 15px; cursor: pointer; flex: 1;"><i class="bi bi-eraser me-1"></i> Limpar</button>
-                    <button type="button" id="btn-salvar-hotsite" class="conf-btn-salvar" style="background-color:#FFC300; color:#000; flex: 1 1 100%; margin-top: 8px;"><i class="bi bi-floppy me-1"></i> Salvar &amp; Publicar</button>
-                </div>
-
-                <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 4px;">
-                    <div style="font-size:0.88rem; font-weight:700; color:var(--texto-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom: 10px;">Configurações</div>
-                    <a class="cta" href="prestadorConfigurarAgenda.html" style="width: 100%; text-align: center; background-color: var(--rodape-fundo);">
-                        <i class="bi bi-calendar3 me-1"></i> Configurar Agenda
-                    </a>
-                </div>
-            </aside>
-
-            <!-- PREVIEW DO HOTSITE -->
-            <div class="hotsiteadm-preview">
-                <div class="hotsiteadm-indicador-edicao">
-                    <i class="bi bi-pencil-square me-1"></i> Você está em Modo de Edição / Preview
-                </div>
-
-                <!-- CARD PERFIL PREVIEW -->
-                <div class="hotsiteadm-preview-perfil">
-                    <div class="hotsite-avatar" style="margin-bottom: 12px; background-color:#FFC300; color:#000;">JC</div>
-                    <div class="hotsite-nome"></div>
-                    <div class="hotsite-meta-info">
-                        Serviço Prestado &nbsp;·&nbsp; ★★★★☆ &nbsp;0.0 &nbsp;·&nbsp; 0 avaliações
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-nome">Nome do Prestador</label>
+                        <input class="hotsiteadm-input" type="text" id="adm-nome" value="" readonly>
+                        <small style="color:var(--texto-muted); font-size:0.78rem;">Preenchido automaticamente a partir do seu cadastro.</small>
                     </div>
-                    <div class="hotsite-atende" style="margin-top: 8px;">
-                        <i class="bi bi-geo-alt-fill me-1"></i> Atende em:
-                    </div>
-                    <a class="cta" href="prestadorServicosAgendados.html" style="margin-top:12px; width:100%; text-align:center; background-color:#FFC300; color:#000;">
-                        <i class="bi bi-calendar-check me-1"></i> Verificar Agendamentos
-                    </a>
-                </div>
 
-                <!-- CARD CONTEÚDO PREVIEW -->
-                <div class="hotsiteadm-preview-conteudo">
-                    <div class="hotsite-cabecalho-bloco">
-                        <div>
-                            <div class="hotsite-secao-titulo">Serviços &amp; Descrição</div>
-                            <p class="hotsite-desc"></p>
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-cnpj">CPF/CNPJ</label>
+                        <input class="hotsiteadm-input" type="text" id="adm-cnpj" value="" maxlength="18" placeholder="000.000.000-00 ou 00.000.000/0000-00">
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-categoria">Categoria Principal</label>
+                        <select class="hotsiteadm-select" id="adm-categoria">
+                            <option value="" selected>Selecione...</option>
+                            <option value="eletricista">Eletricista</option>
+                            <option value="encanador">Encanador</option>
+                            <option value="pintor">Pintor(a)</option>
+                            <option value="diarista">Diarista</option>
+                            <option value="montador">Montador(a) de Móveis</option>
+                            <option value="jardineiro">Jardineiro(a)</option>
+                            <option value="carpinteiro">Carpinteiro(a)</option>
+                            <option value="marido-aluguel">Marido de Aluguel</option>
+                        </select>
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-cidade">Atende em</label>
+                        <input class="hotsiteadm-input" type="text" id="adm-cidade" value="" placeholder="Cidade(s) de atendimento">
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-descricao">Descrição dos Serviços</label>
+                        <textarea class="caixa-mensagem-fixa" id="adm-descricao" rows="6" maxlength="2000" style="resize: none; overflow-y: auto; height: 169px;"></textarea>
+                        <small id="adm-descricao-contador" style="display:block; text-align:right; font-size:0.78rem; color:var(--texto-muted); margin-top:-8px; margin-bottom:8px;">0 / 2000</small>
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-endereco">Endereço do Prestador</label>
+                        <input class="hotsiteadm-input" type="text" id="adm-endereco" value="">
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-email">Email de Contato</label>
+                        <input class="hotsiteadm-input" type="email" id="adm-email" value="" readonly>
+                        <small style="color:var(--texto-muted); font-size:0.78rem;">Preenchido automaticamente a partir do seu cadastro.</small>
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-tel">Telefone</label>
+                        <input class="hotsiteadm-input" type="text" id="adm-tel" value="" placeholder="(00) 00000-0000">
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-galeria">Foto de Perfil (Avatar)</label>
+                        <input type="file" id="adm-galeria" accept="image/*" class="hotsiteadm-input" style="padding: 5px;">
+                        <small style="color:var(--texto-muted); font-size:0.78rem;">Selecione uma imagem para ser exibida no card do perfil ao lado.</small>
+                    </div>
+
+                    <div class="hotsiteadm-botoes" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <a href="prestadorAreaExclusiva.html" class="conf-btn-voltar" style="background-color: #dc3545; color: #fff; border-color: #dc3545; flex: 1; text-align: center;">Cancelar</a>
+                        <button type="button" id="btn-limpar-hotsite" style="background-color: #6c757d; color: white; border: none; border-radius: 4px; font-weight: bold; padding: 10px 15px; cursor: pointer; flex: 1;"><i class="bi bi-eraser me-1"></i> Limpar</button>
+                        <button type="button" id="btn-salvar-hotsite" class="conf-btn-salvar" style="background-color:#FFC300; color:#000; flex: 1 1 100%; margin-top: 8px;"><i class="bi bi-floppy me-1"></i> Salvar &amp; Publicar</button>
+                    </div>
+
+                    <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 4px;">
+                        <div style="font-size:0.88rem; font-weight:700; color:var(--texto-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom: 10px;">Configurações</div>
+                        <a class="cta" href="prestadorConfigurarAgenda.html" style="width: 100%; text-align: center; background-color: var(--rodape-fundo);">
+                            <i class="bi bi-calendar3 me-1"></i> Configurar Agenda
+                        </a>
+                    </div>
+
+                    <!-- SEGURANÇA: ALTERAR SENHA (modal) -->
+                    <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 16px;">
+                        <div style="font-size:0.88rem; font-weight:700; color:var(--texto-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom: 10px;">Segurança</div>
+                        <a class="cta" href="#" data-bs-toggle="modal" data-bs-target="#modalAlterarSenha" style="width: 100%; text-align: center; background-color: var(--rodape-fundo); cursor: pointer;">
+                            <i class="bi bi-lock me-1"></i> Alterar Senha
+                        </a>
+                    </div>
+                </aside>
+
+                <!-- PREVIEW DO HOTSITE -->
+                <div class="hotsiteadm-preview">
+                    <div class="hotsiteadm-indicador-edicao">
+                        <i class="bi bi-pencil-square me-1"></i> Você está em Modo de Edição / Preview
+                    </div>
+
+                    <!-- CARD PERFIL PREVIEW -->
+                    <div class="hotsiteadm-preview-perfil">
+                        <div class="hotsite-avatar" style="margin-bottom: 12px; background-color:#FFC300; color:#000;">JC</div>
+                        <div class="hotsite-nome"></div>
+                        <div class="hotsite-meta-info">
+                            Serviço Prestado &nbsp;·&nbsp; ★★★★☆ &nbsp;0.0 &nbsp;·&nbsp; 0 avaliações
+                        </div>
+                        <div class="hotsite-atende" style="margin-top: 8px;">
+                            <i class="bi bi-geo-alt-fill me-1"></i> Atende em:
+                        </div>
+                        <a class="cta" href="prestadorServicosAgendados.html" style="margin-top:12px; width:100%; text-align:center; background-color:#FFC300; color:#000;">
+                            <i class="bi bi-calendar-check me-1"></i> Verificar Agendamentos
+                        </a>
+                    </div>
+
+                    <!-- CARD CONTEÚDO PREVIEW -->
+                    <div class="hotsiteadm-preview-conteudo">
+                        <div class="hotsite-cabecalho-bloco">
+                            <div>
+                                <div class="hotsite-secao-titulo">Serviços &amp; Descrição</div>
+                                <p class="hotsite-desc"></p>
+                            </div>
+                        </div>
+
+                        <div class="hotsite-secao-titulo" style="margin-top: 14px;">Galeria de Trabalhos</div>
+                        <div class="hotsiteadm-galeria-preview" id="galeria-thumbs">
+                            <div class="hotsiteadm-thumb-preview" data-slot="0" style="position:relative;"><i class="bi bi-image"></i> Foto 1<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="1" style="position:relative;"><i class="bi bi-image"></i> Foto 2<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="2" style="position:relative;"><i class="bi bi-image"></i> Foto 3<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="3" style="position:relative;"><i class="bi bi-play-circle"></i> Vídeo<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <label style="font-size:0.82rem; font-weight:600; color:var(--texto-muted); display:block; margin-bottom:4px;">Adicionar mídia à galeria</label>
+                            <input type="file" id="adm-galeria-nova" multiple accept="image/*,video/*" class="hotsiteadm-input" style="padding: 5px;">
+                        </div>
+
+                        <div class="hotsite-secao-titulo" style="margin-top: 14px;">Depoimentos (Lidos do Sistema)</div>
+                        <div class="hotsite-depoimento"></div>
+                        <div class="hotsite-depoimento"></div>
+
+                        <div class="hotsite-secao-titulo" style="margin-top: 14px;">Contatos</div>
+                        <p style="font-size:0.9rem; color:#444; margin:0 0 14px;">
+                            <i class="bi bi-envelope me-1"></i>
+                            &nbsp;&nbsp;
+                            <i class="bi bi-telephone me-1"></i>
+                        </p>
+
+                        <div class="hotsite-secao-titulo">Agenda &amp; Disponibilidade</div>
+                        <div class="placeholder" style="margin-bottom: 16px;">
+                            Próximo horário disponível: <strong></strong> (simulado)
                         </div>
                     </div>
+                </div>
 
-                    <div class="hotsite-secao-titulo" style="margin-top: 14px;">Galeria de Trabalhos</div>
-                    <div class="hotsiteadm-galeria-preview" id="galeria-thumbs">
-                        <div class="hotsiteadm-thumb-preview" data-slot="0" style="position:relative;"><i class="bi bi-image"></i> Foto 1<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
-                        <div class="hotsiteadm-thumb-preview" data-slot="1" style="position:relative;"><i class="bi bi-image"></i> Foto 2<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
-                        <div class="hotsiteadm-thumb-preview" data-slot="2" style="position:relative;"><i class="bi bi-image"></i> Foto 3<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
-                        <div class="hotsiteadm-thumb-preview" data-slot="3" style="position:relative;"><i class="bi bi-play-circle"></i> Vídeo<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
-                    </div>
-                    <div style="margin-top: 8px;">
-                        <label style="font-size:0.82rem; font-weight:600; color:var(--texto-muted); display:block; margin-bottom:4px;">Adicionar mídia à galeria</label>
-                        <input type="file" id="adm-galeria-nova" multiple accept="image/*,video/*" class="hotsiteadm-input" style="padding: 5px;">
-                    </div>
+            </div>
 
-                    <div class="hotsite-secao-titulo" style="margin-top: 14px;">Depoimentos (Lidos do Sistema)</div>
-                    <div class="hotsite-depoimento"></div>
-                    <div class="hotsite-depoimento"></div>
-
-                    <div class="hotsite-secao-titulo" style="margin-top: 14px;">Contatos</div>
-                    <p style="font-size:0.9rem; color:#444; margin:0 0 14px;">
-                        <i class="bi bi-envelope me-1"></i>
-                        &nbsp;&nbsp;
-                        <i class="bi bi-telephone me-1"></i>
-                    </p>
-
-                    <div class="hotsite-secao-titulo">Agenda &amp; Disponibilidade</div>
-                    <div class="placeholder" style="margin-bottom: 16px;">
-                        Próximo horário disponível: <strong></strong> (simulado)
+            <!-- MODAL: ALTERAR SENHA -->
+            <div class="modal fade" id="modalAlterarSenha" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#FFC300; color:#000;">
+                            <h5 class="modal-title"><i class="bi bi-lock me-2"></i>Alterar Senha</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="senha-atual-geral" class="form-label fw-bold text-dark">Senha Atual:</label>
+                                <input type="password" class="form-control" id="senha-atual-geral" autocomplete="current-password">
+                            </div>
+                            <hr>
+                            <div class="mb-3">
+                                <label for="nova-senha-geral" class="form-label fw-bold text-dark">Nova Senha:</label>
+                                <input type="password" class="form-control" id="nova-senha-geral" autocomplete="new-password">
+                                <small class="text-muted d-block mt-1">Mínimo 8 caracteres, incluindo letras, números e caracteres especiais (Case Sensitive).</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="repita-nova-senha-geral" class="form-label fw-bold text-dark">Repita a Nova Senha:</label>
+                                <input type="password" class="form-control" id="repita-nova-senha-geral" autocomplete="new-password">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-warning" id="btn-salvar-senha-geral"><i class="bi bi-floppy me-1"></i>Salvar Nova Senha</button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-        </div>
-    </main>
+            </div>
+        </main>
+    </div>
 
     <!-- FOOTER -->
     <footer>
@@ -238,7 +294,7 @@
             </div>
             <hr class="text-white-50">
             <div class="text-center small text-white-50">
-                © 2025 ServGo! Todos os direitos reservados.
+                &copy; 2025 ServGo! Todos os direitos reservados.
             </div>
         </div>
     </footer>
@@ -257,53 +313,29 @@
             }
         })();
 
-        // --- Avatar: ao escolher imagem no input adm-galeria, exibir no hotsite-avatar ---
-        (function () {
-            var inputAvatar = document.getElementById('adm-galeria');
-            var avatar = document.querySelector('.hotsite-avatar');
-            if (!inputAvatar || !avatar) return;
-
-            inputAvatar.addEventListener('change', function () {
-                var file = this.files[0];
-                if (!file || !file.type.startsWith('image/')) return;
-                var reader = new FileReader();
-                reader.onload = function (e) {
-                    avatar.style.backgroundImage = 'url(' + e.target.result + ')';
-                    avatar.style.backgroundSize = 'cover';
-                    avatar.style.backgroundPosition = 'center';
-                    avatar.style.color = 'transparent';
-                    avatar.textContent = '';
-                };
-                reader.readAsDataURL(file);
-            });
-        })();
-
         // --- Galeria: ao escolher mídia no input adm-galeria-nova, preencher os cards da galeria ---
         (function () {
             var inputGaleria = document.getElementById('adm-galeria-nova');
             if (!inputGaleria) return;
 
-            // Labels padrão de cada slot (para restaurar ao excluir)
             var labelsDefault = [
                 '<i class="bi bi-image"></i> Foto 1',
                 '<i class="bi bi-image"></i> Foto 2',
                 '<i class="bi bi-image"></i> Foto 3',
-                '<i class="bi bi-play-circle"></i> Vídeo'
+                '<i class="bi bi-play-circle"></i> V\u00eddeo'
             ];
 
             function criarBotaoExcluir(slot, slotIdx) {
                 var btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'btn-galeria-excluir';
-                btn.title = 'Excluir mídia';
+                btn.title = 'Excluir m\u00eddia';
                 btn.innerHTML = '&times;';
                 btn.style.cssText = 'position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;z-index:10;';
                 btn.addEventListener('click', function () {
-                    // Restaura o slot para o estado vazio padrão
                     slot.innerHTML = labelsDefault[slotIdx] + '<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button>';
                     slot.style.padding = '';
                     slot.style.overflow = '';
-                    // Rebinda o botão X que foi recriado (mas estará oculto pois sem mídia)
                 });
                 return btn;
             }
@@ -334,16 +366,13 @@
                             slot.style.overflow = 'hidden';
                             slot.appendChild(vid);
                         }
-                        // Adiciona botão X visível sobre a mídia
                         slot.appendChild(criarBotaoExcluir(slot, parseInt(slot.dataset.slot)));
                     };
                     reader.readAsDataURL(file);
                 });
-                // Limpa o input para permitir reselecionar os mesmos arquivos
                 inputGaleria.value = '';
             });
 
-            // Delegação para botões X já existentes no HTML (ocultos por padrão)
             document.getElementById('galeria-thumbs').addEventListener('click', function(e) {
                 var btn = e.target.closest('.btn-galeria-excluir');
                 if (!btn) return;

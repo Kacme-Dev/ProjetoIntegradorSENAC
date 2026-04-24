@@ -6,13 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ServGo! - Serviços Agendados</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/css/estiloServGo.css">
 </head>
 
 <body>
 
-    <!-- NAVBAR -->
+    <!-- NAVBAR (padrão index.html — responsividade unificada) -->
     <header>
         <nav class="navbar navbar-expand-lg">
             <div class="container menu">
@@ -20,126 +20,303 @@
                     <span class="serv-part">Serv</span><span class="go-part">Go!</span>
                 </a>
                 <span class="navbar-logada-info">Olá, Prestador Demo!</span>
+
+                <!-- Botão Sanduíche em Responsividade (padrão index.html) -->
                 <div class="d-flex order-lg-3">
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
                         aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
                     </button>
                 </div>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav mx-auto">
-                        <li class="nav-item"><a class="nav-link nav-link-active" href="/index.html">Início</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/paginasSite/avaliacao.html">Avaliações</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/paginasSite/contatoSite.html">Contato</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/paginasSite/faqSite.html">FAQ</a></li>
-                    </ul>                    
-                </div>
 
-                    <ul class="navbar-nav mx-auto">
-                        <li class="nav-item"><a class="nav-link" href="prestadorAreaExclusiva.html" class="text-black"><i class="bi bi-gear"></i> Área Exclusiva</a></li>
+                <!-- Menus -->
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <!--Menus da Página-->
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+                        <li class="nav-item mb-2 mb-lg-0">
+                            <button id="btn-voltar" type="button" class="btn btn-outline-secondary">Voltar</button>
+                            <a class="btn btn-danger" href="/index.html">Sair</a>
+                        </li>
                     </ul>
+                </div>
+                </div>
             </div>
         </nav>
     </header>
 
-    <!-- CONTEÚDO PRINCIPAL -->
-    <main class="agenda-prest-main">
-        <div class="agenda-prest-topo">
-            <h1>Minha Agenda de Serviços</h1>
-            <a class="cta" href="prestadorConfigurarAgenda.html">
-                <i class="bi bi-sliders me-1"></i> Configurar Disponibilidade
-            </a>
-        </div>
+    <!-- WRAPPER SIDEBAR + CONTEÚDO -->
+    <div class="prest-wrapper">
 
-        <div class="card" style="padding: 0;">
-            <!-- ABAS -->
-            <div class="agenda-prest-abas" style="padding: 0 20px;">
-                <a class="nav-link nav-link-active" href="/paginasPrestador/prestadorServicosAgendados.html">Próximos Agendamentos (6)</a>
-                <a class="nav-link" href="/paginasPrestador/prestadorServicosPendentes.html">Pendentes de Confirmação (1)</a>
-                <a class="nav-link" href="/paginasPrestador/prestadorServicosHistorico.html">Histórico (35)</a>
+        <nav class="prest-sidebar">
+            <ul>
+                <li><a href="prestadorAreaExclusiva.html"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li><a href="prestadorServicosAgendados.html" class="prest-nav-ativo"><i class="bi bi-calendar-check"></i> Meus Agendamentos</a></li>
+                <li><a href="prestadorConfigurarAgenda.html"><i class="bi bi-calendar3"></i> Gerenciar Agenda</a></li>
+                <li><a href="prestadorHotsiteAdm.html"><i class="bi bi-globe"></i> Meu Hot Site</a></li>
+                <li><a href="prestadorAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Feitas</a></li>
+                <li><a href="prestadorAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
+                <li><a href="prestadorContato.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+            </ul>
+        </nav>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="prest-main">
+            <div style="max-width: 900px; margin: 40px auto; padding: 0 16px;">
+            <div class="agenda-prest-topo">
+                <h1>Minha Agenda de Serviços</h1>
+                <a class="cta" href="prestadorConfigurarAgenda.html">
+                    <i class="bi bi-sliders me-1"></i> Configurar Disponibilidade
+                </a>
             </div>
 
-            <!-- LISTA DE AGENDAMENTOS -->
-            <ul class="agenda-prest-lista">
+            <div class="card" style="padding: 0;">
+                <!-- ABAS (Controladas via JS — não navegam, só alternam o conteúdo) -->
+                <!--
+                    O wrapper abaixo mantém as abas à esquerda e reserva espaço à direita
+                    para o aviso de mensagens não lidas (#agenda-aviso-msgs-nao-lidas),
+                    que é exibido dinamicamente pelo script.js quando houver pelo menos
+                    uma conversa com mensagens não lidas.
+                -->
+                <div class="agenda-prest-abas-wrapper" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; padding: 0 20px;">
+                    <div class="agenda-prest-abas" style="padding: 0;" id="agenda-abas">
+                        <a href="#" class="nav-link nav-link-active agenda-aba-ativa" data-aba="proximos">
+                            Próximos Agendamentos (<span id="contador-proximos">0</span>)
+                        </a>
+                        <a href="#" class="nav-link" data-aba="pendentes">
+                            Pendentes de Confirmação (<span id="contador-pendentes">0</span>)
+                        </a>
+                        <a href="#" class="nav-link" data-aba="historico">
+                            Histórico (<span id="contador-historico">0</span>)
+                        </a>
+                    </div>
+                    <span class="msg-nao-lidas-aviso" id="agenda-aviso-msgs-nao-lidas" style="display:none;">
+                        <i class="bi bi-bell-fill"></i>
+                        Você possui mensagens não lidas
+                    </span>
+                </div>
 
-                <li class="agenda-prest-item">
-                    <div>
-                        <div class="agenda-slot-dia">Hoje</div>
-                        <div class="agenda-slot-tempo">14:00 - 17:00</div>
-                    </div>
-                    <div>
-                        <div class="agenda-cliente-nome">Maria da Silva</div>
-                        <p class="agenda-cliente-servico">Serviço: Montagem de Estante</p>
-                        <p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i> Rua das Flores, 123 - Centro</p>
-                    </div>
-                    <div class="agenda-status-area">
-                        <span class="agenda-status-tag confirmado">Confirmado</span>
-                        <div class="agenda-botoes">
-                            <a href="#" class="agenda-btn"><i class="bi bi-info-circle me-1"></i>Detalhes</a>
-                            <a href="#" class="agenda-btn cancelar"><i class="bi bi-x me-1"></i>Cancelar</a>
+                <!-- FILTRO POR PERÍODO (só aparece na aba Histórico) -->
+                <div id="agenda-filtro-periodo" class="agenda-filtro-periodo" style="display:none;">
+                    <div class="agenda-filtro-linha">
+                        <div class="agenda-filtro-campo">
+                            <label for="filtro-data-inicio"><i class="bi bi-calendar-event me-1"></i> De:</label>
+                            <input type="date" id="filtro-data-inicio" class="form-control form-control-sm">
+                        </div>
+                        <div class="agenda-filtro-campo">
+                            <label for="filtro-data-fim"><i class="bi bi-calendar-event me-1"></i> Até:</label>
+                            <input type="date" id="filtro-data-fim" class="form-control form-control-sm">
+                        </div>
+                        <div class="agenda-filtro-botoes">
+                            <button type="button" id="btn-filtrar-historico" class="btn btn-sm btn-primary">
+                                <i class="bi bi-funnel me-1"></i> Filtrar
+                            </button>
+                            <button type="button" id="btn-limpar-filtro" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-x-circle me-1"></i> Limpar
+                            </button>
                         </div>
                     </div>
-                </li>
+                    <div id="filtro-info-periodo" class="agenda-filtro-info"></div>
+                </div>
 
-                <li class="agenda-prest-item">
-                    <div>
-                        <div class="agenda-slot-dia">Amanhã</div>
-                        <div class="agenda-slot-tempo">09:00 - 11:00</div>
-                    </div>
-                    <div>
-                        <div class="agenda-cliente-nome">Pedro Souza</div>
-                        <p class="agenda-cliente-servico">Serviço: Pequeno Reparo na Porta</p>
-                        <p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i> Av. Principal, 500 - Vila Nova</p>
-                    </div>
-                    <div class="agenda-status-area">
-                        <span class="agenda-status-tag pendente">Pendente</span>
-                        <div class="agenda-botoes">
-                            <a href="#" class="agenda-btn confirmar"><i class="bi bi-check me-1"></i>Confirmar</a>
-                            <a href="#" class="agenda-btn cancelar"><i class="bi bi-x me-1"></i>Rejeitar</a>
-                        </div>
-                    </div>
-                </li>
+                <!-- LISTA DE AGENDAMENTOS (preenchida via JS) -->
+                <ul class="agenda-prest-lista" id="agenda-lista"></ul>
+            </div>
+            </div>
+        </main>
+    </div>
 
-                <li class="agenda-prest-item">
-                    <div>
-                        <div class="agenda-slot-dia">Qui, 25/Out</div>
-                        <div class="agenda-slot-tempo">10:00 - 12:00</div>
-                    </div>
-                    <div>
-                        <div class="agenda-cliente-nome">Ana Lúcia</div>
-                        <p class="agenda-cliente-servico">Serviço: Restauração de Móvel Antigo</p>
-                        <p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i> Bairro Nobre, 330</p>
-                    </div>
-                    <div class="agenda-status-area">
-                        <span class="agenda-status-tag confirmado">Confirmado</span>
-                        <div class="agenda-botoes">
-                            <a href="#" class="agenda-btn"><i class="bi bi-info-circle me-1"></i>Detalhes</a>
-                            <a href="#" class="agenda-btn cancelar"><i class="bi bi-x me-1"></i>Cancelar</a>
-                        </div>
-                    </div>
-                </li>
-
-                <li class="agenda-prest-item">
-                    <div>
-                        <div class="agenda-slot-dia">Seg, 14/Out</div>
-                        <div class="agenda-slot-tempo">08:00 - 13:00</div>
-                    </div>
-                    <div>
-                        <div class="agenda-cliente-nome">Fábio Mello</div>
-                        <p class="agenda-cliente-servico">Serviço: Instalação de Prateleiras (5)</p>
-                        <p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i> Condomínio Residencial</p>
-                    </div>
-                    <div class="agenda-status-area">
-                        <span class="agenda-status-tag concluido">Concluído</span>
-                        <div class="agenda-botoes">
-                            <a href="#" class="agenda-btn"><i class="bi bi-file-text me-1"></i>Ver Nota</a>
-                        </div>
-                    </div>
-                </li>
-
-            </ul>
+    <!-- ============================================== -->
+    <!--        MODAL: DETALHES DO AGENDAMENTO          -->
+    <!-- ============================================== -->
+    <div class="modal fade" id="modalDetalhesAgendamento" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color:#146ADB; color:#fff;">
+                    <h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Detalhes do Agendamento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body" id="modal-detalhes-corpo">
+                    <!-- preenchido via JS -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
         </div>
-    </main>
+    </div>
+
+    <!-- ============================================== -->
+    <!--    MODAL: CANCELAR / REJEITAR AGENDAMENTO      -->
+    <!-- ============================================== -->
+    <div class="modal fade" id="modalCancelarAgendamento" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color:#dc3545; color:#fff;">
+                    <h5 class="modal-title" id="modal-cancelar-titulo">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Cancelar Agendamento
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="modal-cancelar-descricao" class="mb-3">
+                        Selecione abaixo o motivo do cancelamento. O cliente receberá um aviso
+                        com o motivo e uma solicitação de reagendamento.
+                    </p>
+
+                    <div id="modal-cancelar-info-agendamento" class="agenda-modal-info-box mb-3"></div>
+
+                    <label class="form-label fw-bold">Motivo do cancelamento:</label>
+                    <div class="agenda-motivos-lista" id="motivos-lista">
+                        <label class="agenda-motivo-opcao">
+                            <input type="radio" name="motivo-cancelamento" value="Imprevisto pessoal do prestador">
+                            <span>Imprevisto pessoal do prestador</span>
+                        </label>
+                        <label class="agenda-motivo-opcao">
+                            <input type="radio" name="motivo-cancelamento" value="Problema de saúde">
+                            <span>Problema de saúde</span>
+                        </label>
+                        <label class="agenda-motivo-opcao">
+                            <input type="radio" name="motivo-cancelamento" value="Conflito de horário / agenda sobreposta">
+                            <span>Conflito de horário / agenda sobreposta</span>
+                        </label>
+                        <label class="agenda-motivo-opcao">
+                            <input type="radio" name="motivo-cancelamento" value="Problema com ferramentas ou materiais">
+                            <span>Problema com ferramentas ou materiais</span>
+                        </label>
+                        <label class="agenda-motivo-opcao">
+                            <input type="radio" name="motivo-cancelamento" value="Condições climáticas desfavoráveis">
+                            <span>Condições climáticas desfavoráveis</span>
+                        </label>
+                        <label class="agenda-motivo-opcao">
+                            <input type="radio" name="motivo-cancelamento" value="Serviço fora da minha área de atuação">
+                            <span>Serviço fora da minha área de atuação</span>
+                        </label>
+                        <label class="agenda-motivo-opcao">
+                            <input type="radio" name="motivo-cancelamento" value="Localização fora do raio de atendimento">
+                            <span>Localização fora do raio de atendimento</span>
+                        </label>
+                        <label class="agenda-motivo-opcao">
+                            <input type="radio" name="motivo-cancelamento" value="outro" id="motivo-outro">
+                            <span>Outro motivo (descrever abaixo)</span>
+                        </label>
+                    </div>
+
+                    <div class="mt-3">
+                        <label for="motivo-observacao" class="form-label fw-bold">
+                            Observação / detalhes adicionais
+                            <small class="text-muted fw-normal">(opcional, exceto p/ "Outro motivo")</small>
+                        </label>
+                        <textarea id="motivo-observacao" class="form-control" rows="3"
+                                  placeholder="Descreva com mais detalhes o motivo — essa observação será enviada ao cliente."></textarea>
+                    </div>
+
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="chk-solicitar-reagendamento" checked>
+                        <label class="form-check-label" for="chk-solicitar-reagendamento">
+                            Enviar solicitação de <strong>reagendamento</strong> ao cliente
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-arrow-left me-1"></i> Voltar
+                    </button>
+                    <button type="button" class="btn btn-danger" id="btn-confirmar-cancelamento">
+                        <i class="bi bi-send me-1"></i> Confirmar e Notificar Cliente
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!--        MODAL: VER NOTA DE AVALIAÇÃO            -->
+    <!-- ============================================== -->
+    <div class="modal fade" id="modalVerNota" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color:#FFC300; color:#000;">
+                    <h5 class="modal-title"><i class="bi bi-star-fill me-2"></i>Avaliação do Cliente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body" id="modal-ver-nota-corpo">
+                    <!-- preenchido via JS -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!--        MODAL: CHAT COM O CLIENTE               -->
+    <!-- ============================================== -->
+    <div class="modal fade" id="modalChatCliente" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content agenda-chat-modal">
+                <div class="modal-header" style="background-color:#146ADB; color:#fff;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-chat-dots me-2"></i>
+                        <span>Chat com </span><span id="modal-chat-cliente-nome">Cliente</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+
+                <div class="modal-body p-0">
+                    <!-- INFO DO AGENDAMENTO (contexto do chat) -->
+                    <div id="modal-chat-info-agendamento" class="agenda-chat-info"></div>
+
+                    <!-- HISTÓRICO DE MENSAGENS -->
+                    <div id="modal-chat-historico" class="agenda-chat-historico" aria-live="polite">
+                        <!-- mensagens preenchidas via JS -->
+                    </div>
+
+                    <!-- ÁREA DE COMPOSIÇÃO DA MENSAGEM -->
+                    <div class="agenda-chat-composer">
+                        <textarea id="modal-chat-texto" class="form-control agenda-chat-textarea"
+                                  rows="3"
+                                  placeholder="Escreva sua mensagem para o cliente..."
+                                  maxlength="1000"></textarea>
+                        <div class="agenda-chat-contador">
+                            <span id="modal-chat-contador">0</span> / 1000 caracteres
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer agenda-chat-rodape">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-chat-limpar">
+                        <i class="bi bi-eraser me-1"></i> Limpar
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="btn-chat-editar">
+                        <i class="bi bi-pencil me-1"></i> Editar
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-chat-cancelar">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-chat-enviar">
+                        <i class="bi bi-send me-1"></i> Enviar Mensagem
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!--        TOAST — NOTIFICAÇÃO DE SUCESSO          -->
+    <!-- ============================================== -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1080;">
+        <div id="toastNotificacao" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toast-corpo">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <span id="toast-mensagem">Ação realizada com sucesso!</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
+            </div>
+        </div>
+    </div>
 
     <!-- FOOTER -->
     <footer>
@@ -184,7 +361,7 @@
             </div>
             <hr class="text-white-50">
             <div class="text-center small text-white-50">
-                © 2025 ServGo! Todos os direitos reservados.
+                &copy; 2025 ServGo! Todos os direitos reservados.
             </div>
         </div>
     </footer>

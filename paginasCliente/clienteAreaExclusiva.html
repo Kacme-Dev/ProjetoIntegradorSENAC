@@ -102,15 +102,35 @@
             </div>
 
             <div class="cli-card">
-                <div class="cli-card-cabecalho">Status dos Últimos Pedidos</div>
+                <div class="cli-card-cabecalho" id="cli-cabecalho-pedidos">
+                    <span>Status dos Últimos Pedidos</span>
+                    <!--
+                        Aviso de mensagens não lidas — só aparece se houver pelo menos um item
+                        com a classe .tem-mensagem-nao-lida na lista abaixo. A visibilidade é
+                        controlada dinamicamente pelo script.js (veja inicializarClienteAreaExclusiva).
+                    -->
+                    <span class="msg-nao-lidas-aviso" id="cli-aviso-msgs-nao-lidas" style="display:none;">
+                        <i class="bi bi-bell-fill"></i>
+                        Você possui mensagens não lidas
+                    </span>
+                </div>
                 <ul class="cli-pedidos-lista">
-                    <li class="cli-pedidos-item" data-pedido-id="pedido-1" data-servico="Eletricista" data-profissional="Maria Silva">
+                    <li class="cli-pedidos-item tem-mensagem-nao-lida" data-pedido-id="pedido-1" data-servico="Eletricista" data-profissional="Maria Silva">
                         <span><strong>Serviço:</strong> Eletricista &nbsp;|&nbsp; <strong>Profissional:</strong> Maria Silva</span>
                         <span class="cli-badge em-andamento">Em Andamento</span>
                         <div class="cli-pedidos-acoes">
+                            <!--
+                                Sininho clicável: só é exibido quando existem mensagens não lidas do prestador.
+                                Ao clicar, abre o modal de chat já marcando a conversa como lida.
+                                O title indica de qual prestador veio a mensagem.
+                            -->
+                            <button type="button" class="cli-msg-sino" title="Mensagens não lidas de Maria Silva" aria-label="Mensagens não lidas de Maria Silva">
+                                <i class="bi bi-bell-fill"></i>
+                            </button>
                             <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
                             <button type="button" class="btn btn-warning btn-editar">Editar</button>
                             <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
+                            <button type="button" class="btn btn-chat"><i class="bi bi-chat-dots me-1"></i>Chat</button>
                         </div>
                     </li>
                     <li class="cli-pedidos-item" data-pedido-id="pedido-2" data-servico="Diarista" data-profissional="João Souza">
@@ -120,6 +140,7 @@
                             <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
                             <button type="button" class="btn btn-warning btn-editar">Editar</button>
                             <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
+                            <button type="button" class="btn btn-chat"><i class="bi bi-chat-dots me-1"></i>Chat</button>
                         </div>
                     </li>
                     <li class="cli-pedidos-item" data-pedido-id="pedido-3" data-servico="Montador de Móveis" data-profissional="N/A">
@@ -129,6 +150,7 @@
                             <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
                             <button type="button" class="btn btn-warning btn-editar">Editar</button>
                             <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
+                            <button type="button" class="btn btn-chat"><i class="bi bi-chat-dots me-1"></i>Chat</button>
                         </div>
                     </li>
                 </ul>
@@ -245,6 +267,92 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="button" class="btn btn-primary" id="btn-salvar-edicao"><i class="bi bi-floppy me-1"></i>Salvar Alterações</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!--        MODAL: CHAT COM O PRESTADOR              -->
+    <!-- ============================================== -->
+    <!--
+        Modal de conversa do cliente com o prestador de serviço. Segue a MESMA estrutura e
+        comportamentos do modal de chat presente em prestadorServicosAgendados.html, garantindo
+        uma experiência consistente dos dois lados da conversa.
+
+        Regras principais (implementadas em script.js → inicializarClienteAreaExclusiva):
+          • Cada conversa é exclusiva entre UM cliente e UM prestador;
+          • O histórico é persistido em localStorage sob uma chave derivada do pedido/prestador,
+            de modo que a mesma conversa reapareça ao fechar e reabrir o modal;
+          • Os 4 botões do rodapé (Limpar, Editar, Cancelar, Enviar) têm as mesmas
+            responsabilidades da versão do prestador.
+    -->
+    <div class="modal fade" id="modalChatPrestador" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content agenda-chat-modal">
+                <div class="modal-header" style="background-color:#146ADB; color:#fff;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-chat-dots me-2"></i>
+                        <span>Chat com </span><span id="modal-chat-prestador-nome">Prestador</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+
+                <div class="modal-body p-0">
+                    <!-- Faixa de contexto (serviço + profissional) -->
+                    <div id="modal-chat-cli-info" class="agenda-chat-info"></div>
+
+                    <!-- Histórico de mensagens -->
+                    <div id="modal-chat-cli-historico" class="agenda-chat-historico" aria-live="polite">
+                        <!-- preenchido via JS -->
+                    </div>
+
+                    <!-- Área de composição da mensagem -->
+                    <div class="agenda-chat-composer">
+                        <!--
+                            Textarea com altura fixa (controlada por CSS). Comporta cerca de
+                            200 caracteres antes de surgir a barra de rolagem vertical. O
+                            tamanho do campo não aumenta conforme o usuário digita.
+                        -->
+                        <textarea id="modal-chat-cli-texto"
+                                  class="form-control agenda-chat-textarea"
+                                  rows="3"
+                                  placeholder="Escreva sua mensagem para o prestador..."
+                                  maxlength="1000"></textarea>
+                        <div class="agenda-chat-contador">
+                            <span id="modal-chat-cli-contador">0</span> / 1000 caracteres
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer agenda-chat-rodape">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-chat-cli-limpar">
+                        <i class="bi bi-eraser me-1"></i> Limpar
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="btn-chat-cli-editar">
+                        <i class="bi bi-pencil me-1"></i> Editar
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-chat-cli-cancelar">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="btn-chat-cli-enviar">
+                        <i class="bi bi-send me-1"></i> Enviar Mensagem
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!--        TOAST — NOTIFICAÇÃO DE SUCESSO          -->
+    <!-- ============================================== -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1080;">
+        <div id="toastNotificacao" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <span id="toast-mensagem">Ação realizada com sucesso!</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
             </div>
         </div>
     </div>

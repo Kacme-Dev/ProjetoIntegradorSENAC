@@ -1,111 +1,111 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
+
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Relatórios — Portal Prestadores</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServGo! - Relatórios</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/css/estiloServGo.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/css/estiloServGo.css">
 </head>
+
 <body>
+
+    <!-- NAVBAR (padrão index.html — responsividade unificada) -->
     <header>
+        <nav class="navbar navbar-expand-lg">
+            <div class="container menu">
+                <a class="navbar-brand" href="/index.html">
+                    <span class="serv-part">Serv</span><span class="go-part">Go!</span>
+                </a>
+                <span class="navbar-logada-info">Olá, Prestador Demo!</span>
 
-            <!--TOPO DA PÁGINA-->
-
-            <!--Trabalha sobre os Menus (links)-->
-
-            <nav class="navbar navbar-expand-lg">
-
-                <div class="container menu"> <!--Altera o conteúdo dos Menus (links)-->
-
-                    <!--Propriedades do Logo (Topo da Página) + Clicar no Logo volta para página Home-->
-
-                    <a class="navbar-brand" href="index.html">
-                        <span class="serv-part">Serv</span><span class="go-part">Go!</span>
-                    </a>
-                    <span class="navbar-logada-info">Olá, Prestador Demo!</span>
-
-                    <!--Botão Serviços Quando Estiver em Responsividade-->
-
-                    <div class="d-flex order-lg-3">                        
-
-                        <!--Botão Sanduíche Quando Estiver em Responsividade-->
-
-                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                            <span class="navbar-toggler-icon"></span>
-                        </button>
-                    </div>
-
-                    <!--Menus da Página Home-->
-
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav mx-auto">
-                            <li class="nav-item"><a class="nav-link nav-link-active" href="/index.html">Início</a></li>
-                            <li class="nav-item"><a class="nav-link" href="./avaliacao.html">Avaliações</a></li>
-                            <li class="nav-item"><a class="nav-link" href="./contatoSite.html">Contato</a></li>
-                            <li class="nav-item"><a class="nav-link" href="./faqSite.html">FAQ</a></li>
-                        </ul>                        
-                    </div>
-
-                    <li class="nav-item"><a class="nav-link" href="/paginasPrestador/prestadorAreaExclusiva.html">Área Exclusiva | Prestador</a></li>
-
+                <!-- Botão Sanduíche em Responsividade (padrão index.html) -->
+                <div class="d-flex order-lg-3">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
                 </div>
-            </nav>
-        </header>
 
-        <!--FIM DO CABEÇALHO DA PÁGINA-->
-
-
-    <main class="relatorio-main">
-        <h1>Relatórios</h1>
-        <p>Visão simplificada de atendimentos e ganhos (simulado).</p>
-
-        <div class="grid">
-            <div class="card">
-                <h3>Total de clientes atendidos</h3>
-                <div class="kv">42</div>
+                <!-- Menus -->
+                <!--Menus da Página-->
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+                        <li class="nav-item mb-2 mb-lg-0">
+                            <button id="btn-voltar" type="button" class="btn btn-outline-secondary">Voltar</button>
+                            <a class="btn btn-danger" href="/index.html">Sair</a>
+                        </li>
+                    </ul>
+                </div>
             </div>
-            <div class="card">
-                <h3>Serviços realizados</h3>
-                <div class="kv">87</div>
-            </div>
-            <div class="card">
-                <h3>Faturamento no mês</h3>
-                <div class="kv">R$ 7.400,00</div>
-            </div>
-            <div class="card">
-                <h3>Avaliações positivas</h3>
-                <div class="kv">80%</div>
-            </div>
-        </div>
+        </nav>
+    </header>
 
-        <div class="card">
-            <h3>Relatório detalhado (simulado)</h3>
-            <div class="placeholder">Tabela de atendimentos / valores / tempo médio — export CSV disponível na versão final.</div>
-        </div>
-    </main>
+    <!-- WRAPPER SIDEBAR + CONTEÚDO -->
+    <div class="prest-wrapper">
 
-    <!------------------------------------------ INÍCIO DO RODAPÉ ------------------------------------------------>
+        <nav class="prest-sidebar">
+            <ul>
+                <li><a href="prestadorAreaExclusiva.html" class="prest-nav-ativo"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li><a href="prestadorServicosAgendados.html"><i class="bi bi-calendar-check"></i> Meus Agendamentos</a></li>
+                <li><a href="prestadorConfigurarAgenda.html"><i class="bi bi-calendar3"></i> Gerenciar Agenda</a></li>
+                <li><a href="prestadorHotsiteAdm.html"><i class="bi bi-globe"></i> Meu Hot Site</a></li>
+                <li><a href="prestadorAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Feitas</a></li>
+                <li><a href="prestadorAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
+                <li><a href="prestadorContato.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+            </ul>
+        </nav>
 
-    <footer class="bg-dark text-white pt-5 pb-4" style="background-color: var(--rodape-fundo) !important;">
-        <div class="container">
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="relatorio-main">
+            <h1>Relatórios</h1>
+            <p>Visão simplificada de atendimentos e ganhos (simulado).</p>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>Total de clientes atendidos</h3>
+                    <div class="kv">42</div>
+                </div>
+                <div class="card">
+                    <h3>Serviços realizados</h3>
+                    <div class="kv">87</div>
+                </div>
+                <div class="card">
+                    <h3>Faturamento no mês</h3>
+                    <div class="kv">R$ 7.400,00</div>
+                </div>
+                <div class="card">
+                    <h3>Avaliações positivas</h3>
+                    <div class="kv">80%</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Relatório detalhado (simulado)</h3>
+                <div class="placeholder">Tabela de atendimentos / valores / tempo médio — export CSV disponível na versão final.</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container" style="padding-top: 40px; padding-bottom: 32px;">
             <div class="row">
                 <div class="col-md-3 mb-4">
                     <a class="navbar-footer" href="#">
                         <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
                     </a>
-                    <p class="small text-muted">Análise, inovação e conteúdo de valor.</p>
-                    <div class="d-flex social-icons-custom">
+                    <p class="small text-muted mt-2">Análise, inovação e conteúdo de valor.</p>
+                    <div class="d-flex social-icons-custom mt-2">
                         <a href="#" class="text-white me-3"><i class="bi bi-linkedin"></i></a>
                         <a href="#" class="text-white me-3"><i class="bi bi-instagram"></i></a>
                         <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
                     </div>
                 </div>
-
                 <div class="col-md-3 mb-4">
-                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Links Rápidos</h5>
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Links Rápidos</h5>
                     <ul class="list-unstyled">
                         <li><a href="#" class="text-white-50 text-decoration-none">Quem Somos</a></li>
                         <li><a href="#" class="text-white-50 text-decoration-none">Serviços</a></li>
@@ -113,9 +113,8 @@
                         <li><a href="#" class="text-white-50 text-decoration-none">Fale Conosco</a></li>
                     </ul>
                 </div>
-
                 <div class="col-md-3 mb-4">
-                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Nossos Serviços</h5>
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Nossos Serviços</h5>
                     <ul class="list-unstyled">
                         <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
                         <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
@@ -123,9 +122,8 @@
                         <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
                     </ul>
                 </div>
-
                 <div class="col-md-3 mb-4">
-                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Contato</h5>
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Contato</h5>
                     <p class="small text-white-50"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</p>
                     <p class="small text-white-50"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</p>
                     <p class="small text-white-50"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</p>
@@ -134,12 +132,10 @@
             </div>
             <hr class="text-white-50">
             <div class="text-center small text-white-50">
-                © 2026 ServGo! Todos os direitos reservados.
+                &copy; 2025 ServGo! Todos os direitos reservados.
             </div>
         </div>
     </footer>
-
-    <!-------------------------------------------- FIM DO RODAPÉ ------------------------------------------------>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/script.js" defer></script>

@@ -5,121 +5,199 @@ Nunca modificar o que não for citado. Se não for pedido algo, mantenha como es
 O seu foco é aplicar os ajustes solicitados abaixo, garantido a correta implementação do que está sendo pedido e a sua execução de acordo com o que é esperado.
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Na página prestadorHotsiteAdm.html na parte do código
+Ajustar a página prestadorHotsite.html onde
 
-  <!-- CONTEÚDO PRINCIPAL -->
-    <main class="container">
-        <h1 class="hotsiteadm-titulo-pagina">Administração do Hot Site — Serviços</h1>
-
-        <div class="hotsiteadm-layout">
-
-            <!-- PAINEL DE CONTROLES -->
-            <aside class="hotsiteadm-controles">
-                <h3><i class="bi bi-sliders me-2"></i>Controles do Hot Site</h3>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-nome">Nome do Prestador</label>
-                    <input class="hotsiteadm-input" type="text" id="adm-nome" value="">
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-cnpj">CPF/CNPJ</label>        
-                    <input class="hotsiteadm-input" type="text" id="adm-cnpj" value="">
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-categoria">Categoria Principal</label>
-                    <select class="hotsiteadm-select" id="adm-categoria">
-                        <option value="" selected></option>
-                    </select>
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-cidade">Atende em</label>
-                    <input class="hotsiteadm-input" type="text" id="adm-cidade" value="">
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-descricao">Descrição dos Serviços</label>
-                    <textarea class="caixa-mensagem-fixa" id="adm-descricao" rows="6"></textarea>
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-email">Email de Contato</label>
-                    <input class="hotsiteadm-input" type="email" id="adm-email" value="">
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-tel">Telefone</label>
-                    <input class="hotsiteadm-input" type="text" id="adm-tel" value="">
-                </div>
-
-                <div class="hotsiteadm-grupo">
-                    <label for="adm-galeria">Gerenciar Galeria</label>
-                    <input type="file" id="adm-galeria" multiple accept="image/*,video/*" class="hotsiteadm-input" style="padding: 5px;">
-                </div>
-
-                <div class="hotsiteadm-botoes">
-                    <a href="prestadorAreaExclusiva.html" class="conf-btn-voltar">Cancelar</a>
-                    <button type="button" class="conf-btn-salvar"><i class="bi bi-floppy me-1"></i> Salvar &amp; Publicar</button>
-                </div>
-
-                <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 4px;">
-                    <div style="font-size:0.88rem; font-weight:700; color:var(--texto-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom: 10px;">Configurações</div>
-                    <a class="cta" href="prestadorConfigurarAgenda.html" style="width: 100%; text-align: center; background-color: var(--rodape-fundo);">
-                        <i class="bi bi-calendar3 me-1"></i> Configurar Agenda
+<footer>
+        <div class="container" style="padding-top: 40px; padding-bottom: 32px;">
+            <div class="row">
+                <div class="col-md-3 mb-4">
+                    <a class="navbar-footer" href="#">
+                        <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
                     </a>
+                    <p class="small text-muted mt-2">Análise, inovação e conteúdo de valor.</p>
+                    <div class="d-flex social-icons-custom mt-2">
+                        <a href="#" class="text-white me-3"><i class="bi bi-linkedin"></i></a>
+                        <a href="#" class="text-white me-3"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
+                    </div>
                 </div>
-            </aside>
-			
-Incluir o cmapo para Endereço do Prestador
-
-Na parte do código
-
-<div class="hotsiteadm-grupo">
-                    <label for="adm-descricao">Descrição dos Serviços</label>
-                    <textarea class="caixa-mensagem-fixa" id="adm-descricao" rows="6"></textarea>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Links Rápidos</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50 text-decoration-none">Quem Somos</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Serviços</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Fale Conosco</a></li>
+                    </ul>
                 </div>
-
-Ajustar a lógica no javascript (arquivo script.js) para que por padrão (default), os campos correspondentes ao cadastro (nome e e-mail), já apareçam preenchidos, pois já foram informados pelo prestador no cadastro.
-	Os demeis campos, ao serem preenchidos, permita que sejam salvos os dados ao ser clicado no botão "Salvar & Publicar".
-	Altere a cor do botão "Cancelar" para vermelho e o texto "Cancelar do botão" para branco.
-	Implemente um botão limpar, para que o prestador possa limpar os dados de cadastro, exceto os dados "nome e E-mail" já informados no cadastro.
-	Defina a quantidade de caracteres para o campo CPF/CNPJ para aceitar o cadastro de CPF ou CNPJ e, ajuste para que quando o usuário digitar os números, já sejam incluídos automaticamente os pontos e o traço conforme o padrão Brasileiro.
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Nossos Serviços</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Contato</h5>
+                    <p class="small text-white-50"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</p>
+                    <p class="small text-white-50"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</p>
+                    <p class="small text-white-50"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</p>
+                    <a href="#" class="small text-decoration-none text-warning">Trabalhe Conosco</a>
+                </div>
+            </div>
+            <hr class="text-white-50">
+            <div class="text-center small text-white-50">
+                © 2025 ServGo! Todos os direitos reservados.
+            </div>
+        </div>
+    </footer>
 	
-Implemente o ajuste para que quando o usuário clicar no botão "Procuar", em "Foto de Perfil", ao selecionar o arquivo da foto, essa foto seja mostrada em <div class="hotsite-avatar" style="margin-bottom: 12px;">AS</div>
-	Essa foto é o avatar do cliente
-Alterar as cores dos botões "Salvar & Publicar" e "Agendar Serviço" para a cor #FFC300
-Alterar as cores do título "Controles do Hotsite" e do cArd do avatar para a cor #FFC300
-Alterar a cor do botão "Cancelar" para vermelho e com o texto na cor branca (white)
-Ajustar a lógica no javascript (arquivo script.js) para que ao ser clicado no botão "Procurar" em "Gerenciar Galeria", ao ser selcionada uma imagem, que a imagem preencha o card do Avatar do Prestador com a imagem/foto escolhida em-andamento<!-- CARD PERFIL PREVIEW -->
-                <div class="hotsiteadm-preview-perfil">
-                    <div class="hotsite-avatar" style="margin-bottom: 12px;">JC</div>
-                    <div class="hotsite-nome"></div>
-                    <div class="hotsite-meta-info">
-                        Serviço Prestado &nbsp;·&nbsp; ★★★★☆ &nbsp;0.0 &nbsp;·&nbsp; 0 avaliações
+ajustar de acordo com as páginas do projeto, por exemplo, prestadorHotsiteAdm.html
+
+Ajustar o CSS para que as cores dess apágina sejam as mesmas da página prestadorHotsiteAdm.html
+Cire abaixo de <a class="cta" href="/paginasCliente/clienteAgendarServicos.html" style="width: 100%; text-align: center;">
+                    <i class="bi bi-calendar-check me-1"></i> Agendar Serviço
+                </a>
+um botão chamado "Enviar Mensagem" para que quando for clicado, abra o modal 
+
+<div class="modal-header" style="background-color:#146ADB; color:#fff;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-chat-dots me-2"></i>
+                        <span>Chat com </span><span id="modal-chat-prestador-nome">Maria Silva</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+para permitir que o cliente envie mensagem ao prestador de serviço
+
+ajuste a página prestadorHotsite.html para que nela sejam apresentados os dados do prestador de serviço já previamente cadastrados na página prestadorHotsiteAdm.html em
+
+<!-- CARD PERFIL PREVIEW -->
+                    <div class="hotsiteadm-preview-perfil">
+                        <div class="hotsite-avatar" style="margin-bottom: 12px; background-color:#FFC300; color:#000;">JC</div>
+                        <div class="hotsite-nome"></div>
+                        <div class="hotsite-meta-info">
+                            Serviço Prestado &nbsp;·&nbsp; ★★★★☆ &nbsp;0.0 &nbsp;·&nbsp; 0 avaliações
+                        </div>
+                        <div class="hotsite-atende" style="margin-top: 8px;">
+                            <i class="bi bi-geo-alt-fill me-1"></i> Atende em:
+                        </div>
+                        <a class="cta" href="prestadorServicosAgendados.html" style="margin-top:12px; width:100%; text-align:center; background-color:#FFC300; color:#000;">
+                            <i class="bi bi-calendar-check me-1"></i> Verificar Agendamentos
+                        </a>
                     </div>
-                    <div class="hotsite-atende" style="margin-top: 8px;">
-                        <i class="bi bi-geo-alt-fill me-1"></i> Atende em:
+
+                    <!-- CARD CONTEÚDO PREVIEW -->
+                    <div class="hotsiteadm-preview-conteudo">
+                        <div class="hotsite-cabecalho-bloco">
+                            <div>
+                                <div class="hotsite-secao-titulo">Serviços &amp; Descrição</div>
+                                <p class="hotsite-desc"></p>
+                            </div>
+                        </div>
+
+                        <div class="hotsite-secao-titulo" style="margin-top: 14px;">Galeria de Trabalhos</div>
+                        <div class="hotsiteadm-galeria-preview" id="galeria-thumbs">
+                            <div class="hotsiteadm-thumb-preview" data-slot="0" style="position:relative;"><i class="bi bi-image"></i> Foto 1<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="1" style="position:relative;"><i class="bi bi-image"></i> Foto 2<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="2" style="position:relative;"><i class="bi bi-image"></i> Foto 3<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="3" style="position:relative;"><i class="bi bi-play-circle"></i> Vídeo<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                        </div>
+                        <div style="margin-top: 8px;">
+                            <label style="font-size:0.82rem; font-weight:600; color:var(--texto-muted); display:block; margin-bottom:4px;">Adicionar mídia à galeria</label>
+                            <input type="file" id="adm-galeria-nova" multiple accept="image/*,video/*" class="hotsiteadm-input" style="padding: 5px;">
+                        </div>
+
+                        <div class="hotsite-secao-titulo" style="margin-top: 14px;">Depoimentos (Lidos do Sistema)</div>
+                        <div class="hotsite-depoimento"></div>
+                        <div class="hotsite-depoimento"></div>
+
+                        <div class="hotsite-secao-titulo" style="margin-top: 14px;">Contatos</div>
+                        <p style="font-size:0.9rem; color:#444; margin:0 0 14px;">
+                            <i class="bi bi-envelope me-1"></i>
+                            &nbsp;&nbsp;
+                            <i class="bi bi-telephone me-1"></i>
+                        </p>
+
+                        <div class="hotsite-secao-titulo">Agenda &amp; Disponibilidade</div>
+                        <div class="placeholder" style="margin-bottom: 16px;">
+                            Próximo horário disponível: <strong></strong> (simulado)
+                        </div>
                     </div>
-                    <a class="cta" href="prestadorServicosAgendados.html" style="margin-top:12px; width:100%; text-align:center;">
-                        <i class="bi bi-calendar-check me-1"></i> Agendar Serviço
-                    </a>
                 </div>
 
-
-
-
-
-
-
-
-
-
+deixando exatamente igual
 
 
 
 ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Ajustar a página clienteAreaExclusiva.html onde
+
+<li class="cli-pedidos-item" data-pedido-id="pedido-1" data-servico="Eletricista" data-profissional="Maria Silva">
+                        <span><strong>Serviço:</strong> Eletricista &nbsp;|&nbsp; <strong>Profissional:</strong> Maria Silva</span>
+                        <span class="cli-badge em-andamento">Em Andamento</span>
+                        <div class="cli-pedidos-acoes">
+                            <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
+                            <button type="button" class="btn btn-warning btn-editar">Editar</button>
+                            <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
+                        </div>
+                    </li>
+
+incluir um botão "Chat" para que, ao ser clicado, crie um modal de mensagens para se comunicar com o prestador de serviços solicitado
+travar a caixa de texto para que fique fixa até o tamanho de 200 caracteres e depois, ao supoerar essa quantidade, inclua uma barra de espaçoes para rolar o texto
+Ajuste a mesma lógica no javascript para que seja executado conforme abaixo, da mesma forma que a lógica de chat do prestador para o cliente
+
+ajuste para que em
+
+<div class="cli-card-cabecalho">Status dos Últimos Pedidos</div>
+
+seja incluída a mesnagem "Você possui mensagens não lidas" e na freten tenha um ícone na cor vermelha de um sininho, indicando que há mensagens não lidas.
+inclua esse mesmo ícone de sininho em <li class="cli-pedidos-item" data-pedido-id="pedido-1" data-servico="Eletricista" data-profissional="Maria Silva">
+                        <span><strong>Serviço:</strong> Eletricista &nbsp;|&nbsp; <strong>Profissional:</strong> Maria Silva</span>
+                        <span class="cli-badge em-andamento">Em Andamento</span>
+                        <div class="cli-pedidos-acoes">
+                            <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
+                            <button type="button" class="btn btn-warning btn-editar">Editar</button>
+                            <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
+                        </div>
+                    </li>
+à esquerda do botão <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
+
+indicando de qual prestador a mensagem foi recebida
+permita que ao ser clicado no ícone, seja aberto o modal do chat para a comunicação com o prestador de serviço permitindo uma interação fluída.
+
+da mesma forma, inclua o aviso de mensagem recebida para o prestador em <a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Chat</a>
+e informe em <div class="agenda-prest-abas" style="padding: 0 20px;" id="agenda-abas">
+                    <a href="#" class="nav-link nav-link-active agenda-aba-ativa" data-aba="proximos">
+                        Próximos Agendamentos (<span id="contador-proximos">3</span>)
+                    </a>
+                    <a href="#" class="nav-link" data-aba="pendentes">
+                        Pendentes de Confirmação (<span id="contador-pendentes">1</span>)
+                    </a>
+                    <a href="#" class="nav-link" data-aba="historico">
+                        Histórico (<span id="contador-historico">4</span>)
+                    </a>
+                </div>
+a mesnagem "Você possui mensagens não lidas" e na freten tenha um ícone na cor vermelha de um sininho, indicando que há mensagens não lidas.
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 Nas páginas clientePerfilAdm.html
