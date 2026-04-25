@@ -3987,6 +3987,477 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // =====================================================
+    // AGENDAR SERVIÇOS
+    // clienteAgendarServicos.html (logado) e agendarServicos.html (público)
+    // =====================================================
+    function inicializarAgendarServicos() {
+        var mainAgendar = document.querySelector('.agendar-main');
+        if (!mainAgendar) return;
+
+        var HOTSITE_KEY = 'hotsitePrestadorDados';
+
+        // Detecta se o usuário está logado como cliente ou admin
+        var usuarioLogado = null;
+        try { usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null'); } catch (e) {}
+        var estaLogado = usuarioLogado && (usuarioLogado.tipo === 'cliente' || usuarioLogado.tipo === 'admin');
+
+        // Selectboxes, blocos de info e botões
+        var selects = mainAgendar.querySelectorAll('.agendar-select');
+        var selectTipo      = selects[0];
+        var selectPrestador = selects[1];
+        var blocos          = mainAgendar.querySelectorAll('.agendar-info-bloco');
+        var blocoHorario    = blocos[0];
+        var blocoContato    = blocos[1];
+        var btnAgendar      = mainAgendar.querySelector('.cta');
+        var linkHotsite     = mainAgendar.querySelector('.agendar-link');
+
+        if (!selectTipo || !selectPrestador) return;
+
+        // -----------------------------------------------------------------
+        // SEED — cria prestadores de demonstração caso não haja nenhum
+        // cadastrado no hotsitePrestadorDados (primeiro acesso ao sistema).
+        // -----------------------------------------------------------------
+        function semearPrestadoresDemoSeNecessario() {
+            var store = {};
+            try { store = JSON.parse(localStorage.getItem(HOTSITE_KEY) || '{}'); } catch (e) {}
+            if (Object.keys(store).length > 0) return;
+
+            var usuarios = obterUsuariosCadastrados();
+            var demos = [
+                {
+                    email: 'prestador@servgo.com',
+                    nome: 'Prestador Demo',
+                    categoria: 'Manutenção Predial',
+                    cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99123-4567',
+                    descricao: 'Especializado em montagem de móveis, reparos elétricos e hidráulicos.',
+                    cnpj: '', endereco: 'Rua das Flores, 100 - Centro', foto: ''
+                },
+                {
+                    email: 'saude@servgo.com',
+                    nome: 'Dra. Ana Lima',
+                    categoria: 'Saúde',
+                    cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99234-5678',
+                    descricao: 'Clínica geral e nutrição. Atendimento personalizado.',
+                    cnpj: '', endereco: 'Av. Manoel Goulart, 200', foto: ''
+                },
+                {
+                    email: 'beleza@servgo.com',
+                    nome: 'Studio Beleza & Cia',
+                    categoria: 'Beleza',
+                    cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 98765-4321',
+                    descricao: 'Salão completo: cabelo, maquiagem, manicure e pedicure.',
+                    cnpj: '', endereco: 'Rua Coronel José Soares Marcondes, 45', foto: ''
+                },
+                {
+                    email: 'ti@servgo.com',
+                    nome: 'TechSolutions TI',
+                    categoria: 'TI',
+                    cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99876-5432',
+                    descricao: 'Suporte técnico, redes, desenvolvimento web e segurança digital.',
+                    cnpj: '', endereco: 'Rua Tenente Nicolau Maffei, 300', foto: ''
+                },
+                {
+                    email: 'consultoria@servgo.com',
+                    nome: 'BizConsult',
+                    categoria: 'Consultoria',
+                    cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 97654-3210',
+                    descricao: 'Consultoria empresarial, financeira e jurídica.',
+                    cnpj: '', endereco: 'Av. Brasil, 400', foto: ''
+                },
+                {
+                    email: 'design@servgo.com',
+                    nome: 'Pixel Studio Design',
+                    categoria: 'Design',
+                    cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 98888-1234',
+                    descricao: 'Design gráfico, identidade visual e criação de sites.',
+                    cnpj: '', endereco: 'Rua 15 de Novembro, 55', foto: ''
+                }
+            ];
+
+            demos.forEach(function (d) {
+                store[d.email] = {
+                    nome: d.nome, email: d.email, cnpj: d.cnpj,
+                    categoria: d.categoria, cidade: d.cidade,
+                    descricao: d.descricao, endereco: d.endereco,
+                    tel: d.tel, foto: d.foto
+                };
+                if (!usuarios[d.email]) {
+                    usuarios[d.email] = { nome: d.nome, senha: 'Demo@123', tipo: 'prestador' };
+                }
+            });
+
+            localStorage.setItem(HOTSITE_KEY, JSON.stringify(store));
+            salvarUsuariosCadastrados(usuarios);
+        }
+
+        semearPrestadoresDemoSeNecessario();
+
+        // -----------------------------------------------------------------
+        // Helpers de acesso a dados
+        // -----------------------------------------------------------------
+        function obterStorePrestadores() {
+            try { return JSON.parse(localStorage.getItem(HOTSITE_KEY) || '{}'); } catch (e) { return {}; }
+        }
+
+        function obterPrestadoresDoTipo(tipo) {
+            var store = obterStorePrestadores();
+            return Object.keys(store)
+                .map(function (email) { return Object.assign({}, store[email], { email: email }); })
+                .filter(function (p) { return p.nome && p.categoria === tipo; });
+        }
+
+        function obterTiposServico() {
+            var store = obterStorePrestadores();
+            var tipos = [];
+            Object.keys(store).forEach(function (email) {
+                var cat = (store[email] || {}).categoria;
+                if (cat && tipos.indexOf(cat) === -1) tipos.push(cat);
+            });
+            return tipos.sort();
+        }
+
+        // -----------------------------------------------------------------
+        // Cálculo do próximo horário livre da agenda do prestador
+        // -----------------------------------------------------------------
+        function obterAgendamentosDoPrestador(emailPrestador) {
+            var chave = 'agendamentos_' + emailPrestador;
+            var raw = localStorage.getItem(chave);
+            // Fallback para a chave legada do prestador demo
+            if (!raw && emailPrestador === 'prestador@servgo.com') {
+                raw = localStorage.getItem('prestAgendamentos');
+            }
+            try { return JSON.parse(raw || '[]'); } catch (e) { return []; }
+        }
+
+        function proximoHorarioDisponivel(emailPrestador) {
+            var ags = obterAgendamentosDoPrestador(emailPrestador);
+
+            // Constrói mapa de slots ocupados: "YYYY-MM-DD 09:00" → true
+            var ocupados = {};
+            ags.forEach(function (a) {
+                if (a.status === 'cancelado') return;
+                var inicio = (a.horario || '').split(' - ')[0];
+                if (inicio && a.data) ocupados[a.data + ' ' + inicio] = true;
+            });
+
+            var agora = new Date();
+            var diasSem = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            var meses   = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+            for (var d = 0; d < 30; d++) {
+                var dia = new Date(agora);
+                dia.setDate(agora.getDate() + d);
+                var ds = dia.getDay();
+                if (ds === 0 || ds === 6) continue; // ignora fim de semana
+
+                var dataStr = dia.toISOString().substring(0, 10);
+
+                for (var h = 8; h < 18; h++) {
+                    if (d === 0 && h <= agora.getHours()) continue; // slots passados no dia de hoje
+                    var horarioStr = String(h).padStart(2, '0') + ':00';
+                    if (!ocupados[dataStr + ' ' + horarioStr]) {
+                        var label = '';
+                        if (d === 0) label = 'Hoje';
+                        else if (d === 1) label = 'Amanhã';
+                        else label = diasSem[dia.getDay()] + ', ' +
+                                     String(dia.getDate()).padStart(2, '0') + '/' + meses[dia.getMonth()];
+                        label += ' às ' + horarioStr;
+                        return { data: dataStr, horario: horarioStr, label: label };
+                    }
+                }
+            }
+            return null; // sem disponibilidade
+        }
+
+        // -----------------------------------------------------------------
+        // Reserva um horário na agenda do prestador
+        // -----------------------------------------------------------------
+        function reservarAgendamento(emailPrestador, slot, tipoServico, nomeCliente, emailCliente) {
+            var chave = 'agendamentos_' + emailPrestador;
+            var ags = obterAgendamentosDoPrestador(emailPrestador);
+            var fimH = String(parseInt(slot.horario.split(':')[0]) + 1).padStart(2, '0') + ':00';
+
+            ags.push({
+                id: 'ag-cli-' + Date.now(),
+                status: 'pendente',
+                aba: 'pendentes',
+                data: slot.data,
+                diaLabel: slot.label,
+                horario: slot.horario + ' - ' + fimH,
+                cliente: nomeCliente || 'Cliente',
+                clienteEmail: emailCliente || '',
+                servico: tipoServico || 'Serviço',
+                endereco: '',
+                valor: 0,
+                formaPagamento: '',
+                observacoes: 'Agendamento solicitado pelo cliente via plataforma.',
+                lembretes: []
+            });
+
+            localStorage.setItem(chave, JSON.stringify(ags));
+            // Mantém sincronizado com a chave legada do prestador demo
+            if (emailPrestador === 'prestador@servgo.com') {
+                localStorage.setItem('prestAgendamentos', JSON.stringify(ags));
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // Preenchimento dos selects
+        // -----------------------------------------------------------------
+        function preencherTipos() {
+            var tipos = obterTiposServico();
+            selectTipo.innerHTML = '<option value="">-- Selecione o tipo de serviço --</option>';
+            tipos.forEach(function (t) {
+                var opt = document.createElement('option');
+                opt.value = t; opt.textContent = t;
+                selectTipo.appendChild(opt);
+            });
+        }
+
+        function preencherPrestadores(tipo) {
+            selectPrestador.innerHTML = '<option value="">-- Selecione um prestador --</option>';
+            if (!tipo) return;
+            obterPrestadoresDoTipo(tipo).forEach(function (p) {
+                var opt = document.createElement('option');
+                opt.value = p.email; opt.textContent = p.nome;
+                selectPrestador.appendChild(opt);
+            });
+        }
+
+        // -----------------------------------------------------------------
+        // Atualização dos blocos de informação
+        // -----------------------------------------------------------------
+        var slotAtual = null;
+
+        function atualizarInfoPrestador(emailPrestador) {
+            slotAtual = null;
+            if (!emailPrestador) {
+                if (blocoHorario) blocoHorario.innerHTML = '';
+                if (blocoContato) blocoContato.innerHTML = '';
+                return;
+            }
+            var dados = obterStorePrestadores()[emailPrestador] || {};
+            slotAtual = proximoHorarioDisponivel(emailPrestador);
+
+            if (blocoHorario) {
+                blocoHorario.innerHTML = slotAtual
+                    ? '<strong>' + slotAtual.label + '</strong>'
+                    : '<em>Nenhuma disponibilidade nos próximos 30 dias.</em>';
+            }
+            if (blocoContato) {
+                blocoContato.innerHTML =
+                    '<i class="bi bi-telephone me-1"></i>' + (dados.tel || '—') +
+                    '<br><i class="bi bi-envelope me-1"></i>' + (dados.email || emailPrestador);
+            }
+        }
+
+        // -----------------------------------------------------------------
+        // Modal de acesso restrito (usuário não logado)
+        // -----------------------------------------------------------------
+        function mostrarModalLoginNecessario(acao) {
+            var msg = acao === 'hotsite'
+                ? 'Para visualizar o Hotsite do prestador, você precisa estar logado.'
+                : 'Para solicitar um agendamento, você precisa estar logado.';
+
+            var loginUrl = obterPrefixoRaiz() + 'paginasSite/login.html';
+
+            var id = 'modalLoginNecessarioAgendar';
+            var ex = document.getElementById(id);
+            if (ex) ex.remove();
+
+            var modal = document.createElement('div');
+            modal.className = 'modal fade'; modal.id = id; modal.setAttribute('tabindex', '-1');
+            modal.innerHTML =
+                '<div class="modal-dialog modal-dialog-centered">' +
+                    '<div class="modal-content">' +
+                        '<div class="modal-header" style="background-color:#FFC300;color:#000;">' +
+                            '<h5 class="modal-title"><i class="bi bi-lock me-2"></i>Acesso Restrito</h5>' +
+                            '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
+                        '</div>' +
+                        '<div class="modal-body"><p class="mb-0">' + msg + '</p></div>' +
+                        '<div class="modal-footer">' +
+                            '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>' +
+                            '<a href="' + loginUrl + '" class="btn btn-warning"><i class="bi bi-box-arrow-in-right me-1"></i>Fazer Login</a>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            document.body.appendChild(modal);
+            new bootstrap.Modal(modal).show();
+        }
+
+        // -----------------------------------------------------------------
+        // Eventos dos selects
+        // -----------------------------------------------------------------
+        selectTipo.addEventListener('change', function () {
+            preencherPrestadores(selectTipo.value);
+            atualizarInfoPrestador('');
+        });
+
+        selectPrestador.addEventListener('change', function () {
+            atualizarInfoPrestador(selectPrestador.value);
+        });
+
+        // -----------------------------------------------------------------
+        // Botão "Solicitar Agendamento"
+        // -----------------------------------------------------------------
+        if (btnAgendar) {
+            btnAgendar.addEventListener('click', function () {
+                if (!estaLogado) { mostrarModalLoginNecessario('agendar'); return; }
+                if (!selectPrestador.value) { alert('Por favor, selecione um prestador.'); return; }
+                if (!slotAtual) { alert('Não há horários disponíveis para este prestador.'); return; }
+
+                var nomePrestador = selectPrestador.options[selectPrestador.selectedIndex].textContent;
+                reservarAgendamento(
+                    selectPrestador.value,
+                    slotAtual,
+                    selectTipo.value || 'Serviço',
+                    usuarioLogado.nome,
+                    usuarioLogado.email
+                );
+
+                alert(
+                    'Agendamento solicitado com sucesso!\n\n' +
+                    'Prestador: ' + nomePrestador + '\n' +
+                    'Horário: ' + slotAtual.label + '\n\n' +
+                    'Aguarde a confirmação do prestador.'
+                );
+
+                // Atualiza exibição (slot recém-reservado não aparece mais)
+                atualizarInfoPrestador(selectPrestador.value);
+            });
+        }
+
+        // -----------------------------------------------------------------
+        // Link "Ver Hotsite"
+        // -----------------------------------------------------------------
+        if (linkHotsite) {
+            linkHotsite.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                if (!estaLogado) { mostrarModalLoginNecessario('hotsite'); return; }
+                if (!selectPrestador.value) { alert('Por favor, selecione um prestador para ver o Hotsite.'); return; }
+
+                var path = window.location.pathname;
+                var base = path.includes('/paginasCliente/') || path.includes('/paginasSite/')
+                    ? '../paginasPrestador/'
+                    : 'paginasPrestador/';
+
+                window.location.href = base + 'prestadorHotsite.html?prestador=' + encodeURIComponent(selectPrestador.value);
+            });
+        }
+
+        // -----------------------------------------------------------------
+        // Boot: preenche tipos e pré-seleciona via query param (se houver)
+        // -----------------------------------------------------------------
+        preencherTipos();
+
+        var params = new URLSearchParams(window.location.search);
+        var prestadorParam = params.get('prestador');
+        if (prestadorParam) {
+            var dadosPre = obterStorePrestadores()[prestadorParam];
+            if (dadosPre && dadosPre.categoria) {
+                selectTipo.value = dadosPre.categoria;
+                preencherPrestadores(dadosPre.categoria);
+                selectPrestador.value = prestadorParam;
+                atualizarInfoPrestador(prestadorParam);
+            }
+        }
+    }
+
+
+    // =====================================================
+    // HOTSITE PÚBLICO DO PRESTADOR (prestadorHotsite.html — visão do cliente)
+    // Controla acesso restrito ao botão Agendar e ao chat.
+    // =====================================================
+    function inicializarHotsitePublico() {
+        // Identifica a página pública do hotsite pela presença de #hs-avatar
+        // e ausência do campo adm (#adm-cnpj), que pertence à tela de administração.
+        var hsAvatar = document.getElementById('hs-avatar');
+        var admCnpj  = document.getElementById('adm-cnpj');
+        if (!hsAvatar || admCnpj) return;
+
+        var usuarioLogado = null;
+        try { usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null'); } catch (e) {}
+        var estaLogado = usuarioLogado && (usuarioLogado.tipo === 'cliente' || usuarioLogado.tipo === 'admin');
+
+        var params = new URLSearchParams(window.location.search);
+        var emailPrestador = params.get('prestador') || '';
+
+        var btnAgendar  = document.querySelector('.cta-agendar');
+        var btnMensagem = document.querySelector('.btn-enviar-msg');
+
+        // -----------------------------------------------------------------
+        // Modal de acesso restrito
+        // -----------------------------------------------------------------
+        function mostrarModalLoginHotsite(acao) {
+            var msg = acao === 'mensagem'
+                ? 'Para enviar uma mensagem ao prestador, você precisa estar logado.'
+                : 'Para agendar um serviço, você precisa estar logado.';
+
+            var id = 'modalLoginHotsitePublico';
+            var ex = document.getElementById(id);
+            if (ex) ex.remove();
+
+            var modal = document.createElement('div');
+            modal.className = 'modal fade'; modal.id = id; modal.setAttribute('tabindex', '-1');
+            modal.innerHTML =
+                '<div class="modal-dialog modal-dialog-centered">' +
+                    '<div class="modal-content">' +
+                        '<div class="modal-header" style="background-color:#FFC300;color:#000;">' +
+                            '<h5 class="modal-title"><i class="bi bi-lock me-2"></i>Acesso Restrito</h5>' +
+                            '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
+                        '</div>' +
+                        '<div class="modal-body"><p class="mb-0">' + msg + '</p></div>' +
+                        '<div class="modal-footer">' +
+                            '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>' +
+                            '<a href="../paginasSite/login.html" class="btn btn-warning"><i class="bi bi-box-arrow-in-right me-1"></i>Fazer Login</a>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            document.body.appendChild(modal);
+            new bootstrap.Modal(modal).show();
+        }
+
+        // -----------------------------------------------------------------
+        // Botão "Agendar Serviço"
+        // -----------------------------------------------------------------
+        if (btnAgendar) {
+            btnAgendar.addEventListener('click', function (e) {
+                e.preventDefault();
+                if (!estaLogado) { mostrarModalLoginHotsite('agendar'); return; }
+                // Direciona de volta para a tela de agendamento do cliente,
+                // pré-selecionando o prestador atual via query param.
+                var url = '../paginasCliente/clienteAgendarServicos.html';
+                if (emailPrestador) url += '?prestador=' + encodeURIComponent(emailPrestador);
+                window.location.href = url;
+            });
+        }
+
+        // -----------------------------------------------------------------
+        // Botão "Enviar Mensagem" — bloqueia para usuários não logados
+        // removendo os atributos data-bs do Bootstrap antes do clique.
+        // -----------------------------------------------------------------
+        if (btnMensagem) {
+            if (!estaLogado) {
+                // Remove o data-bs-toggle para que o Bootstrap não abra o modal
+                btnMensagem.removeAttribute('data-bs-toggle');
+                btnMensagem.removeAttribute('data-bs-target');
+                btnMensagem.addEventListener('click', function () {
+                    mostrarModalLoginHotsite('mensagem');
+                });
+            }
+            // Se logado, o data-bs-toggle original já abre o modal de chat normalmente.
+        }
+    }
+
+
+    // =====================================================
     // INICIALIZAÇÃO GERAL
     // =====================================================
     inicializarNavbarSaudacao();
@@ -4005,4 +4476,6 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarHotsitePrestador();
     inicializarAlterarSenhaGeral();
     inicializarSidebarResponsiva();
+    inicializarAgendarServicos();
+    inicializarHotsitePublico();
 });

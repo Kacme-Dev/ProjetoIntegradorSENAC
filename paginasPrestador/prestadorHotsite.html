@@ -4,12 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ServGo! - João Carpintaria</title>
+    <title>ServGo! - Hot Site do Prestador</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/css/estiloServGo.css">
-</head>
-<style>
+    <style>
         /* Responsividade padrão igual ao index.html: breakpoint lg (992px). */
         @media (max-width: 991.98px) {
             .cli-wrapper { flex-direction: column; }
@@ -23,6 +22,60 @@
             }
             .cli-sidebar.cli-sidebar-show { display: block; }
         }
+
+        /* Avatar com cor amarela igual ao preview do Adm */
+        .hotsite-perfil-aside .hotsite-avatar {
+            background-color: #FFC300;
+            color: #000;
+        }
+
+        /* Botão Agendar Serviço — amarelo (igual ao preview do Adm) */
+        .hotsite-perfil-aside .cta-agendar {
+            display: inline-block;
+            width: 100%;
+            text-align: center;
+            padding: 10px 22px;
+            border-radius: 6px;
+            background-color: #FFC300;
+            color: #000;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: background-color 0.2s;
+        }
+        .hotsite-perfil-aside .cta-agendar:hover {
+            background-color: #e6b000;
+            color: #000;
+            text-decoration: none;
+        }
+
+        /* Botão Enviar Mensagem — azul principal */
+        .hotsite-perfil-aside .btn-enviar-msg {
+            display: inline-block;
+            width: 100%;
+            text-align: center;
+            padding: 10px 22px;
+            border-radius: 6px;
+            background-color: var(--azul-principal);
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+        .hotsite-perfil-aside .btn-enviar-msg:hover {
+            background-color: var(--blue2, #0056b3);
+            color: #fff;
+        }
+        .hotsite-perfil-aside .btn-enviar-msg:active {
+            transform: translateY(2px);
+        }
     </style>
 </head>
 
@@ -32,7 +85,7 @@
     <header>
         <nav class="navbar navbar-expand-lg">
             <div class="container-fluid" style="max-width:1140px; margin:0 auto; padding:0 16px;">
-                <a class="navbar-brand" href="index.html">
+                <a class="navbar-brand" href="/index.html">
                     <span class="serv-part">Serv</span><span class="go-part">Go!</span>
                 </a>
                 <span class="navbar-logada-info">Olá, Cliente!</span>
@@ -62,7 +115,7 @@
         <nav class="cli-sidebar">
             <ul>
                 <li><a href="/paginasCliente/clienteAreaExclusiva.html"><i class="bi bi-house-door"></i> Dashboard</a></li>
-                <li><a class="cli-nav-ativo" href="/paginasCliente/clientePerfilAdm.html"><i class="bi bi-person-circle"></i> Meu Perfil</a></li>
+                <li><a href="/paginasCliente/clientePerfilAdm.html"><i class="bi bi-person-circle"></i> Meu Perfil</a></li>
                 <li><a href="/paginasCliente/clienteAgendarServicos.html"><i class="bi bi-calendar-check"></i> Agendar Serviços</a></li>
                 <li><a href="/paginasCliente/clienteAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Realizadas</a></li>
                 <li><a href="/paginasCliente/clienteAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
@@ -70,78 +123,92 @@
             </ul>
         </nav>
 
-        <main class="cli-main">            
-        <div class="hotsite-main-layout">
+        <main class="cli-main">
+            <div class="hotsite-main-layout">
 
-            <!-- ASIDE: PERFIL -->
-            <aside class="hotsite-perfil-aside">
-                <div class="hotsite-avatar"></div>
-                <div class="hotsite-nome"></div>
-                <div class="hotsite-meta-info">
-                    Atividade &nbsp;·&nbsp;
-                    <span class="hotsite-estrelas">★★★★</span><span class="hotsite-estrela-vazia">☆</span>
-                    &nbsp;0.0 &nbsp;·&nbsp; 0 avaliações
-                </div>
-                <div class="hotsite-atende">
-                    <i class="bi bi-geo-alt-fill me-1"></i> Atende em:
-                </div>
-                <a class="cta" href="/paginasCliente/clienteAgendarServicos.html" style="width: 100%; text-align: center;">
-                    <i class="bi bi-calendar-check me-1"></i> Agendar Serviço
-                </a>
-            </aside>
+                <!-- ASIDE: PERFIL -->
+                <aside class="hotsite-perfil-aside">
+                    <div class="hotsite-avatar" id="hs-avatar"></div>
+                    <div class="hotsite-nome" id="hs-nome"></div>
+                    <div class="hotsite-meta-info" id="hs-meta">
+                        Atividade &nbsp;·&nbsp;
+                        <span class="hotsite-estrelas">★★★★</span><span class="hotsite-estrela-vazia">☆</span>
+                        &nbsp;0.0 &nbsp;·&nbsp; 0 avaliações
+                    </div>
+                    <div class="hotsite-atende" id="hs-atende">
+                        <i class="bi bi-geo-alt-fill me-1"></i> Atende em:
+                    </div>
 
-            <!-- SEÇÃO: CONTEÚDO -->
-            <section class="hotsite-conteudo">
+                    <!-- BOTÃO AGENDAR — amarelo como no preview do Adm -->
+                    <a class="cta-agendar" href="/paginasCliente/clienteAgendarServicos.html">
+                        <i class="bi bi-calendar-check me-1"></i> Agendar Serviço
+                    </a>
 
-                <!-- SERVIÇOS E DESCRIÇÃO -->
-                <div class="hotsite-conteudo-card">
-                    <div class="hotsite-cabecalho-bloco">
-                        <div>
-                            <div class="hotsite-secao-titulo">Serviços &amp; Descrição</div>
-                            <p class="hotsite-desc"></p>
+                    <!-- BOTÃO ENVIAR MENSAGEM — azul, abre modal de chat -->
+                    <button type="button" class="btn-enviar-msg"
+                            data-bs-toggle="modal" data-bs-target="#modalChatPrestador">
+                        <i class="bi bi-chat-dots me-1"></i> Enviar Mensagem
+                    </button>
+                </aside>
+
+                <!-- SEÇÃO: CONTEÚDO -->
+                <section class="hotsite-conteudo">
+
+                    <!-- SERVIÇOS E DESCRIÇÃO -->
+                    <div class="hotsite-conteudo-card">
+                        <div class="hotsite-cabecalho-bloco">
+                            <div>
+                                <div class="hotsite-secao-titulo">Serviços &amp; Descrição</div>
+                                <p class="hotsite-desc" id="hs-desc"></p>
+                            </div>
+                            <div style="text-align:right; flex-shrink:0;">
+                                <div class="hotsite-estrelas" style="font-size:1.2rem;">★★★★<span class="hotsite-estrela-vazia">☆</span></div>
+                                <div style="font-size:0.83rem; color:var(--texto-muted);">0.0 (0)</div>
+                            </div>
                         </div>
-                        <div style="text-align:right; flex-shrink:0;">
-                            <div class="hotsite-estrelas" style="font-size:1.2rem;">★★★★<span class="hotsite-estrela-vazia">☆</span></div>
-                            <div style="font-size:0.83rem; color:var(--texto-muted);">0.0 (0)</div>
+
+                        <div class="hotsite-secao-titulo" style="margin-top: 16px;">Galeria de Trabalhos</div>
+                        <div class="hotsite-galeria" id="hs-galeria">
+                            <div class="hotsite-thumb"><i class="bi bi-image"></i> Foto 1</div>
+                            <div class="hotsite-thumb"><i class="bi bi-image"></i> Foto 2</div>
+                            <div class="hotsite-thumb"><i class="bi bi-image"></i> Foto 3</div>
+                            <div class="hotsite-thumb"><i class="bi bi-play-circle"></i> Vídeo</div>
                         </div>
                     </div>
 
-                    <div class="hotsite-secao-titulo" style="margin-top: 16px;">Galeria de Trabalhos</div>
-                    <div class="hotsite-galeria">
-                        <div class="hotsite-thumb"><i class="bi bi-image"></i> Foto 1</div>
-                        <div class="hotsite-thumb"><i class="bi bi-image"></i> Foto 2</div>
-                        <div class="hotsite-thumb"><i class="bi bi-image"></i> Foto 3</div>
-                        <div class="hotsite-thumb"><i class="bi bi-play-circle"></i> Vídeo</div>
+                    <!-- DEPOIMENTOS -->
+                    <div class="hotsite-conteudo-card">
+                        <div class="hotsite-secao-titulo">Depoimentos</div>
+                        <div class="hotsite-depoimento"></div>
+                        <div class="hotsite-depoimento"></div>
                     </div>
-                </div>
 
-                <!-- DEPOIMENTOS -->
-                <div class="hotsite-conteudo-card">
-                    <div class="hotsite-secao-titulo">Depoimentos</div>
-                    <div class="hotsite-depoimento"></div>
-                </div>
-
-                <!-- CONTATOS -->
-                <div class="hotsite-conteudo-card">
-                    <div class="hotsite-secao-titulo">Contatos</div>
-                    <p style="font-size:0.9rem; color:#444; margin: 0;">
-                        <i class="bi bi-envelope me-1"></i>
-                        &nbsp;&nbsp;
-                        <i class="bi bi-telephone me-1"></i>
-                    </p>
-                </div>
-
-                <!-- AGENDA & DISPONIBILIDADE -->
-                <div class="hotsite-conteudo-card">
-                    <div class="hotsite-secao-titulo">Agenda &amp; Disponibilidade</div>
-                    <div class="placeholder">
-                        Próximo horário disponível: <strong></strong> (simulado)
+                    <!-- CONTATOS -->
+                    <div class="hotsite-conteudo-card">
+                        <div class="hotsite-secao-titulo">Contatos</div>
+                        <p style="font-size:0.9rem; color:#444; margin:0 0 6px;">
+                            <i class="bi bi-envelope me-1"></i>
+                            <span id="hs-email"></span>
+                        </p>
+                        <p style="font-size:0.9rem; color:#444; margin:0;">
+                            <i class="bi bi-telephone me-1"></i>
+                            <span id="hs-tel"></span>
+                        </p>
                     </div>
-                </div>
-            </section>
-        </div>
-    </main>
 
+                    <!-- AGENDA & DISPONIBILIDADE -->
+                    <div class="hotsite-conteudo-card">
+                        <div class="hotsite-secao-titulo">Agenda &amp; Disponibilidade</div>
+                        <div class="placeholder">
+                            Próximo horário disponível: <strong></strong> (simulado)
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- FOOTER (padrão prestadorHotsiteAdm.html) -->
     <footer>
         <div class="container" style="padding-top: 40px; padding-bottom: 32px;">
             <div class="row">
@@ -184,37 +251,57 @@
             </div>
             <hr class="text-white-50">
             <div class="text-center small text-white-50">
-                © 2025 ServGo! Todos os direitos reservados.
+                &copy; 2025 ServGo! Todos os direitos reservados.
             </div>
         </div>
     </footer>
 
-    <div class="modal fade" id="modalAlterarSenha" tabindex="-1" aria-labelledby="modalAlterarSenhaLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header" style="background-color: #2B2B2B; color: white;">
-                    <h5 class="modal-title" id="modalAlterarSenhaLabel"><i class="bi bi-lock me-2"></i>Alterar Senha</h5>
+    <!-- ============================================================ -->
+    <!-- MODAL DE CHAT — CLIENTE ENVIA MENSAGEM AO PRESTADOR          -->
+    <!-- ============================================================ -->
+    <div class="modal fade" id="modalChatPrestador" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content agenda-chat-modal">
+                <div class="modal-header" style="background-color:#146ADB; color:#fff;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-chat-dots me-2"></i>
+                        <span>Chat com </span><span id="modal-chat-prestador-nome"></span>
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="senha-atual" class="form-label fw-bold">Senha Atual:</label>
-                        <input type="password" class="form-control" id="senha-atual">
+
+                <div class="modal-body p-0">
+                    <!-- HISTÓRICO DE MENSAGENS -->
+                    <div id="hs-chat-historico" class="agenda-chat-historico" aria-live="polite">
+                        <div class="agenda-chat-vazio" id="hs-chat-vazio">
+                            <i class="bi bi-chat-square-dots"></i>
+                            Nenhuma mensagem ainda. Seja o primeiro a escrever!
+                        </div>
                     </div>
-                    <hr>
-                    <div class="mb-3">
-                        <label for="nova-senha" class="form-label fw-bold">Nova Senha:</label>
-                        <input type="password" class="form-control" id="nova-senha">
-                        <small class="text-muted d-block mt-1">Mínimo 8 caracteres, incluindo letras, números e caracteres especiais (Case Sensitive).</small>
-                    </div>
-                    <div class="mb-3">
-                        <label for="repita-nova-senha" class="form-label fw-bold">Repita a Nova Senha:</label>
-                        <input type="password" class="form-control" id="repita-nova-senha">
+
+                    <!-- ÁREA DE COMPOSIÇÃO -->
+                    <div class="agenda-chat-composer">
+                        <textarea id="hs-chat-texto" class="form-control agenda-chat-textarea"
+                                  rows="3"
+                                  placeholder="Escreva sua mensagem para o prestador..."
+                                  maxlength="1000"></textarea>
+                        <div class="agenda-chat-contador">
+                            <span id="hs-chat-contador">0</span> / 1000 caracteres
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btn-salvar-senha"><i class="bi bi-floppy me-1"></i>Salvar Nova Senha</button>
+
+                <div class="modal-footer agenda-chat-rodape">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="hs-btn-chat-limpar">
+                        <i class="bi bi-eraser me-1"></i> Limpar
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="hs-btn-chat-enviar"
+                            style="background-color:#146ADB; border-color:#146ADB;">
+                        <i class="bi bi-send me-1"></i> Enviar Mensagem
+                    </button>
                 </div>
             </div>
         </div>
@@ -222,5 +309,214 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/script.js" defer></script>
+
+    <!-- SCRIPT: carrega dados do hotsite do prestador e inicializa o chat -->
+    <script>
+    (function () {
+        var HOTSITE_KEY = 'hotsitePrestadorDados';
+        var CHAT_KEY_PREFIX = 'hsChat_';
+
+        // ----------------------------------------------------------------
+        // 1. Descobre qual prestador exibir
+        //    Prioridade: query param ?prestador=email, depois usuarioLogado
+        //    (se for prestador), depois primeiro registro salvo.
+        // ----------------------------------------------------------------
+        function obterEmailPrestador() {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('prestador')) return params.get('prestador');
+
+            try {
+                var logado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+                // Se o logado for prestador, usa o e-mail dele para visualização de demo
+                if (logado && logado.tipo === 'prestador' && logado.email) return logado.email;
+            } catch (e) {}
+
+            // Fallback: pega o primeiro e-mail salvo no store
+            try {
+                var store = JSON.parse(localStorage.getItem(HOTSITE_KEY) || '{}');
+                var keys = Object.keys(store);
+                if (keys.length) return keys[0];
+            } catch (e) {}
+
+            return null;
+        }
+
+        // ----------------------------------------------------------------
+        // 2. Carrega e exibe os dados do prestador na página
+        // ----------------------------------------------------------------
+        function carregarDadosPrestador(emailPrestador) {
+            var dados = {};
+            try {
+                var store = JSON.parse(localStorage.getItem(HOTSITE_KEY) || '{}');
+                dados = store[emailPrestador] || {};
+            } catch (e) {}
+
+            // Avatar
+            var avatarEl = document.getElementById('hs-avatar');
+            if (avatarEl) {
+                if (dados.foto) {
+                    avatarEl.style.backgroundImage = 'url(' + dados.foto + ')';
+                    avatarEl.style.backgroundSize = 'cover';
+                    avatarEl.style.backgroundPosition = 'center';
+                    avatarEl.textContent = '';
+                } else {
+                    var nome = dados.nome || '';
+                    var partes = nome.trim().split(/\s+/);
+                    var iniciais = '';
+                    if (partes.length >= 2) {
+                        iniciais = (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+                    } else if (partes.length === 1 && partes[0].length > 0) {
+                        iniciais = partes[0].substring(0, 2).toUpperCase();
+                    }
+                    avatarEl.textContent = iniciais || 'JC';
+                }
+            }
+
+            // Nome
+            var nomeEl = document.getElementById('hs-nome');
+            if (nomeEl) nomeEl.textContent = dados.nome || '';
+
+            // Meta info (categoria + avaliação)
+            var metaEl = document.getElementById('hs-meta');
+            if (metaEl) {
+                var categoria = dados.categoria || 'Atividade';
+                metaEl.innerHTML =
+                    categoria + ' &nbsp;·&nbsp; ' +
+                    '<span class="hotsite-estrelas">★★★★</span><span class="hotsite-estrela-vazia">☆</span>' +
+                    ' &nbsp;0.0 &nbsp;·&nbsp; 0 avaliações';
+            }
+
+            // Atende em (cidade)
+            var atendeEl = document.getElementById('hs-atende');
+            if (atendeEl) {
+                atendeEl.innerHTML =
+                    '<i class="bi bi-geo-alt-fill me-1"></i> Atende em: ' +
+                    (dados.cidade || '');
+            }
+
+            // Nome no modal do chat
+            var modalNomeEl = document.getElementById('modal-chat-prestador-nome');
+            if (modalNomeEl) modalNomeEl.textContent = dados.nome || 'Prestador';
+
+            // Descrição
+            var descEl = document.getElementById('hs-desc');
+            if (descEl) descEl.textContent = dados.descricao || '';
+
+            // Contatos
+            var emailEl = document.getElementById('hs-email');
+            if (emailEl) emailEl.textContent = dados.email || '';
+
+            var telEl = document.getElementById('hs-tel');
+            if (telEl) telEl.textContent = dados.tel || '';
+
+            // Galeria (se houver fotos salvas, exibe-as; caso contrário mantém placeholders)
+            // Nota: as imagens da galeria não são persistidas no localStorage nesta versão —
+            // somente o avatar é salvo. O bloco abaixo está pronto para expansão futura.
+        }
+
+        // ----------------------------------------------------------------
+        // 3. Chat — lógica de mensagens (cliente → prestador)
+        // ----------------------------------------------------------------
+        function inicializarChat(emailPrestador) {
+            var chatKey = CHAT_KEY_PREFIX + (emailPrestador || 'anonimo');
+
+            var historicoEl  = document.getElementById('hs-chat-historico');
+            var vazioEl      = document.getElementById('hs-chat-vazio');
+            var textoEl      = document.getElementById('hs-chat-texto');
+            var contadorEl   = document.getElementById('hs-chat-contador');
+            var btnEnviar    = document.getElementById('hs-btn-chat-enviar');
+            var btnLimpar    = document.getElementById('hs-btn-chat-limpar');
+
+            if (!historicoEl || !textoEl || !btnEnviar) return;
+
+            // Atualiza o contador de caracteres
+            textoEl.addEventListener('input', function () {
+                if (contadorEl) contadorEl.textContent = textoEl.value.length;
+            });
+
+            // Botão Limpar
+            if (btnLimpar) {
+                btnLimpar.addEventListener('click', function () {
+                    textoEl.value = '';
+                    if (contadorEl) contadorEl.textContent = '0';
+                });
+            }
+
+            // Renderiza as mensagens do histórico
+            function renderizarHistorico() {
+                var msgs = [];
+                try { msgs = JSON.parse(localStorage.getItem(chatKey) || '[]'); } catch (e) {}
+
+                // Remove mensagens antigas (mantém apenas os blocos de mensagem, não o vazio)
+                var itens = historicoEl.querySelectorAll('.agenda-chat-msg');
+                itens.forEach(function (el) { el.remove(); });
+
+                if (!msgs.length) {
+                    if (vazioEl) vazioEl.style.display = '';
+                } else {
+                    if (vazioEl) vazioEl.style.display = 'none';
+                    msgs.forEach(function (msg) {
+                        var div = document.createElement('div');
+                        div.className = 'agenda-chat-msg ' + (msg.remetente === 'cliente' ? 'prest' : 'cliente');
+                        var hora = '';
+                        try {
+                            hora = new Date(msg.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        } catch (e) {}
+                        div.innerHTML =
+                            msg.texto.replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+                            '<span class="agenda-chat-msg-hora">' + hora + '</span>';
+                        historicoEl.appendChild(div);
+                    });
+                    // Rola para o final
+                    historicoEl.scrollTop = historicoEl.scrollHeight;
+                }
+            }
+
+            // Botão Enviar
+            btnEnviar.addEventListener('click', function () {
+                var texto = textoEl.value.trim();
+                if (!texto) { textoEl.focus(); return; }
+
+                var msgs = [];
+                try { msgs = JSON.parse(localStorage.getItem(chatKey) || '[]'); } catch (e) {}
+
+                msgs.push({
+                    id: 'msg-' + Date.now(),
+                    remetente: 'cliente',
+                    texto: texto,
+                    data: new Date().toISOString()
+                });
+
+                localStorage.setItem(chatKey, JSON.stringify(msgs));
+
+                textoEl.value = '';
+                if (contadorEl) contadorEl.textContent = '0';
+                renderizarHistorico();
+            });
+
+            // Recarrega o histórico toda vez que o modal abre
+            var modalEl = document.getElementById('modalChatPrestador');
+            if (modalEl) {
+                modalEl.addEventListener('show.bs.modal', function () {
+                    renderizarHistorico();
+                    setTimeout(function () { textoEl.focus(); }, 300);
+                });
+            }
+
+            renderizarHistorico();
+        }
+
+        // ----------------------------------------------------------------
+        // 4. Boot — executa após o DOM carregar
+        // ----------------------------------------------------------------
+        document.addEventListener('DOMContentLoaded', function () {
+            var emailPrestador = obterEmailPrestador();
+            if (emailPrestador) {
+                carregarDadosPrestador(emailPrestador);
+                inicializarChat(emailPrestador);
+            }
+        });
+    })();
+    </script>
 </body>
 </html>
