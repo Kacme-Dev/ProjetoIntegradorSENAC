@@ -100,6 +100,51 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // =====================================================
+    // SISTEMA DE NOTIFICAÇÕES (ServGo! — ambos os lados)
+    // -----------------------------------------------------
+    // Chave: sgNotificacoes_<email>
+    // Cada notificação: { id, tipo, lida, timestamp, dados }
+    // Tipos: 'agendamento' | 'mensagem' | 'confirmacao' |
+    //        'cancelamento' | 'rejeicao'
+    // =====================================================
+    var SG_NOTIF_PREFIX = 'sgNotificacoes_';
+
+    function sgObterNotificacoes(email) {
+        if (!email) return [];
+        try { return JSON.parse(localStorage.getItem(SG_NOTIF_PREFIX + email) || '[]'); }
+        catch (e) { return []; }
+    }
+    function sgSalvarNotificacoes(email, arr) {
+        if (!email) return;
+        try { localStorage.setItem(SG_NOTIF_PREFIX + email, JSON.stringify(arr)); } catch (e) {}
+    }
+    function sgCriarNotificacao(emailDestino, tipo, dados) {
+        if (!emailDestino) return;
+        var lista = sgObterNotificacoes(emailDestino);
+        lista.push({
+            id: 'notif-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+            tipo: tipo,
+            lida: false,
+            timestamp: new Date().toISOString(),
+            dados: dados || {}
+        });
+        sgSalvarNotificacoes(emailDestino, lista);
+    }
+    function sgContarNaoLidas(email) {
+        return sgObterNotificacoes(email).filter(function (n) { return !n.lida; }).length;
+    }
+    function sgMarcarTodasLidas(email) {
+        var lista = sgObterNotificacoes(email);
+        lista.forEach(function (n) { n.lida = true; });
+        sgSalvarNotificacoes(email, lista);
+    }
+    function sgMarcarLida(email, id) {
+        var lista = sgObterNotificacoes(email);
+        var idx = lista.findIndex(function (n) { return n.id === id; });
+        if (idx >= 0) { lista[idx].lida = true; sgSalvarNotificacoes(email, lista); }
+    }
+
+    // =====================================================
     // HOME (index.html)
     // =====================================================
     function inicializarHome() {
@@ -669,15 +714,27 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         // -----------------------------------------------------------
-        // Modal: Aguardando Confirmação
+        // Modal: Aguardando Confirmação — lê dados REAIS do cliente
         // -----------------------------------------------------------
-        function abrirModalAguardandoConfirmacao(pedidosAbertos) {
-            var conteudo = '';
+        function abrirModalAguardandoConfirmacao() {
+            var emailCliente = '';
+            try {
+                var usu = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+                if (usu) emailCliente = usu.email || '';
+            } catch (e) {}
 
-            if (pedidosAbertos.length === 0) {
-                conteudo = '<p class="text-muted text-center py-3"><i class="bi bi-check-circle me-2"></i>Nenhum agendamento aguardando confirmação.</p>';
+            var cliKey = 'clienteAgendamentos_' + emailCliente;
+            var cliAgs = [];
+            try { cliAgs = JSON.parse(localStorage.getItem(cliKey) || '[]'); } catch (e) {}
+
+            // Ordena do mais recente para o mais antigo
+            cliAgs.sort(function (a, b) { return (b.criadoEm || '') > (a.criadoEm || '') ? 1 : -1; });
+
+            var conteudo = '';
+            if (cliAgs.length === 0) {
+                conteudo = '<p class="text-muted text-center py-3"><i class="bi bi-check-circle me-2"></i>Nenhuma solicitação de agendamento registrada.</p>';
             } else {
-                conteudo += '<p class="mb-3 text-muted">Agendamentos enviados ao prestador e aguardando confirmação:</p>';
+                conteudo += '<p class="mb-3 text-muted">Suas solicitações de agendamento e respectivos status:</p>';
                 conteudo += '<div class="table-responsive"><table class="table table-bordered table-hover align-middle">';
                 conteudo += '<thead class="table-dark"><tr>' +
                     '<th>#</th>' +
@@ -687,23 +744,35 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<th>Status</th>' +
                     '</tr></thead><tbody>';
 
-                pedidosAbertos.forEach(function (p, idx) {
+                cliAgs.forEach(function (ag, idx) {
+                    // Formata data BR
+                    var dataFmt = ag.data
+                        ? ag.data.split('-').reverse().join('/') + ' às ' + (ag.horario || '').split(' - ')[0]
+                        : '—';
+
+                    var statusMap = {
+                        pendente:   { cor: '#0d6efd', texto: 'Aguardando' },
+                        confirmado: { cor: '#198754', texto: 'Confirmado' },
+                        cancelado:  { cor: '#dc3545', texto: 'Cancelado'  },
+                        rejeitado:  { cor: '#fd7e14', texto: 'Rejeitado'  }
+                    };
+                    var st = statusMap[ag.status] || { cor: '#6c757d', texto: ag.status || '—' };
+
                     conteudo += '<tr>' +
                         '<td>' + (idx + 1) + '</td>' +
-                        '<td>' + p.servico + '</td>' +
-                        '<td>' + p.profissional + '</td>' +
-                        '<td>' + p.dataHora + '</td>' +
-                        '<td><span class="badge" style="background-color:#0d6efd;">Em Andamento</span></td>' +
+                        '<td>' + (ag.servico || '—') + '</td>' +
+                        '<td>' + (ag.nomePrestador || '—') + '</td>' +
+                        '<td>' + dataFmt + '</td>' +
+                        '<td><span class="badge" style="background-color:' + st.cor + ';">' + st.texto + '</span></td>' +
                         '</tr>';
                 });
 
                 conteudo += '</tbody></table></div>';
             }
 
-            // AJUSTADO: Mesmo padrão do Modal "Detalhes dos Pagamentos" (#FFC300)
             var modal = criarModal(
                 'modalAguardandoConfirmacao',
-                '<i class="bi bi-hourglass me-2"></i>Agendamentos Aguardando Confirmação',
+                '<i class="bi bi-hourglass me-2"></i>Meus Agendamentos',
                 '#FFC300',
                 conteudo
             );
@@ -816,7 +885,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 document.getElementById('link-aguardando-confirmacao').addEventListener('click', function (e) {
                     e.preventDefault();
-                    abrirModalAguardandoConfirmacao(stats.pedidosAbertos);
+                    abrirModalAguardandoConfirmacao();
                 });
             }
 
@@ -1266,6 +1335,42 @@ document.addEventListener('DOMContentLoaded', function () {
                 var hist = carregarHistoricoChatCli(cliChatPrestadorId, cliChatClienteId);
                 hist.push(msg);
                 salvarHistoricoChatCli(cliChatPrestadorId, cliChatClienteId, hist);
+
+                // Notifica o prestador sobre nova mensagem
+                // O email do prestador é derivado do CHAT_PREST_ID (que no lado prestador = email)
+                // Aqui usamos o prestadorId slug: tentamos reverter para o email via hotsitePrestadorDados
+                (function notificarPrestador() {
+                    try {
+                        var store = JSON.parse(localStorage.getItem('hotsitePrestadorDados') || '{}');
+                        var emailPrest = null;
+                        // Procura pelo email cujo slug corresponde a cliChatPrestadorId
+                        Object.keys(store).forEach(function (em) {
+                            var slug = 'prest-' + em.toLowerCase()
+                                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                                .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                            if (slug === cliChatPrestadorId) emailPrest = em;
+                        });
+                        // Fallback: tenta também pelo nome
+                        if (!emailPrest) {
+                            Object.keys(store).forEach(function (em) {
+                                var nslug = 'prest-' + (store[em].nome || '').toLowerCase()
+                                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                                    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                                if (nslug === cliChatPrestadorId) emailPrest = em;
+                            });
+                        }
+                        if (emailPrest) {
+                            var usu = JSON.parse(localStorage.getItem('usuarioLogado') || '{}');
+                            sgCriarNotificacao(emailPrest, 'mensagem', {
+                                clienteNome: usu.nome || 'Cliente',
+                                clienteEmail: cliChatClienteId,
+                                prestadorEmail: emailPrest,
+                                preview: texto.substring(0, 80) + (texto.length > 80 ? '…' : ''),
+                                clienteId: cliChatClienteId
+                            });
+                        }
+                    } catch (e) { /* silencioso */ }
+                })();
 
                 // Como eu acabei de interagir com a conversa, marco TUDO como lido
                 marcarConversaComoLidaCli(cliChatPrestadorId, cliChatClienteId);
@@ -2835,7 +2940,14 @@ document.addEventListener('DOMContentLoaded', function () {
         var containerAbas  = document.getElementById('agenda-abas');
         if (!containerLista || !containerAbas) return;
 
-        var AGENDAMENTOS_KEY  = 'prestAgendamentos';
+        // Identifica o prestador logado para usar chave personalizada de agendamentos
+        var _usuLogadoPrest = null;
+        try { _usuLogadoPrest = JSON.parse(localStorage.getItem('usuarioLogado') || 'null'); } catch (e) {}
+        var _emailPrestLogado = (_usuLogadoPrest && _usuLogadoPrest.tipo === 'prestador')
+            ? _usuLogadoPrest.email
+            : 'prestador@servgo.com';
+
+        var AGENDAMENTOS_KEY  = 'agendamentos_' + _emailPrestLogado;
         var AVISOS_KEY        = 'prestAvisosAoCliente';
         var SOLICITACOES_KEY  = 'prestSolicitacoesReagend';
 
@@ -2845,6 +2957,14 @@ document.addEventListener('DOMContentLoaded', function () {
         // -----------------------------------------------------------------
         function semearAgendamentosSeNecessario() {
             var existente = localStorage.getItem(AGENDAMENTOS_KEY);
+            // Migração: se existir dado na chave legada, migra para a chave por email
+            if (!existente) {
+                var legado = localStorage.getItem('prestAgendamentos');
+                if (legado) {
+                    localStorage.setItem(AGENDAMENTOS_KEY, legado);
+                    existente = legado;
+                }
+            }
             if (existente) return;
 
             var hoje = new Date();
@@ -3125,11 +3245,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (ag.status === 'confirmado') {
                 html += '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
-                html += '<a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Chat' + sinoHtml + '</a>';
+                html += '<a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens' + sinoHtml + '</a>';
                 html += '<a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a>';
             } else if (ag.status === 'pendente') {
                 html += '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
-                html += '<a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Chat' + sinoHtml + '</a>';
+                html += '<a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens' + sinoHtml + '</a>';
                 html += '<a href="#" class="agenda-btn confirmar" data-acao="confirmar"><i class="bi bi-check me-1"></i>Confirmar</a>';
                 html += '<a href="#" class="agenda-btn cancelar" data-acao="rejeitar"><i class="bi bi-x me-1"></i>Rejeitar</a>';
             } else if (ag.status === 'concluido') {
@@ -3296,16 +3416,43 @@ document.addEventListener('DOMContentLoaded', function () {
             var corpo = document.getElementById('modal-detalhes-corpo');
             if (!corpo) return;
 
-            var lembretesHtml = '<em class="text-muted">Nenhum lembrete registrado.</em>';
-            if (ag.lembretes && ag.lembretes.length > 0) {
-                lembretesHtml = ag.lembretes.map(function (l) {
-                    return '<div class="agenda-detalhe-lembrete"><i class="bi bi-bell me-2"></i>' + l + '</div>';
-                }).join('');
+            var podEditar = (ag.status === 'confirmado' || ag.status === 'pendente');
+
+            // Lembretes: editáveis se status permitir
+            var lembretesHtml = '';
+            if (podEditar) {
+                var lemItens = (ag.lembretes && ag.lembretes.length > 0)
+                    ? ag.lembretes.map(function (l, i) {
+                        return '<div class="agenda-lembrete-edit-row" style="display:flex;gap:6px;margin-bottom:6px;">' +
+                            '<input type="text" class="form-control form-control-sm agenda-lembrete-input" value="' + l.replace(/"/g,'&quot;') + '" style="flex:1;">' +
+                            '<button type="button" class="btn btn-sm btn-outline-danger agenda-lembrete-del" data-idx="' + i + '" title="Remover"><i class="bi bi-trash"></i></button>' +
+                        '</div>';
+                    }).join('')
+                    : '';
+                lembretesHtml =
+                    '<div id="agenda-lembretes-lista">' + lemItens + '</div>' +
+                    '<button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="btn-add-lembrete">' +
+                        '<i class="bi bi-plus-circle me-1"></i>Adicionar Lembrete' +
+                    '</button>';
+            } else {
+                lembretesHtml = (ag.lembretes && ag.lembretes.length > 0)
+                    ? ag.lembretes.map(function (l) {
+                        return '<div class="agenda-detalhe-lembrete"><i class="bi bi-bell me-2"></i>' + l + '</div>';
+                    }).join('')
+                    : '<em class="text-muted">Nenhum lembrete registrado.</em>';
             }
 
-            var observacaoHtml = ag.observacoes
-                ? '<div class="agenda-detalhe-observacao"><i class="bi bi-chat-left-text me-2"></i>' + ag.observacoes + '</div>'
-                : '<em class="text-muted">Sem observações.</em>';
+            // Observações: editáveis se status permitir
+            var observacaoHtml = '';
+            if (podEditar) {
+                observacaoHtml =
+                    '<textarea id="agenda-obs-textarea" class="form-control form-control-sm" rows="3" style="resize:vertical;">' +
+                    (ag.observacoes || '') + '</textarea>';
+            } else {
+                observacaoHtml = ag.observacoes
+                    ? '<div class="agenda-detalhe-observacao"><i class="bi bi-chat-left-text me-2"></i>' + ag.observacoes + '</div>'
+                    : '<em class="text-muted">Sem observações.</em>';
+            }
 
             var statusTag = '<span class="agenda-status-tag ' + ag.status + '">' +
                             ag.status.charAt(0).toUpperCase() + ag.status.slice(1) + '</span>';
@@ -3314,6 +3461,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 ? 'R$ ' + ag.valor.toFixed(2).replace('.', ',')
                 : '—';
 
+            // Botão Ver Perfil do Cliente
+            var btnVerPerfilHtml =
+                '<div style="margin-top:8px;">' +
+                    '<a href="' + (window.location.pathname.includes('/paginasPrestador/') ? '../' : '') + 'paginasCliente/clientePerfil.html' +
+                        (ag.clienteEmail ? '?cliente=' + encodeURIComponent(ag.clienteEmail) : '') +
+                        '" class="btn btn-sm btn-outline-info" target="_blank">' +
+                        '<i class="bi bi-person-badge me-1"></i>Ver Perfil do Cliente' +
+                    '</a>' +
+                '</div>';
+
             corpo.innerHTML =
                 '<div class="agenda-detalhe-secao">' +
                     '<h6><i class="bi bi-person-circle me-1"></i>Dados do Cliente</h6>' +
@@ -3321,6 +3478,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         '<div><strong>Nome</strong><span>' + ag.cliente + '</span></div>' +
                         '<div><strong>Telefone</strong><span>' + (ag.telefone || '—') + '</span></div>' +
                     '</div>' +
+                    btnVerPerfilHtml +
                 '</div>' +
                 '<div class="agenda-detalhe-secao">' +
                     '<h6><i class="bi bi-calendar-event me-1"></i>Serviço Agendado</h6>' +
@@ -3334,12 +3492,14 @@ document.addEventListener('DOMContentLoaded', function () {
                         '<div><strong>Forma de Pagamento</strong><span>' + (ag.formaPagamento || '—') + '</span></div>' +
                     '</div>' +
                 '</div>' +
-                '<div class="agenda-detalhe-secao">' +
-                    '<h6><i class="bi bi-bell me-1"></i>Lembretes</h6>' +
+                '<div class="agenda-detalhe-secao" id="secao-lembretes">' +
+                    '<h6><i class="bi bi-bell me-1"></i>Lembretes ' +
+                    (podEditar ? '<small class="text-muted fw-normal">(editável)</small>' : '') + '</h6>' +
                     lembretesHtml +
                 '</div>' +
-                '<div class="agenda-detalhe-secao">' +
-                    '<h6><i class="bi bi-chat-left-text me-1"></i>Observações</h6>' +
+                '<div class="agenda-detalhe-secao" id="secao-observacoes">' +
+                    '<h6><i class="bi bi-chat-left-text me-1"></i>Observações ' +
+                    (podEditar ? '<small class="text-muted fw-normal">(editável)</small>' : '') + '</h6>' +
                     observacaoHtml +
                 '</div>' +
                 (ag.motivoCancelamento
@@ -3348,6 +3508,78 @@ document.addEventListener('DOMContentLoaded', function () {
                         '<div class="agenda-detalhe-observacao" style="background:#fee2e2; border-left-color:#dc3545;">' + ag.motivoCancelamento + '</div>' +
                       '</div>'
                     : '');
+
+            // Botão Salvar no rodapé do modal (só se editável)
+            var modalDetalhes = document.getElementById('modalDetalhesAgendamento');
+            var footer = modalDetalhes ? modalDetalhes.querySelector('.modal-footer') : null;
+            if (footer) {
+                // Remove botão salvar anterior
+                var oldSave = footer.querySelector('#btn-salvar-detalhes');
+                if (oldSave) oldSave.remove();
+
+                if (podEditar) {
+                    var btnSalvar = document.createElement('button');
+                    btnSalvar.type = 'button';
+                    btnSalvar.className = 'btn btn-primary';
+                    btnSalvar.id = 'btn-salvar-detalhes';
+                    btnSalvar.innerHTML = '<i class="bi bi-floppy me-1"></i>Salvar Alterações';
+                    btnSalvar.addEventListener('click', function () {
+                        // Coleta lembretes
+                        var inputs = corpo.querySelectorAll('.agenda-lembrete-input');
+                        var novosLembretes = [];
+                        inputs.forEach(function (inp) {
+                            var v = inp.value.trim();
+                            if (v) novosLembretes.push(v);
+                        });
+                        // Coleta observações
+                        var obsTA = document.getElementById('agenda-obs-textarea');
+                        var novasObs = obsTA ? obsTA.value.trim() : ag.observacoes;
+
+                        // Salva
+                        var ags = obterAgendamentos();
+                        var idx = ags.findIndex(function (a) { return a.id === ag.id; });
+                        if (idx >= 0) {
+                            ags[idx].lembretes = novosLembretes;
+                            ags[idx].observacoes = novasObs;
+                            salvarAgendamentos(ags);
+                            ag.lembretes = novosLembretes;
+                            ag.observacoes = novasObs;
+                        }
+                        var inst = bootstrap.Modal.getInstance(modalDetalhes);
+                        if (inst) inst.hide();
+                        mostrarToast('Detalhes do agendamento atualizados!', 'success');
+                        renderizarLista();
+                    });
+                    footer.insertBefore(btnSalvar, footer.querySelector('button'));
+                }
+            }
+
+            // Evento: adicionar lembrete
+            var btnAddLem = corpo.querySelector('#btn-add-lembrete');
+            if (btnAddLem) {
+                btnAddLem.addEventListener('click', function () {
+                    var lista = corpo.querySelector('#agenda-lembretes-lista');
+                    if (!lista) return;
+                    var idx2 = lista.querySelectorAll('.agenda-lembrete-edit-row').length;
+                    var row = document.createElement('div');
+                    row.className = 'agenda-lembrete-edit-row';
+                    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;';
+                    row.innerHTML =
+                        '<input type="text" class="form-control form-control-sm agenda-lembrete-input" placeholder="Novo lembrete..." style="flex:1;">' +
+                        '<button type="button" class="btn btn-sm btn-outline-danger agenda-lembrete-del" data-idx="' + idx2 + '" title="Remover"><i class="bi bi-trash"></i></button>';
+                    lista.appendChild(row);
+                    row.querySelector('input').focus();
+                });
+            }
+
+            // Evento: remover lembrete (delegação)
+            corpo.addEventListener('click', function (e) {
+                var btnDel = e.target.closest('.agenda-lembrete-del');
+                if (btnDel) {
+                    var row = btnDel.closest('.agenda-lembrete-edit-row');
+                    if (row) row.remove();
+                }
+            });
 
             new bootstrap.Modal(document.getElementById('modalDetalhesAgendamento')).show();
         }
@@ -3454,6 +3686,27 @@ document.addEventListener('DOMContentLoaded', function () {
                         : 'Seu agendamento foi cancelado pelo prestador. Motivo: ') + motivoFinal
                 });
 
+                // Atualiza o registro do cliente com o novo status
+                if (agendamentoEmAcao.clienteEmail) {
+                    _atualizarStatusClienteAgendamento(
+                        agendamentoEmAcao.id,
+                        agendamentoEmAcao.clienteEmail,
+                        tipoAcaoAtual === 'rejeitar' ? 'rejeitado' : 'cancelado'
+                    );
+                    // Notifica o cliente
+                    sgCriarNotificacao(agendamentoEmAcao.clienteEmail,
+                        tipoAcaoAtual === 'rejeitar' ? 'rejeicao' : 'cancelamento',
+                        {
+                            agendamentoId: agendamentoEmAcao.id,
+                            servico: agendamentoEmAcao.servico,
+                            data: agendamentoEmAcao.data,
+                            horario: agendamentoEmAcao.horario,
+                            motivo: motivoFinal,
+                            prestadorNome: (_usuLogadoPrest && _usuLogadoPrest.nome) || 'Prestador'
+                        }
+                    );
+                }
+
                 // 3) Se marcado, registra a solicitação de reagendamento
                 if (solicitarReagendamento) {
                     registrarSolicitacaoReagendamento({
@@ -3554,8 +3807,8 @@ document.addEventListener('DOMContentLoaded', function () {
         //       - Enviar   → adiciona a mensagem ao histórico, persiste e limpa o
         //                    rascunho; a mensagem vai SOMENTE para aquele cliente.
         // -----------------------------------------------------------------
-        var CHAT_PREST_ID = 'prestador-demo';        // Em produção: id do prestador logado
-        var CHAT_MSGS_PREFIX = 'prestChatMensagens_'; // Prefixo das chaves no localStorage
+        var CHAT_PREST_ID = _emailPrestLogado;          // ID do prestador logado (email)
+        var CHAT_MSGS_PREFIX = 'prestChatMensagens_';  // Prefixo das chaves no localStorage
 
         // Referências DOM do modal (resolvidas na primeira abertura)
         var modalChatEl, modalChatInstance, chatHistoricoEl, chatTextareaEl,
@@ -3719,6 +3972,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 hist.push(msg);
                 salvarHistoricoChat(chatClienteIdAtual, hist);
 
+                // Notifica o cliente sobre nova mensagem
+                if (chatAgendamentoAtual && chatAgendamentoAtual.clienteEmail) {
+                    sgCriarNotificacao(chatAgendamentoAtual.clienteEmail, 'mensagem', {
+                        agendamentoId: chatAgendamentoAtual.id,
+                        servico: chatAgendamentoAtual.servico,
+                        prestadorNome: (_usuLogadoPrest && _usuLogadoPrest.nome) || 'Prestador',
+                        prestadorEmail: CHAT_PREST_ID,
+                        preview: texto.substring(0, 80) + (texto.length > 80 ? '…' : ''),
+                        clienteId: chatClienteIdAtual
+                    });
+                }
+
                 // Atualiza UI
                 renderizarHistoricoChat(hist);
                 chatTextareaEl.value = '';
@@ -3836,6 +4101,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 salvarAgendamentos(ags);
             }
 
+            // Atualiza o registro de agendamento do lado do cliente
+            if (ag.clienteEmail) {
+                _atualizarStatusClienteAgendamento(ag.id, ag.clienteEmail, 'confirmado');
+                // Notifica o cliente
+                sgCriarNotificacao(ag.clienteEmail, 'confirmacao', {
+                    agendamentoId: ag.id,
+                    servico: ag.servico,
+                    data: ag.data,
+                    horario: ag.horario,
+                    prestadorNome: (_usuLogadoPrest && _usuLogadoPrest.nome) || 'Prestador'
+                });
+            }
+
             atualizarContadores();
             renderizarLista();
             mostrarToast('Agendamento confirmado! O cliente foi notificado.', 'success');
@@ -3863,6 +4141,46 @@ document.addEventListener('DOMContentLoaded', function () {
         // BOOT
         // -----------------------------------------------------------------
         semearAgendamentosSeNecessario();
+
+        // --- Trata parâmetros de URL (vindos de notificações do dashboard) ---
+        (function tratarParamsUrl() {
+            var params = new URLSearchParams(window.location.search);
+            var abaParam = params.get('aba');
+            var agIdParam = params.get('agendamentoId');
+            var chatParam = params.get('chat');
+
+            if (abaParam && ['proximos','pendentes','historico'].includes(abaParam)) {
+                // Vai ativar essa aba após o boot
+                setTimeout(function () { ativarAba(abaParam); }, 100);
+            }
+            if (agIdParam) {
+                // Destaca visualmente o agendamento após render
+                setTimeout(function () {
+                    var el = containerLista.querySelector('[data-agendamento-id="' + agIdParam + '"]');
+                    if (el) {
+                        el.style.outline = '3px solid #FFC300';
+                        el.style.borderRadius = '8px';
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Abre o modal de detalhes automaticamente
+                        var ags2 = obterAgendamentos();
+                        var agAlvo = ags2.find(function (a) { return a.id === agIdParam; });
+                        if (agAlvo) { setTimeout(function () { abrirModalDetalhes(agAlvo); }, 600); }
+                    }
+                }, 400);
+            }
+            if (chatParam) {
+                // Abre chat do agendamento especificado
+                setTimeout(function () {
+                    var ags2 = obterAgendamentos();
+                    var agChat = ags2.find(function (a) { return a.id === chatParam; });
+                    if (agChat) {
+                        // Ativa a aba correta
+                        ativarAba(agChat.aba || 'proximos');
+                        setTimeout(function () { abrirModalChat(agChat); }, 600);
+                    }
+                }, 400);
+            }
+        })();
 
         // --- SEED DEMO do chat -----------------------------------------------
         // Em modo de demonstração, garantimos que pelo menos uma conversa tenha
@@ -3985,6 +4303,24 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+
+    // =====================================================
+    // HELPER GLOBAL — Atualiza status de agendamento
+    // no registro pessoal do cliente (clienteAgendamentos_<email>)
+    // Chamado pelo prestador ao confirmar/cancelar/rejeitar.
+    // =====================================================
+    function _atualizarStatusClienteAgendamento(agId, emailCliente, novoStatus) {
+        if (!emailCliente || !agId) return;
+        var cliKey = 'clienteAgendamentos_' + emailCliente;
+        var cliAgs = [];
+        try { cliAgs = JSON.parse(localStorage.getItem(cliKey) || '[]'); } catch (e) {}
+        var idx = cliAgs.findIndex(function (a) { return a.id === agId; });
+        if (idx >= 0) {
+            cliAgs[idx].status = novoStatus;
+            cliAgs[idx].atualizadoEm = new Date().toISOString();
+            localStorage.setItem(cliKey, JSON.stringify(cliAgs));
+        }
+    }
 
     // =====================================================
     // AGENDAR SERVIÇOS
@@ -4182,9 +4518,21 @@ document.addEventListener('DOMContentLoaded', function () {
             var chave = 'agendamentos_' + emailPrestador;
             var ags = obterAgendamentosDoPrestador(emailPrestador);
             var fimH = String(parseInt(slot.horario.split(':')[0]) + 1).padStart(2, '0') + ':00';
+            var novoId = 'ag-cli-' + Date.now();
+
+            // Bloqueia duplo agendamento: verifica se o slot já está ocupado
+            var ocupado = ags.some(function (a) {
+                if (a.status === 'cancelado') return false;
+                var inicioExist = (a.horario || '').split(' - ')[0];
+                return a.data === slot.data && inicioExist === slot.horario;
+            });
+            if (ocupado) {
+                alert('Este horário já foi reservado por outro cliente. Por favor, escolha outro.');
+                return false;
+            }
 
             ags.push({
-                id: 'ag-cli-' + Date.now(),
+                id: novoId,
                 status: 'pendente',
                 aba: 'pendentes',
                 data: slot.data,
@@ -4205,6 +4553,40 @@ document.addEventListener('DOMContentLoaded', function () {
             if (emailPrestador === 'prestador@servgo.com') {
                 localStorage.setItem('prestAgendamentos', JSON.stringify(ags));
             }
+
+            // Salva registro na lista pessoal do cliente para exibir na sua área
+            if (emailCliente) {
+                var prestStore = obterStorePrestadores();
+                var nomePrest = (prestStore[emailPrestador] || {}).nome || emailPrestador;
+                var cliKey = 'clienteAgendamentos_' + emailCliente;
+                var cliAgs = [];
+                try { cliAgs = JSON.parse(localStorage.getItem(cliKey) || '[]'); } catch (e) {}
+                cliAgs.push({
+                    id: novoId,
+                    emailPrestador: emailPrestador,
+                    nomePrestador: nomePrest,
+                    servico: tipoServico || 'Serviço',
+                    data: slot.data,
+                    horario: slot.horario + ' - ' + fimH,
+                    diaLabel: slot.label,
+                    status: 'pendente',
+                    criadoEm: new Date().toISOString()
+                });
+                localStorage.setItem(cliKey, JSON.stringify(cliAgs));
+            }
+
+            // Notifica o prestador sobre nova solicitação de agendamento
+            sgCriarNotificacao(emailPrestador, 'agendamento', {
+                agendamentoId: novoId,
+                clienteNome: nomeCliente || 'Cliente',
+                clienteEmail: emailCliente || '',
+                servico: tipoServico || 'Serviço',
+                data: slot.data,
+                horario: slot.horario + ' - ' + fimH,
+                label: slot.label
+            });
+
+            return novoId;
         }
 
         // -----------------------------------------------------------------
@@ -4297,11 +4679,180 @@ document.addEventListener('DOMContentLoaded', function () {
         selectTipo.addEventListener('change', function () {
             preencherPrestadores(selectTipo.value);
             atualizarInfoPrestador('');
+            // Reseta o calendário ao trocar tipo
+            var inpData = document.getElementById('sg-cal-data');
+            if (inpData) { inpData.value = ''; _renderizarSlotsCalendario(''); }
         });
 
         selectPrestador.addEventListener('change', function () {
             atualizarInfoPrestador(selectPrestador.value);
+            // Reseta o calendário ao trocar prestador
+            var inpData = document.getElementById('sg-cal-data');
+            if (inpData) { inpData.value = ''; _renderizarSlotsCalendario(''); }
         });
+
+        // -----------------------------------------------------------------
+        // CALENDÁRIO — escolha de data e horário específicos pelo cliente
+        // -----------------------------------------------------------------
+        // Guarda o slot escolhido via calendário; quando definido,
+        // sobrescreve o "próximo horário livre" na solicitação.
+        var _slotEscolhido = null;
+
+        (function injetarCalendario() {
+            // Cria o widget logo acima do .card existente
+            var card = mainAgendar.querySelector('.card');
+            if (!card) return;
+
+            var wrapper = document.createElement('div');
+            wrapper.id = 'sg-calendario-wrapper';
+            wrapper.style.cssText =
+                'margin:18px 0 12px;padding:16px 18px;' +
+                'background:#f0f4ff;border:1.5px solid #c7d9f7;border-radius:10px;';
+            wrapper.innerHTML =
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">' +
+                    '<i class="bi bi-calendar3" style="color:#146ADB;font-size:1.1rem;"></i>' +
+                    '<strong style="font-size:.95rem;color:#1a2b4a;">Escolher data e horário</strong>' +
+                    '<span style="font-size:.75rem;color:#6c757d;">(opcional — ou use o próximo horário disponível)</span>' +
+                '</div>' +
+                '<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;">' +
+                    '<div>' +
+                        '<label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:4px;">Data</label>' +
+                        '<input type="date" id="sg-cal-data" class="form-control form-control-sm" style="min-width:160px;">' +
+                    '</div>' +
+                    '<div style="flex:1;min-width:220px;">' +
+                        '<label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:4px;">Horário disponível</label>' +
+                        '<div id="sg-cal-slots" style="display:flex;flex-wrap:wrap;gap:6px;min-height:32px;">' +
+                            '<span id="sg-cal-hint" style="font-size:.8rem;color:#6c757d;">Selecione um prestador e uma data.</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div id="sg-cal-feedback" style="margin-top:8px;font-size:.83rem;"></div>';
+
+            mainAgendar.insertBefore(wrapper, card);
+
+            // Limita input de data: de hoje em diante
+            var hoje = new Date();
+            var minData = hoje.toISOString().substring(0, 10);
+            var inpData = document.getElementById('sg-cal-data');
+            if (inpData) inpData.min = minData;
+
+            // Evento: troca de data
+            if (inpData) {
+                inpData.addEventListener('change', function () {
+                    if (!selectPrestador.value) {
+                        alert('Selecione um prestador antes de escolher a data.');
+                        inpData.value = '';
+                        return;
+                    }
+                    _renderizarSlotsCalendario(inpData.value);
+                });
+            }
+        })();
+
+        function _renderizarSlotsCalendario(dataISO) {
+            var slotsEl    = document.getElementById('sg-cal-slots');
+            var feedbackEl = document.getElementById('sg-cal-feedback');
+            if (!slotsEl) return;
+
+            _slotEscolhido = null;
+            if (feedbackEl) feedbackEl.innerHTML = '';
+
+            if (!dataISO) {
+                slotsEl.innerHTML = '<span id="sg-cal-hint" style="font-size:.8rem;color:#6c757d;">Selecione um prestador e uma data.</span>';
+                // Restaura slotAtual para o próximo livre
+                if (selectPrestador.value) atualizarInfoPrestador(selectPrestador.value);
+                return;
+            }
+
+            // Rejeita finais de semana
+            var diaSem = new Date(dataISO + 'T12:00:00').getDay();
+            if (diaSem === 0 || diaSem === 6) {
+                slotsEl.innerHTML = '<span style="font-size:.82rem;color:#dc3545;"><i class="bi bi-x-circle me-1"></i>Fim de semana — prestador não atende.</span>';
+                return;
+            }
+
+            // Monta mapa de horários ocupados do prestador
+            var ags = obterAgendamentosDoPrestador(selectPrestador.value);
+            var ocupados = {};
+            ags.forEach(function (a) {
+                if (a.status === 'cancelado') return;
+                var ini = (a.horario || '').split(' - ')[0];
+                if (ini && a.data) ocupados[a.data + ' ' + ini] = true;
+            });
+
+            var agora    = new Date();
+            var ehHoje   = dataISO === agora.toISOString().substring(0, 10);
+            var html     = '';
+            var temLivre = false;
+
+            for (var h = 8; h < 18; h++) {
+                var hor = String(h).padStart(2, '0') + ':00';
+                if (ehHoje && h <= agora.getHours()) continue; // horário passado no dia atual
+                var livre = !ocupados[dataISO + ' ' + hor];
+                if (livre) temLivre = true;
+
+                html +=
+                    '<button type="button" class="sg-slot-btn"' +
+                    ' data-hor="' + hor + '" data-data="' + dataISO + '"' +
+                    (livre ? '' : ' disabled') +
+                    ' style="padding:4px 11px;border-radius:6px;font-size:.79rem;font-weight:600;border:1.5px solid ' +
+                    (livre ? '#146ADB' : '#dc3545') + ';color:' +
+                    (livre ? '#146ADB' : '#dc3545') + ';background:' +
+                    (livre ? '#e8f0fb' : '#fee2e2') + ';cursor:' +
+                    (livre ? 'pointer' : 'not-allowed') + ';opacity:' +
+                    (livre ? '1' : '.5') + ';">' + hor + '</button>';
+            }
+
+            if (!html) {
+                slotsEl.innerHTML = '<span style="font-size:.82rem;color:#dc3545;">Nenhum horário disponível.</span>';
+                return;
+            }
+            slotsEl.innerHTML = html;
+            if (!temLivre) {
+                slotsEl.insertAdjacentHTML('beforeend',
+                    '<div style="width:100%;font-size:.82rem;color:#dc3545;margin-top:4px;">Todos os horários desta data estão ocupados.</div>');
+            }
+
+            // Listeners nos botões de slot livre
+            slotsEl.querySelectorAll('.sg-slot-btn:not([disabled])').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    // Desmarca seleção anterior
+                    slotsEl.querySelectorAll('.sg-slot-btn').forEach(function (b) {
+                        b.style.background = b.disabled ? '#fee2e2' : '#e8f0fb';
+                        b.style.color      = b.disabled ? '#dc3545' : '#146ADB';
+                        b.style.boxShadow  = '';
+                    });
+                    // Marca este como selecionado
+                    btn.style.background = '#146ADB';
+                    btn.style.color      = '#fff';
+                    btn.style.boxShadow  = '0 2px 8px rgba(20,106,219,.35)';
+
+                    var d   = btn.dataset.data;
+                    var hor = btn.dataset.hor;
+                    var fimH = String(parseInt(hor.split(':')[0]) + 1).padStart(2, '0') + ':00';
+
+                    // Monta label legível
+                    var diasNome = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+                    var mesesN   = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+                    var dObj     = new Date(d + 'T12:00:00');
+                    var hj       = new Date(); hj.setHours(0,0,0,0);
+                    var diff     = Math.round((dObj - hj) / 86400000);
+                    var label    = diff === 0 ? 'Hoje' : diff === 1 ? 'Amanhã'
+                                 : diasNome[dObj.getDay()] + ', ' + String(dObj.getDate()).padStart(2,'0') + '/' + mesesN[dObj.getMonth()];
+                    label += ' às ' + hor;
+
+                    _slotEscolhido = { data: d, horario: hor, label: label };
+                    slotAtual = _slotEscolhido; // sobrescreve o próximo livre
+
+                    if (blocoHorario) {
+                        blocoHorario.innerHTML = '<strong style="color:#146ADB;"><i class="bi bi-calendar-check me-1"></i>' + label + ' (sua escolha)</strong>';
+                    }
+                    if (feedbackEl) {
+                        feedbackEl.innerHTML = '<i class="bi bi-check-circle-fill me-1" style="color:#198754;"></i><strong style="color:#198754;">Horário selecionado: ' + label + '</strong>';
+                    }
+                });
+            });
+        }
 
         // -----------------------------------------------------------------
         // Botão "Solicitar Agendamento"
@@ -4313,13 +4864,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!slotAtual) { alert('Não há horários disponíveis para este prestador.'); return; }
 
                 var nomePrestador = selectPrestador.options[selectPrestador.selectedIndex].textContent;
-                reservarAgendamento(
+                var resultado = reservarAgendamento(
                     selectPrestador.value,
                     slotAtual,
                     selectTipo.value || 'Serviço',
                     usuarioLogado.nome,
                     usuarioLogado.email
                 );
+
+                if (resultado === false) {
+                    // Slot foi ocupado entre a seleção e o clique — atualiza a tela
+                    atualizarInfoPrestador(selectPrestador.value);
+                    var inpD = document.getElementById('sg-cal-data');
+                    if (inpD && inpD.value) _renderizarSlotsCalendario(inpD.value);
+                    return;
+                }
 
                 alert(
                     'Agendamento solicitado com sucesso!\n\n' +
@@ -4328,7 +4887,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Aguarde a confirmação do prestador.'
                 );
 
-                // Atualiza exibição (slot recém-reservado não aparece mais)
+                // Limpa seleção do calendário e atualiza próximo livre
+                _slotEscolhido = null;
+                var inpData = document.getElementById('sg-cal-data');
+                if (inpData) { inpData.value = ''; _renderizarSlotsCalendario(''); }
                 atualizarInfoPrestador(selectPrestador.value);
             });
         }
@@ -4458,6 +5020,328 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     // =====================================================
+    // NOTIFICAÇÕES — DASHBOARD DO PRESTADOR
+    // (prestadorAreaExclusiva.html)
+    // =====================================================
+    function inicializarNotificacoesDashboardPrestador() {
+        var mainEl = document.querySelector('.prest-main');
+        if (!mainEl) return;
+        // Só roda na área exclusiva do prestador (sem agenda-lista)
+        if (document.getElementById('agenda-lista')) return;
+
+        var usuarioLogado = null;
+        try { usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null'); } catch (e) {}
+        var emailPrest = usuarioLogado ? usuarioLogado.email : null;
+        if (!emailPrest) return;
+
+        // Injeta a barra de notificações antes do primeiro filho do main
+        var barraId = 'sg-notif-barra-prest';
+        if (!document.getElementById(barraId)) {
+            var barra = document.createElement('div');
+            barra.id = barraId;
+            barra.style.cssText = 'margin-bottom:16px;';
+            mainEl.insertBefore(barra, mainEl.firstChild);
+        }
+
+        function renderizarBarra() {
+            var barra = document.getElementById(barraId);
+            if (!barra) return;
+            var notifs = sgObterNotificacoes(emailPrest).filter(function (n) { return !n.lida; });
+            var qtdAg  = notifs.filter(function (n) { return n.tipo === 'agendamento'; }).length;
+            var qtdMsg = notifs.filter(function (n) { return n.tipo === 'mensagem'; }).length;
+
+            if (qtdAg === 0 && qtdMsg === 0) { barra.innerHTML = ''; return; }
+
+            var html = '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#fffbe6;border:1.5px solid #FFC300;border-radius:10px;">' +
+                '<i class="bi bi-bell-fill" style="color:#e6a800;font-size:1.2rem;"></i>' +
+                '<strong style="color:#7a5800;">Novas notificações:</strong>';
+
+            if (qtdAg > 0) {
+                html += '<button type="button" id="btn-notif-prest-ag" class="btn btn-warning btn-sm" style="font-size:.83rem;">' +
+                    '<i class="bi bi-calendar-plus me-1"></i>' + qtdAg + ' nova(s) solicitação(ões) de agendamento' +
+                '</button>';
+            }
+            if (qtdMsg > 0) {
+                html += '<button type="button" id="btn-notif-prest-msg" class="btn btn-primary btn-sm" style="font-size:.83rem;">' +
+                    '<i class="bi bi-chat-dots me-1"></i>' + qtdMsg + ' nova(s) mensagem(ns)' +
+                '</button>';
+            }
+            html += '<button type="button" id="btn-notif-prest-all" class="btn btn-outline-secondary btn-sm" style="font-size:.83rem;margin-left:auto;">' +
+                '<i class="bi bi-list-check me-1"></i>Ver todas' +
+            '</button>';
+            html += '</div>';
+            barra.innerHTML = html;
+
+            // Clique: solicitações de agendamento → prestadorServicosAgendados pendentes
+            var btnAg = document.getElementById('btn-notif-prest-ag');
+            if (btnAg) {
+                btnAg.addEventListener('click', function () {
+                    // Pega o primeiro agendamento pendente
+                    var primeiroAg = notifs.find(function (n) { return n.tipo === 'agendamento'; });
+                    var agId = primeiroAg ? (primeiroAg.dados.agendamentoId || '') : '';
+                    var url = 'prestadorServicosAgendados.html?aba=pendentes' + (agId ? '&agendamentoId=' + agId : '');
+                    window.location.href = url;
+                });
+            }
+
+            // Clique: mensagens → prestadorServicosAgendados com chat
+            var btnMsg = document.getElementById('btn-notif-prest-msg');
+            if (btnMsg) {
+                btnMsg.addEventListener('click', function () {
+                    var primeiraMsg = notifs.find(function (n) { return n.tipo === 'mensagem'; });
+                    var agId = primeiraMsg ? (primeiraMsg.dados.agendamentoId || '') : '';
+                    var url = 'prestadorServicosAgendados.html' + (agId ? '?chat=' + agId : '');
+                    window.location.href = url;
+                });
+            }
+
+            // Clique: ver todas → abre modal com lista completa
+            var btnAll = document.getElementById('btn-notif-prest-all');
+            if (btnAll) {
+                btnAll.addEventListener('click', function () { abrirModalNotificacoesPrest(emailPrest); });
+            }
+        }
+
+        function abrirModalNotificacoesPrest(email) {
+            var todasNotifs = sgObterNotificacoes(email).slice().reverse();
+            var html = '';
+            if (todasNotifs.length === 0) {
+                html = '<p class="text-muted text-center py-3"><i class="bi bi-check2-all me-2"></i>Nenhuma notificação.</p>';
+            } else {
+                html = '<div class="list-group">';
+                todasNotifs.forEach(function (n) {
+                    var icon = 'bi-bell';
+                    var cor = '#6c757d';
+                    var titulo = 'Notificação';
+                    var desc = '';
+                    var acao = '';
+                    if (n.tipo === 'agendamento') {
+                        icon = 'bi-calendar-plus'; cor = '#FFC300'; titulo = 'Nova Solicitação de Agendamento';
+                        desc = '<strong>' + (n.dados.clienteNome || 'Cliente') + '</strong> solicitou agendamento de <strong>' +
+                            (n.dados.servico || 'serviço') + '</strong> para ' + (n.dados.label || n.dados.data || '');
+                        if (n.dados.agendamentoId) {
+                            acao = 'prestadorServicosAgendados.html?aba=pendentes&agendamentoId=' + n.dados.agendamentoId;
+                        }
+                    } else if (n.tipo === 'mensagem') {
+                        icon = 'bi-chat-dots'; cor = '#146ADB'; titulo = 'Nova Mensagem';
+                        desc = '<strong>' + (n.dados.clienteNome || 'Cliente') + '</strong>: ' + (n.dados.preview || '');
+                        if (n.dados.agendamentoId) {
+                            acao = 'prestadorServicosAgendados.html?chat=' + n.dados.agendamentoId;
+                        }
+                    }
+                    var dt = '';
+                    try { dt = new Date(n.timestamp).toLocaleString('pt-BR'); } catch (e) {}
+                    html += '<div class="list-group-item list-group-item-action' + (n.lida ? '' : ' fw-bold') + '" style="border-left:4px solid ' + cor + ';margin-bottom:4px;border-radius:6px;">';
+                    html += '<div class="d-flex justify-content-between align-items-start">';
+                    html += '<div><i class="bi ' + icon + ' me-2" style="color:' + cor + ';"></i>' + titulo + '</div>';
+                    html += '<small class="text-muted">' + dt + '</small></div>';
+                    html += '<div style="margin-top:4px;font-size:.88rem;">' + desc + '</div>';
+                    if (acao) {
+                        html += '<div style="margin-top:6px;"><a href="' + acao + '" class="btn btn-sm btn-outline-primary" style="font-size:.8rem;">' +
+                            '<i class="bi bi-arrow-right-circle me-1"></i>Ver detalhes</a></div>';
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+
+            var idModal = 'modalNotifPrestDash';
+            var ex = document.getElementById(idModal);
+            if (ex) ex.remove();
+            var modal = document.createElement('div');
+            modal.className = 'modal fade'; modal.id = idModal; modal.setAttribute('tabindex', '-1');
+            modal.innerHTML =
+                '<div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">' +
+                    '<div class="modal-content">' +
+                        '<div class="modal-header" style="background:#FFC300;color:#000;">' +
+                            '<h5 class="modal-title"><i class="bi bi-bell-fill me-2"></i>Minhas Notificações</h5>' +
+                            '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>' +
+                        '</div>' +
+                        '<div class="modal-body">' + html + '</div>' +
+                        '<div class="modal-footer">' +
+                            '<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>' +
+                            '<button type="button" class="btn btn-outline-secondary btn-sm" id="btn-marcar-todas-lidas-prest">Marcar todas como lidas</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            document.body.appendChild(modal);
+            var inst = new bootstrap.Modal(modal);
+            inst.show();
+            modal.querySelector('#btn-marcar-todas-lidas-prest').addEventListener('click', function () {
+                sgMarcarTodasLidas(email);
+                inst.hide();
+                renderizarBarra();
+            });
+        }
+
+        renderizarBarra();
+        // Polling a cada 5s para capturar notificações chegando em outra aba
+        setInterval(renderizarBarra, 5000);
+    }
+
+    // =====================================================
+    // NOTIFICAÇÕES — DASHBOARD DO CLIENTE
+    // (clienteAreaExclusiva.html)
+    // =====================================================
+    function inicializarNotificacoesDashboardCliente() {
+        var mainEl = document.querySelector('.cli-main');
+        if (!mainEl) return;
+        // Só roda na área exclusiva do cliente (tem cli-pedidos-lista)
+        if (!document.querySelector('.cli-pedidos-lista')) return;
+
+        var usuarioLogado = null;
+        try { usuarioLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null'); } catch (e) {}
+        var emailCli = usuarioLogado ? usuarioLogado.email : null;
+        if (!emailCli) return;
+
+        var barraId = 'sg-notif-barra-cli';
+        if (!document.getElementById(barraId)) {
+            var barra = document.createElement('div');
+            barra.id = barraId;
+            barra.style.cssText = 'margin-bottom:16px;';
+            mainEl.insertBefore(barra, mainEl.firstChild);
+        }
+
+        function renderizarBarra() {
+            var barra = document.getElementById(barraId);
+            if (!barra) return;
+            var notifs = sgObterNotificacoes(emailCli).filter(function (n) { return !n.lida; });
+            var qtdConf = notifs.filter(function (n) { return n.tipo === 'confirmacao' || n.tipo === 'cancelamento' || n.tipo === 'rejeicao'; }).length;
+            var qtdMsg  = notifs.filter(function (n) { return n.tipo === 'mensagem'; }).length;
+
+            if (qtdConf === 0 && qtdMsg === 0) { barra.innerHTML = ''; return; }
+
+            var html = '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#e8f4fd;border:1.5px solid #146ADB;border-radius:10px;">' +
+                '<i class="bi bi-bell-fill" style="color:#146ADB;font-size:1.2rem;"></i>' +
+                '<strong style="color:#0d3d78;">Novas notificações:</strong>';
+
+            if (qtdConf > 0) {
+                html += '<button type="button" id="btn-notif-cli-ag" class="btn btn-warning btn-sm" style="font-size:.83rem;">' +
+                    '<i class="bi bi-calendar-check me-1"></i>' + qtdConf + ' atualização(ões) de agendamento' +
+                '</button>';
+            }
+            if (qtdMsg > 0) {
+                html += '<button type="button" id="btn-notif-cli-msg" class="btn btn-primary btn-sm" style="font-size:.83rem;">' +
+                    '<i class="bi bi-chat-dots me-1"></i>' + qtdMsg + ' nova(s) mensagem(ns)' +
+                '</button>';
+            }
+            html += '<button type="button" id="btn-notif-cli-all" class="btn btn-outline-secondary btn-sm" style="font-size:.83rem;margin-left:auto;">' +
+                '<i class="bi bi-list-check me-1"></i>Ver todas' +
+            '</button>';
+            html += '</div>';
+            barra.innerHTML = html;
+
+            // Clique: confirmação/cancelamento → abre modal de agendamentos
+            var btnAg = document.getElementById('btn-notif-cli-ag');
+            if (btnAg) {
+                btnAg.addEventListener('click', function () {
+                    sgMarcarTodasLidas(emailCli);
+                    renderizarBarra();
+                    // Dispara o modal de agendamentos do cliente
+                    var linkAg = document.getElementById('link-aguardando-confirmacao');
+                    if (linkAg) linkAg.click();
+                });
+            }
+
+            // Clique: mensagens → abre chat com o prestador relevante
+            var btnMsg = document.getElementById('btn-notif-cli-msg');
+            if (btnMsg) {
+                btnMsg.addEventListener('click', function () {
+                    var primeiraMsg = notifs.find(function (n) { return n.tipo === 'mensagem'; });
+                    if (!primeiraMsg) return;
+                    // Tenta abrir o chat pelo clienteId + prestadorId
+                    var cliId = primeiraMsg.dados.clienteId;
+                    if (cliId) {
+                        // Encontra o pedido cujo slug corresponde
+                        var pedido = document.querySelector('.cli-pedidos-item');
+                        var pedidos = document.querySelectorAll('.cli-pedidos-item');
+                        pedidos.forEach(function (p) {
+                            // Tenta abrir o chat do primeiro item
+                        });
+                        // Como simplificação, abre o modal de notificações
+                    }
+                    abrirModalNotificacoesCli(emailCli);
+                });
+            }
+
+            // Clique: ver todas → modal
+            var btnAll = document.getElementById('btn-notif-cli-all');
+            if (btnAll) {
+                btnAll.addEventListener('click', function () { abrirModalNotificacoesCli(emailCli); });
+            }
+        }
+
+        function abrirModalNotificacoesCli(email) {
+            var todasNotifs = sgObterNotificacoes(email).slice().reverse();
+            var html = '';
+            if (todasNotifs.length === 0) {
+                html = '<p class="text-muted text-center py-3"><i class="bi bi-check2-all me-2"></i>Nenhuma notificação.</p>';
+            } else {
+                html = '<div class="list-group">';
+                todasNotifs.forEach(function (n) {
+                    var icon = 'bi-bell'; var cor = '#6c757d'; var titulo = 'Notificação'; var desc = '';
+                    if (n.tipo === 'confirmacao') {
+                        icon = 'bi-calendar-check'; cor = '#198754'; titulo = 'Agendamento Confirmado!';
+                        desc = 'Seu agendamento de <strong>' + (n.dados.servico || '') + '</strong> com <strong>' +
+                            (n.dados.prestadorNome || 'Prestador') + '</strong> foi <strong style="color:#198754;">CONFIRMADO</strong>.';
+                    } else if (n.tipo === 'cancelamento') {
+                        icon = 'bi-calendar-x'; cor = '#dc3545'; titulo = 'Agendamento Cancelado';
+                        desc = 'Seu agendamento de <strong>' + (n.dados.servico || '') + '</strong> foi <strong style="color:#dc3545;">CANCELADO</strong>.' +
+                            (n.dados.motivo ? ' Motivo: ' + n.dados.motivo : '');
+                    } else if (n.tipo === 'rejeicao') {
+                        icon = 'bi-x-octagon'; cor = '#fd7e14'; titulo = 'Solicitação Rejeitada';
+                        desc = 'Sua solicitação de <strong>' + (n.dados.servico || '') + '</strong> foi <strong style="color:#fd7e14;">REJEITADA</strong>.' +
+                            (n.dados.motivo ? ' Motivo: ' + n.dados.motivo : '');
+                    } else if (n.tipo === 'mensagem') {
+                        icon = 'bi-chat-dots'; cor = '#146ADB'; titulo = 'Nova Mensagem do Prestador';
+                        desc = '<strong>' + (n.dados.prestadorNome || 'Prestador') + '</strong>: ' + (n.dados.preview || '');
+                    }
+                    var dt = '';
+                    try { dt = new Date(n.timestamp).toLocaleString('pt-BR'); } catch (e) {}
+                    html += '<div class="list-group-item' + (n.lida ? '' : ' fw-bold') + '" style="border-left:4px solid ' + cor + ';margin-bottom:4px;border-radius:6px;">';
+                    html += '<div class="d-flex justify-content-between align-items-start">';
+                    html += '<div><i class="bi ' + icon + ' me-2" style="color:' + cor + ';"></i>' + titulo + '</div>';
+                    html += '<small class="text-muted">' + dt + '</small></div>';
+                    html += '<div style="margin-top:4px;font-size:.88rem;">' + desc + '</div>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+
+            var idModal = 'modalNotifCliDash';
+            var ex = document.getElementById(idModal);
+            if (ex) ex.remove();
+            var modal = document.createElement('div');
+            modal.className = 'modal fade'; modal.id = idModal; modal.setAttribute('tabindex', '-1');
+            modal.innerHTML =
+                '<div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">' +
+                    '<div class="modal-content">' +
+                        '<div class="modal-header" style="background:#146ADB;color:#fff;">' +
+                            '<h5 class="modal-title"><i class="bi bi-bell-fill me-2"></i>Minhas Notificações</h5>' +
+                            '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>' +
+                        '</div>' +
+                        '<div class="modal-body">' + html + '</div>' +
+                        '<div class="modal-footer">' +
+                            '<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>' +
+                            '<button type="button" class="btn btn-outline-secondary btn-sm" id="btn-marcar-todas-lidas-cli">Marcar todas como lidas</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            document.body.appendChild(modal);
+            var inst = new bootstrap.Modal(modal);
+            inst.show();
+            modal.querySelector('#btn-marcar-todas-lidas-cli').addEventListener('click', function () {
+                sgMarcarTodasLidas(email);
+                inst.hide();
+                renderizarBarra();
+            });
+        }
+
+        renderizarBarra();
+        setInterval(renderizarBarra, 5000);
+    }
+
+    // =====================================================
     // INICIALIZAÇÃO GERAL
     // =====================================================
     inicializarNavbarSaudacao();
@@ -4478,4 +5362,6 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarSidebarResponsiva();
     inicializarAgendarServicos();
     inicializarHotsitePublico();
+    inicializarNotificacoesDashboardPrestador();
+    inicializarNotificacoesDashboardCliente();
 });
