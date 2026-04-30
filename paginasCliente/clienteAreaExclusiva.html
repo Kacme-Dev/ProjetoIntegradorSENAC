@@ -130,7 +130,7 @@
                             <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
                             <button type="button" class="btn btn-warning btn-editar">Editar</button>
                             <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
-                            <button type="button" class="btn btn-chat"><i class="bi bi-chat-dots me-1"></i>Chat</button>
+                            
                         </div>
                     </li>
                     <li class="cli-pedidos-item" data-pedido-id="pedido-2" data-servico="Diarista" data-profissional="João Souza">
@@ -140,7 +140,7 @@
                             <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
                             <button type="button" class="btn btn-warning btn-editar">Editar</button>
                             <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
-                            <button type="button" class="btn btn-chat"><i class="bi bi-chat-dots me-1"></i>Chat</button>
+                            
                         </div>
                     </li>
                     <li class="cli-pedidos-item" data-pedido-id="pedido-3" data-servico="Montador de Móveis" data-profissional="N/A">
@@ -150,10 +150,25 @@
                             <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
                             <button type="button" class="btn btn-warning btn-editar">Editar</button>
                             <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
-                            <button type="button" class="btn btn-chat"><i class="bi bi-chat-dots me-1"></i>Chat</button>
+                            
                         </div>
                     </li>
                 </ul>
+            </div>
+
+            <!-- ============================================== -->
+            <!--  CARD: Serviços Confirmados — Chat com Prestador -->
+            <!-- ============================================== -->
+            <div class="cli-card" id="cli-card-confirmados" style="margin-top:24px;">
+                <div class="cli-card-cabecalho" id="cli-cabecalho-confirmados">
+                    <span><i class="bi bi-chat-dots me-2"></i>Serviços Confirmados — Canal de Mensagens</span>
+                    <span class="msg-nao-lidas-aviso" id="cli-aviso-msgs-confirmados" style="display:none;">
+                        <i class="bi bi-bell-fill"></i> Você possui mensagens não lidas
+                    </span>
+                </div>
+                <div id="cli-tabela-confirmados" class="p-3">
+                    <!-- preenchido dinamicamente por script.js -->
+                </div>
             </div>
         </main>
     </div>

@@ -1402,7 +1402,10 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        // Abre o modal de chat para um determinado item de pedido (<li>)
+        // Abre o modal de chat para um determinado item de pedido.
+        // Aceita tanto um elemento DOM <li class="cli-pedidos-item"> (com .dataset)
+        // quanto um objeto plano { profissional, servico, pedidoId } — útil para
+        // os botões "Falar com Prestador" da tabela de serviços confirmados.
         function abrirModalChatCli(itemPedido) {
             // Lazy-init do DOM (cachear referências)
             if (!cliModalChatEl) {
@@ -1421,14 +1424,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 registrarHandlersChatCli();
             }
 
-            var prestadorNome = itemPedido.dataset.profissional || 'Prestador';
+            // Normaliza: aceita elemento DOM (tem .dataset) ou objeto plano com os mesmos campos
+            var dados = (itemPedido && typeof itemPedido.dataset === 'object') ? itemPedido.dataset : itemPedido;
+            var prestadorNome = dados.profissional || 'Prestador';
             if (!prestadorNome || prestadorNome === 'N/A') {
                 alert('Este pedido ainda não tem um prestador atribuído — não é possível abrir um chat.');
                 return;
             }
 
             cliChatPedidoAtual  = itemPedido;
-            cliChatPrestadorId  = obterPrestadorIdDoItem(itemPedido);
+            cliChatPrestadorId  = 'prest-' + slugificarCli(prestadorNome);
             cliChatClienteId    = obterClienteIdLogado();
             cliChatOrigemFoco   = document.activeElement;
 
@@ -1439,7 +1444,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<span class="agenda-chat-info-item"><i class="bi bi-person-badge"></i><strong>' +
                         escaparHtmlCli(prestadorNome) + '</strong></span>' +
                     '<span class="agenda-chat-info-item"><i class="bi bi-tools"></i>' +
-                        escaparHtmlCli(itemPedido.dataset.servico || '') + '</span>';
+                        escaparHtmlCli(dados.servico || '') + '</span>';
             }
 
             // Carrega o histórico persistido e renderiza
@@ -1450,15 +1455,15 @@ document.addEventListener('DOMContentLoaded', function () {
             // mensagens salvas, semeamos uma mensagem do prestador simulando uma
             // notificação recebida, para que o usuário consiga "ver" a mensagem
             // não lida sinalizada pelo sininho.
-            if (historico.length === 0 &&
-                itemPedido.dataset.pedidoId === 'pedido-1' &&
-                itemPedido.classList.contains('tem-mensagem-nao-lida')) {
+            var isDemoPedido1 = (dados.pedidoId === 'pedido-1') ||
+                (itemPedido.classList && itemPedido.classList.contains('tem-mensagem-nao-lida'));
+            if (historico.length === 0 && isDemoPedido1) {
                 historico.push({
                     id: 'msg-demo-' + Date.now(),
                     remetente: 'prestador',
                     texto: 'Olá! Estou a caminho do endereço combinado. Posso precisar confirmar o modelo do disjuntor antes de iniciar o serviço.',
                     data: new Date().toISOString(),
-                    pedidoId: 'pedido-1'
+                    pedidoId: dados.pedidoId || 'pedido-1'
                 });
                 salvarHistoricoChatCli(cliChatPrestadorId, cliChatClienteId, historico);
             }
@@ -1549,13 +1554,148 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
-        // Liga os botões "Chat" de cada pedido
-        pedidosList.querySelectorAll('.btn-chat').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var item = btn.closest('.cli-pedidos-item');
-                if (item) abrirModalChatCli(item);
+        // -----------------------------------------------------------------------
+        // TABELA DE SERVIÇOS CONFIRMADOS — FALAR COM O PRESTADOR
+        // -----------------------------------------------------------------------
+        // Lê os agendamentos confirmados do localStorage (clienteAgendamentos_<email>)
+        // e renderiza uma tabela responsiva na div #cli-tabela-confirmados.
+        // Cada linha tem um botão "Falar com Prestador" que abre o modal de chat.
+        // -----------------------------------------------------------------------
+        function renderizarTabelaConfirmados() {
+            var container = document.getElementById('cli-tabela-confirmados');
+            var avisoCard = document.getElementById('cli-aviso-msgs-confirmados');
+            if (!container) return;
+
+            // Lê agendamentos confirmados do cliente logado
+            var emailCliente = '';
+            try {
+                var usu = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+                if (usu) emailCliente = usu.email || '';
+            } catch (e) {}
+
+            var cliAgs = [];
+            try { cliAgs = JSON.parse(localStorage.getItem('clienteAgendamentos_' + emailCliente) || '[]'); } catch (e) {}
+
+            // Filtra apenas confirmados
+            var confirmados = cliAgs.filter(function (ag) { return ag.status === 'confirmado'; });
+
+            // Agrega dados demo dos itens estáticos "Em Andamento" do DOM
+            var itensDOM = pedidosList ? pedidosList.querySelectorAll('.cli-pedidos-item') : [];
+            itensDOM.forEach(function (li) {
+                var badge = li.querySelector('.cli-badge');
+                var profissional = li.dataset.profissional || '';
+                if (badge && badge.classList.contains('em-andamento') && profissional && profissional !== 'N/A') {
+                    // Verifica se já está na lista de confirmados via localStorage
+                    var jaExiste = confirmados.some(function (a) {
+                        return (a.pedidoId || a.id) === li.dataset.pedidoId;
+                    });
+                    if (!jaExiste) {
+                        var dadoExtra = dadosAgendamentos[li.dataset.pedidoId] || {};
+                        confirmados.unshift({
+                            pedidoId: li.dataset.pedidoId,
+                            servico:  li.dataset.servico || '—',
+                            nomePrestador: profissional,
+                            data:    dadoExtra.dataHora || '—',
+                            status:  'confirmado',
+                            _isDemo: true
+                        });
+                    }
+                }
             });
-        });
+
+            if (confirmados.length === 0) {
+                container.innerHTML =
+                    '<p class="text-muted text-center py-3">' +
+                    '<i class="bi bi-info-circle me-2"></i>' +
+                    'Nenhum serviço confirmado no momento. Quando um prestador confirmar seu agendamento, você poderá enviar mensagens diretamente por aqui.' +
+                    '</p>';
+                if (avisoCard) avisoCard.style.display = 'none';
+                return;
+            }
+
+            // Conta total de mensagens não lidas nestes confirmados
+            var totalNaoLidas = 0;
+            confirmados.forEach(function (ag) {
+                var nome = ag.nomePrestador || ag.profissional || '';
+                if (!nome || nome === 'N/A') return;
+                var pId = 'prest-' + slugificarCli(nome);
+                var cId = obterClienteIdLogado();
+                totalNaoLidas += contarNaoLidasNoPedido(pId, cId);
+            });
+
+            if (avisoCard) {
+                avisoCard.style.display = totalNaoLidas > 0 ? '' : 'none';
+            }
+
+            var html = '<div class="table-responsive">' +
+                '<table class="table table-bordered table-hover align-middle">' +
+                '<thead class="table-dark">' +
+                '<tr>' +
+                '<th>#</th>' +
+                '<th>Serviço</th>' +
+                '<th>Profissional</th>' +
+                '<th>Data / Hora</th>' +
+                '<th>Status</th>' +
+                '<th>Comunicação</th>' +
+                '</tr>' +
+                '</thead><tbody>';
+
+            confirmados.forEach(function (ag, idx) {
+                var nomeProf = ag.nomePrestador || ag.profissional || '—';
+                var dataFmt  = ag.data
+                    ? (ag.data.indexOf('-') > -1
+                        ? ag.data.split('-').reverse().join('/') + ' às ' + (ag.horario || '').split(' - ')[0]
+                        : ag.data)
+                    : '—';
+
+                // Calcula mensagens não lidas para este prestador
+                var naoLidas = 0;
+                if (nomeProf && nomeProf !== '—') {
+                    var pId = 'prest-' + slugificarCli(nomeProf);
+                    var cId = obterClienteIdLogado();
+                    naoLidas = contarNaoLidasNoPedido(pId, cId);
+                }
+
+                var sinoBadge = naoLidas > 0
+                    ? '<span class="badge bg-danger ms-1" style="vertical-align:middle;font-size:0.7rem;">' +
+                      '<i class="bi bi-bell-fill"></i> ' + naoLidas +
+                      '</span>'
+                    : '';
+
+                var podeFalar = nomeProf && nomeProf !== '—';
+                var btnFalar  = podeFalar
+                    ? '<button type="button" class="btn btn-primary btn-sm btn-falar-prestador" ' +
+                      'data-profissional="' + escaparHtmlCli(nomeProf) + '" ' +
+                      'data-servico="' + escaparHtmlCli(ag.servico || '—') + '" ' +
+                      'data-pedido-id="' + escaparHtmlCli((ag.pedidoId || ag.id || '') + '') + '">' +
+                      '<i class="bi bi-chat-dots me-1"></i>Falar com Prestador' + sinoBadge +
+                      '</button>'
+                    : '<span class="text-muted small">Prestador não atribuído</span>';
+
+                html += '<tr>' +
+                    '<td>' + (idx + 1) + '</td>' +
+                    '<td>' + escaparHtmlCli(ag.servico || '—') + '</td>' +
+                    '<td>' + escaparHtmlCli(nomeProf) + '</td>' +
+                    '<td>' + escaparHtmlCli(dataFmt) + '</td>' +
+                    '<td><span class="badge" style="background-color:#198754;">Confirmado</span></td>' +
+                    '<td>' + btnFalar + '</td>' +
+                    '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+
+            // Wira os botões "Falar com Prestador"
+            container.querySelectorAll('.btn-falar-prestador').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    abrirModalChatCli({
+                        profissional: btn.dataset.profissional,
+                        servico:      btn.dataset.servico,
+                        pedidoId:     btn.dataset.pedidoId
+                    });
+                });
+            });
+        }
 
         // Estado inicial: reconcilia os indicadores com o localStorage
 
@@ -1596,9 +1736,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
         atualizarIndicadoresMsgsNaoLidas();
 
+        // Renderiza a tabela de serviços confirmados com botão "Falar com Prestador"
+        renderizarTabelaConfirmados();
+
         // Atualiza periodicamente os indicadores — simula "recebimento de novas mensagens"
         // chegando enquanto o cliente está na página (o prestador pode ter respondido em outra aba).
-        setInterval(atualizarIndicadoresMsgsNaoLidas, 5000);
+        setInterval(function () {
+            atualizarIndicadoresMsgsNaoLidas();
+            renderizarTabelaConfirmados();
+        }, 5000);
     }
 
     // =====================================================
@@ -2389,6 +2535,451 @@ document.addEventListener('DOMContentLoaded', function () {
         function obterAvaliacaoPorPedido(pedidoId) {
             return obterAvaliacoes().find(function (a) { return a.pedidoId === pedidoId; }) || null;
         }
+
+        // -----------------------------------------------------------------------
+        // CARD "Mensagens Não Lidas" — atualiza contador real e liga link "Ver todas"
+        // -----------------------------------------------------------------------
+        (function atualizarCardMensagens() {
+            var CHAT_MSGS_PREFIX = 'prestChatMensagens_';
+
+            // Resolve o ID/slug do prestador logado (mesma lógica de inicializarPrestadorServicosAgendados)
+            var _usu = null;
+            try { _usu = JSON.parse(localStorage.getItem('usuarioLogado') || 'null'); } catch (e) {}
+            var _email = (_usu && _usu.tipo === 'prestador') ? _usu.email : 'prestador@servgo.com';
+
+            function slugificar(s) {
+                return (s || '').toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            }
+
+            var CHAT_PREST_ID = _usu
+                ? ('prest-' + slugificar(_usu.id || _usu.nome || _email))
+                : 'prestador-demo';
+
+            // Conta todas as mensagens não lidas de TODOS os clientes
+            function contarTotalNaoLidas() {
+                var total = 0;
+                var LEITURA_PREFIX = 'prestChatUltimaLeituraPrest_';
+                try {
+                    for (var i = 0; i < localStorage.length; i++) {
+                        var key = localStorage.key(i);
+                        if (key && key.indexOf(CHAT_MSGS_PREFIX + CHAT_PREST_ID + '_') === 0) {
+                            var clienteId = key.replace(CHAT_MSGS_PREFIX + CHAT_PREST_ID + '_', '');
+                            var leituraKey = LEITURA_PREFIX + CHAT_PREST_ID + '_' + clienteId;
+                            var ultimaLeitura = null;
+                            try { ultimaLeitura = localStorage.getItem(leituraKey); } catch (e) {}
+                            var msgs = [];
+                            try { msgs = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) {}
+                            msgs.forEach(function (m) {
+                                if (m.remetente === 'cliente' && (!ultimaLeitura || m.data > ultimaLeitura)) {
+                                    total++;
+                                }
+                            });
+                        }
+                    }
+                } catch (e) {}
+                return total;
+            }
+
+            function atualizar() {
+                var qtd = contarTotalNaoLidas();
+                var elQtd = document.getElementById('prest-qtd-msgs-nao-lidas');
+                if (elQtd) elQtd.textContent = qtd;
+            }
+
+            atualizar();
+            setInterval(atualizar, 5000);
+
+            // Link "Ver todas" → abre o modal de chat do dashboard em vez de redirecionar
+            var linkVerMsgs = document.getElementById('link-ver-msgs-prest');
+            if (linkVerMsgs) {
+                linkVerMsgs.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    if (typeof window.abrirChatDashboard === 'function') {
+                        window.abrirChatDashboard();
+                    }
+                });
+            }
+        })();
+        // -----------------------------------------------------------------------
+
+        // -----------------------------------------------------------------------
+        // CHAT DO DASHBOARD — PRESTADOR <-> CLIENTE (prestadorAreaExclusiva.html)
+        // -----------------------------------------------------------------------
+        // O modal #modalChatClientePrestDash já existe no HTML. Aqui ligamos toda a
+        // lógica de leitura e envio de mensagens, usando a MESMA convenção de chave
+        // do cliente (prestChatMensagens_prest-<slug-nome>_cli-<slug-email>).
+        // -----------------------------------------------------------------------
+        (function inicializarChatDashboard() {
+            var dashChatEl         = document.getElementById('modalChatClientePrestDash');
+            if (!dashChatEl) return;
+
+            var dashHistoricoEl    = document.getElementById('prest-dash-chat-historico');
+            var dashInfoEl         = document.getElementById('prest-dash-chat-info');
+            var dashClienteNomeEl  = document.getElementById('prest-dash-chat-cliente-nome');
+            var dashTextareaEl     = document.getElementById('prest-dash-chat-texto');
+            var dashContadorEl     = document.getElementById('prest-dash-chat-contador');
+            var dashBtnEnviar      = document.getElementById('prest-dash-btn-enviar');
+            var dashBtnLimpar      = document.getElementById('prest-dash-btn-limpar');
+            var dashBtnEditar      = document.getElementById('prest-dash-btn-editar');
+            var dashBtnCancelar    = document.getElementById('prest-dash-btn-cancelar');
+
+            var dashChatInstance   = null;
+            var activeClienteId    = null;    // 'cli-<slug>' do cliente em conversa ativa
+            var activeClienteNome  = null;    // nome legível
+            var activeClienteEmail = null;    // e-mail (para notificação), se disponível
+
+            var CHAT_MSGS_PREFIX_DASH    = 'prestChatMensagens_';
+            var LEITURA_PREST_PREFIX     = 'prestChatUltimaLeituraPrest_';
+
+            // Deriva o CHAT_PREST_ID do prestador logado (mesmo formato do lado do cliente)
+            var _dashUsu = null;
+            try { _dashUsu = JSON.parse(localStorage.getItem('usuarioLogado') || 'null'); } catch (e) {}
+            var DASH_PREST_ID = (function (s) {
+                return 'prest-' + (s || '').toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            })((_dashUsu && (_dashUsu.nome || _dashUsu.id)) || (_dashUsu && _dashUsu.email) || 'prestador-demo');
+
+            // ---- Helpers ----
+            function slugDash(s) {
+                return (s || '').toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            }
+            function escapeDash(str) {
+                return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+            }
+            function formatarHoraDash(iso) {
+                var d = new Date(iso);
+                if (isNaN(d.getTime())) return '';
+                var hoje = new Date();
+                var hh = String(d.getHours()).padStart(2,'0');
+                var mm = String(d.getMinutes()).padStart(2,'0');
+                if (d.toDateString() === hoje.toDateString()) return 'Hoje, ' + hh + ':' + mm;
+                return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + ' ' + hh + ':' + mm;
+            }
+            function obterChaveDash(clienteId) { return CHAT_MSGS_PREFIX_DASH + DASH_PREST_ID + '_' + clienteId; }
+            function obterChaveLeituraDash(clienteId) { return LEITURA_PREST_PREFIX + DASH_PREST_ID + '_' + clienteId; }
+
+            function carregarMsgs(clienteId) {
+                try { var r = localStorage.getItem(obterChaveDash(clienteId)); return r ? (JSON.parse(r) || []) : []; }
+                catch (e) { return []; }
+            }
+            function salvarMsgs(clienteId, msgs) {
+                try { localStorage.setItem(obterChaveDash(clienteId), JSON.stringify(msgs)); } catch (e) {}
+            }
+            function marcarLidaDash(clienteId) {
+                try { localStorage.setItem(obterChaveLeituraDash(clienteId), new Date().toISOString()); } catch (e) {}
+            }
+            function contarNaoLidasDash(clienteId) {
+                var ul = null;
+                try { ul = localStorage.getItem(obterChaveLeituraDash(clienteId)); } catch (e) {}
+                return carregarMsgs(clienteId).filter(function (m) {
+                    if (m.remetente !== 'cliente') return false;
+                    if (!ul) return true;
+                    return m.data > ul;
+                }).length;
+            }
+
+            // Varre localStorage buscando todas as conversas deste prestador
+            function obterTodasConversas() {
+                var conversas = [];
+                try {
+                    var prefix = CHAT_MSGS_PREFIX_DASH + DASH_PREST_ID + '_';
+                    for (var i = 0; i < localStorage.length; i++) {
+                        var key = localStorage.key(i);
+                        if (key && key.indexOf(prefix) === 0) {
+                            var clienteId = key.replace(prefix, '');
+                            var msgs = carregarMsgs(clienteId);
+                            if (!msgs.length) continue;
+                            var naoLidas = contarNaoLidasDash(clienteId);
+                            conversas.push({
+                                clienteId: clienteId,
+                                msgs: msgs,
+                                naoLidas: naoLidas,
+                                ultimaMsg: msgs[msgs.length - 1]
+                            });
+                        }
+                    }
+                } catch (e) {}
+                // Ordena: mais recentes primeiro, não lidas no topo
+                conversas.sort(function (a, b) {
+                    if (b.naoLidas !== a.naoLidas) return b.naoLidas - a.naoLidas;
+                    var da = a.ultimaMsg ? a.ultimaMsg.data : '';
+                    var db = b.ultimaMsg ? b.ultimaMsg.data : '';
+                    return da < db ? 1 : -1;
+                });
+                return conversas;
+            }
+
+            // Tenta recuperar e-mail do cliente pelo clienteId (para notificação)
+            function recuperarEmailCliente(clienteId) {
+                // Tenta via agendamentos do prestador (onde clienteEmail está registrado)
+                try {
+                    var ags = JSON.parse(localStorage.getItem('agendamentos_' + ((_dashUsu && _dashUsu.email) || 'prestador@servgo.com')) || '[]');
+                    for (var i = 0; i < ags.length; i++) {
+                        var ag = ags[i];
+                        if (!ag.clienteEmail) continue;
+                        var idEmail = 'cli-' + slugDash(ag.clienteEmail);
+                        var idNome  = 'cli-' + slugDash(ag.cliente);
+                        if (idEmail === clienteId || idNome === clienteId) return ag.clienteEmail;
+                    }
+                } catch (e) {}
+                // Tenta via usuariosCadastrados: varre por email cujo slug corresponda
+                try {
+                    var usuarios = JSON.parse(localStorage.getItem('usuariosCadastrados') || '{}');
+                    var result = null;
+                    Object.keys(usuarios).forEach(function (email) {
+                        if (!result && 'cli-' + slugDash(email) === clienteId) result = email;
+                    });
+                    if (result) return result;
+                } catch (e) {}
+                return null;
+            }
+
+            // Gera nome legível a partir do clienteId (ex: 'cli-joao-da-silva' → 'Joao Da Silva')
+            function nomeDeClienteId(clienteId) {
+                return clienteId.replace(/^cli-/, '').replace(/-/g, ' ')
+                    .replace(/\b\w/g, function (l) { return l.toUpperCase(); });
+            }
+
+            // Renderiza o histórico da conversa ativa no modal
+            function renderizarHistoricoDash(clienteId) {
+                if (!dashHistoricoEl) return;
+                var msgs = carregarMsgs(clienteId);
+                if (!msgs.length) {
+                    dashHistoricoEl.innerHTML =
+                        '<div class="agenda-chat-vazio">' +
+                            '<i class="bi bi-chat-square-text"></i>' +
+                            '<div>Nenhuma mensagem ainda.</div>' +
+                            '<small>Envie a primeira mensagem ao cliente.</small>' +
+                        '</div>';
+                    return;
+                }
+                var html = '';
+                msgs.forEach(function (m) {
+                    var classe = m.remetente === 'prestador' ? 'prest' : 'cliente';
+                    html += '<div class="agenda-chat-msg ' + classe + '">' +
+                        escapeDash(m.texto) +
+                        '<span class="agenda-chat-msg-hora">' + formatarHoraDash(m.data) + '</span>' +
+                    '</div>';
+                });
+                dashHistoricoEl.innerHTML = html;
+                dashHistoricoEl.scrollTop = dashHistoricoEl.scrollHeight;
+            }
+
+            // Abre a conversa com um cliente específico dentro do modal
+            function abrirConversaComCliente(clienteId, clienteNome, clienteEmail) {
+                activeClienteId    = clienteId;
+                activeClienteNome  = clienteNome  || nomeDeClienteId(clienteId);
+                activeClienteEmail = clienteEmail || recuperarEmailCliente(clienteId);
+
+                if (dashClienteNomeEl) dashClienteNomeEl.textContent = activeClienteNome;
+                if (dashInfoEl) {
+                    dashInfoEl.innerHTML =
+                        '<span class="agenda-chat-info-item"><i class="bi bi-person-circle"></i>' +
+                        '<strong>' + escapeDash(activeClienteNome) + '</strong></span>' +
+                        (activeClienteEmail
+                            ? '<span class="agenda-chat-info-item"><i class="bi bi-envelope"></i>' + escapeDash(activeClienteEmail) + '</span>'
+                            : '');
+                }
+
+                renderizarHistoricoDash(clienteId);
+                marcarLidaDash(clienteId);
+
+                if (dashTextareaEl) { dashTextareaEl.readOnly = false; dashTextareaEl.value = ''; }
+                if (dashContadorEl) dashContadorEl.textContent = '0';
+            }
+
+            // Mostra lista de conversas ou abre diretamente se houver apenas uma
+            function abrirChatDashboard() {
+                if (!dashChatEl) return;
+                if (!dashChatInstance) dashChatInstance = new bootstrap.Modal(dashChatEl);
+
+                var conversas = obterTodasConversas();
+
+                if (conversas.length === 0) {
+                    activeClienteId = null;
+                    if (dashClienteNomeEl) dashClienteNomeEl.textContent = 'Nenhuma conversa';
+                    if (dashInfoEl) dashInfoEl.innerHTML = '';
+                    if (dashHistoricoEl) {
+                        dashHistoricoEl.innerHTML =
+                            '<div class="agenda-chat-vazio">' +
+                                '<i class="bi bi-chat-square-text"></i>' +
+                                '<div>Nenhuma mensagem recebida ainda.</div>' +
+                                '<small>Quando clientes enviarem mensagens, elas aparecerão aqui.</small>' +
+                            '</div>';
+                    }
+                    dashChatInstance.show();
+                    return;
+                }
+
+                if (conversas.length === 1) {
+                    var c = conversas[0];
+                    abrirConversaComCliente(c.clienteId, nomeDeClienteId(c.clienteId));
+                    dashChatInstance.show();
+                    return;
+                }
+
+                // Múltiplas conversas: exibe seletor dentro da área de histórico
+                if (dashClienteNomeEl) dashClienteNomeEl.textContent = 'Selecione uma conversa';
+                if (dashInfoEl) dashInfoEl.innerHTML = '';
+
+                var html = '<div style="padding:12px;">' +
+                    '<p class="fw-bold mb-2"><i class="bi bi-people me-1"></i>Selecione com quem deseja conversar:</p>' +
+                    '<div class="list-group">';
+
+                conversas.forEach(function (c) {
+                    var nome    = nomeDeClienteId(c.clienteId);
+                    var badge   = c.naoLidas > 0
+                        ? '<span class="badge bg-danger ms-2">' + c.naoLidas + ' não lida' + (c.naoLidas > 1 ? 's' : '') + '</span>'
+                        : '';
+                    var preview = c.ultimaMsg
+                        ? escapeDash((c.ultimaMsg.remetente === 'prestador' ? 'Você: ' : '') + c.ultimaMsg.texto.substring(0, 55)) + (c.ultimaMsg.texto.length > 55 ? '…' : '')
+                        : '';
+                    html +=
+                        '<button type="button" class="list-group-item list-group-item-action prest-dash-conv-btn"' +
+                            ' data-cliente-id="' + escapeDash(c.clienteId) + '"' +
+                            ' style="border-left:3px solid ' + (c.naoLidas > 0 ? '#146ADB' : '#dee2e6') + ';">' +
+                            '<div class="d-flex justify-content-between align-items-center">' +
+                                '<strong>' + escapeDash(nome) + '</strong>' + badge +
+                            '</div>' +
+                            '<small class="text-muted">' + preview + '</small>' +
+                        '</button>';
+                });
+
+                html += '</div></div>';
+                if (dashHistoricoEl) {
+                    dashHistoricoEl.innerHTML = html;
+                    // Liga cliques nas conversas
+                    dashHistoricoEl.querySelectorAll('.prest-dash-conv-btn').forEach(function (btn) {
+                        btn.addEventListener('click', function () {
+                            abrirConversaComCliente(btn.dataset.clienteId, nomeDeClienteId(btn.dataset.clienteId));
+                        });
+                    });
+                }
+
+                dashChatInstance.show();
+            }
+
+            // Expõe para o link "Ver todas" (ligado acima no bloco atualizarCardMensagens)
+            window.abrirChatDashboard = abrirChatDashboard;
+
+            // ---- Botão ENVIAR ----
+            if (dashBtnEnviar) {
+                dashBtnEnviar.addEventListener('click', function () {
+                    if (!activeClienteId) {
+                        alert('Selecione uma conversa antes de enviar.');
+                        return;
+                    }
+                    var texto = (dashTextareaEl ? dashTextareaEl.value : '').trim();
+                    if (!texto) {
+                        alert('Digite uma mensagem antes de enviar.');
+                        if (dashTextareaEl) dashTextareaEl.focus();
+                        return;
+                    }
+
+                    var msg = {
+                        id: 'msg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+                        remetente: 'prestador',
+                        texto: texto,
+                        data: new Date().toISOString()
+                    };
+
+                    var hist = carregarMsgs(activeClienteId);
+                    hist.push(msg);
+                    salvarMsgs(activeClienteId, hist);
+
+                    // Notifica o cliente (se o e-mail for recuperável)
+                    if (activeClienteEmail) {
+                        sgCriarNotificacao(activeClienteEmail, 'mensagem', {
+                            prestadorNome: (_dashUsu && _dashUsu.nome) || 'Prestador',
+                            prestadorEmail: (_dashUsu && _dashUsu.email) || '',
+                            preview: texto.substring(0, 80) + (texto.length > 80 ? '…' : ''),
+                            clienteId: activeClienteId
+                        });
+                    }
+
+                    // Marca como lida pelo prestador (ele acabou de interagir)
+                    marcarLidaDash(activeClienteId);
+
+                    renderizarHistoricoDash(activeClienteId);
+                    if (dashTextareaEl) { dashTextareaEl.value = ''; dashTextareaEl.focus(); }
+                    if (dashContadorEl) dashContadorEl.textContent = '0';
+
+                    // Atualiza contador do card
+                    var qtdEl = document.getElementById('prest-qtd-msgs-nao-lidas');
+                    if (qtdEl) {
+                        var total = 0;
+                        obterTodasConversas().forEach(function (c) { total += c.naoLidas; });
+                        qtdEl.textContent = total;
+                    }
+                });
+            }
+
+            // ---- Botão LIMPAR ----
+            if (dashBtnLimpar) {
+                dashBtnLimpar.addEventListener('click', function () {
+                    if (dashTextareaEl) { dashTextareaEl.value = ''; dashTextareaEl.focus(); }
+                    if (dashContadorEl) dashContadorEl.textContent = '0';
+                });
+            }
+
+            // ---- Botão EDITAR ----
+            if (dashBtnEditar) {
+                dashBtnEditar.addEventListener('click', function () {
+                    if (dashTextareaEl) {
+                        dashTextareaEl.readOnly = false;
+                        dashTextareaEl.focus();
+                        var len = dashTextareaEl.value.length;
+                        try { dashTextareaEl.setSelectionRange(len, len); } catch (e) {}
+                    }
+                });
+            }
+
+            // ---- Botão CANCELAR ----
+            if (dashBtnCancelar) {
+                dashBtnCancelar.addEventListener('click', function () {
+                    if (dashChatInstance) dashChatInstance.hide();
+                });
+            }
+
+            // ---- Contador de caracteres + Ctrl+Enter ----
+            if (dashTextareaEl) {
+                dashTextareaEl.addEventListener('input', function () {
+                    if (dashContadorEl) dashContadorEl.textContent = dashTextareaEl.value.length;
+                });
+                dashTextareaEl.addEventListener('keydown', function (e) {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        if (dashBtnEnviar) dashBtnEnviar.click();
+                    }
+                });
+            }
+
+            // ---- Foco no textarea ao abrir o modal ----
+            dashChatEl.addEventListener('shown.bs.modal', function () {
+                if (dashTextareaEl && activeClienteId) dashTextareaEl.focus();
+            });
+
+            // ---- Polling: atualiza histórico e contador a cada 5s ----
+            setInterval(function () {
+                // Atualiza histórico da conversa aberta (nova mensagem do cliente)
+                if (activeClienteId && dashChatEl.classList.contains('show')) {
+                    renderizarHistoricoDash(activeClienteId);
+                }
+                // Atualiza contador do card
+                var qtdEl2 = document.getElementById('prest-qtd-msgs-nao-lidas');
+                if (qtdEl2) {
+                    var total2 = 0;
+                    obterTodasConversas().forEach(function (c) { total2 += c.naoLidas; });
+                    qtdEl2.textContent = total2;
+                }
+            }, 5000);
+
+        })(); // fim inicializarChatDashboard
 
         // --- Modal do próximo agendamento (link "Amanhã, 10:00h") ---
         var linkProximo = document.getElementById('link-proximo-agendamento');
@@ -3807,7 +4398,13 @@ document.addEventListener('DOMContentLoaded', function () {
         //       - Enviar   → adiciona a mensagem ao histórico, persiste e limpa o
         //                    rascunho; a mensagem vai SOMENTE para aquele cliente.
         // -----------------------------------------------------------------
-        var CHAT_PREST_ID = _emailPrestLogado;          // ID do prestador logado (email)
+        // ID do prestador logado — formato 'prest-<slug-do-nome>' para garantir
+        // compatibilidade bidirecional com a chave usada pelo cliente em clienteAreaExclusiva.html
+        var CHAT_PREST_ID = (function (s) {
+            return 'prest-' + (s || '').toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        })((_usuLogadoPrest && (_usuLogadoPrest.nome || _usuLogadoPrest.id)) || _emailPrestLogado);
         var CHAT_MSGS_PREFIX = 'prestChatMensagens_';  // Prefixo das chaves no localStorage
 
         // Referências DOM do modal (resolvidas na primeira abertura)
@@ -3826,10 +4423,12 @@ document.addEventListener('DOMContentLoaded', function () {
         // sempre a partir da mesma chave, independente do agendamento clicado.
         function obterClienteIdDoAgendamento(ag) {
             if (ag.clienteId) return String(ag.clienteId);
-            if (!ag.cliente)  return 'cli-desconhecido';
-            return 'cli-' + ag.cliente
+            // Prefere e-mail para ID estável (mesmo formato que obterClienteIdLogado no lado do cliente)
+            var ref = ag.clienteEmail || ag.cliente;
+            if (!ref) return 'cli-desconhecido';
+            return 'cli-' + ref
                 .toLowerCase()
-                .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
                 .replace(/[^a-z0-9]+/g, '-')
                 .replace(/^-+|-+$/g, '');
         }

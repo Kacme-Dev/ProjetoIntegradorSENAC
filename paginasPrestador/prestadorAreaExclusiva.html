@@ -50,13 +50,14 @@
 
         <nav class="prest-sidebar">
             <ul>
-                <li><a href="prestadorAreaExclusiva.html" class="prest-nav-ativo"><i class="bi bi-house-door"></i> Dashboard</a></li>
-                <li><a href="prestadorServicosAgendados.html"><i class="bi bi-calendar-check"></i> Meus Agendamentos</a></li>
-                <li><a href="prestadorConfigurarAgenda.html"><i class="bi bi-calendar3"></i> Gerenciar Agenda</a></li>
-                <li><a href="prestadorHotsiteAdm.html"><i class="bi bi-globe"></i> Meu Hot Site</a></li>
-                <li><a href="prestadorAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Feitas</a></li>
-                <li><a href="prestadorAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
-                <li><a href="prestadorContato.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+                <li><a href="/paginasPrestador/prestadorAreaExclusiva.html" class="prest-nav-ativo"><i class="bi bi-house-door"></i> Área Exclusiva</a></li>
+                <li><a href="/paginasPrestador/prestadorServicosAgendados.html"><i class="bi bi-calendar-check"></i> Meus Agendamentos</a></li>
+                <li><a href="/paginasPrestador/prestadorConfigurarAgenda.html"><i class="bi bi-calendar3"></i> Gerenciar Agenda</a></li>
+                <li><a href="/paginasPrestador/prestadorHotsiteAdm.html"><i class="bi bi-globe"></i> Meu Hot Site</a></li>
+                <li><a href="/paginasPrestador/prestadorAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Feitas</a></li>
+                <li><a href="/paginasPrestador/prestadorAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
+                <li><a href="/paginasPrestador/dashboardPrestador.html"><i class="bi bi-grid-1x2"></i> Dashboard</a></li>
+                <li><a href="/paginasPrestador/prestadorContato.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
             </ul>
         </nav>
 
@@ -240,6 +241,71 @@
             </div>
         </div>
     </footer>
+
+    <!-- ============================================== -->
+    <!--  MODAL: CHAT COM CLIENTE (do Dashboard do Prestador) -->
+    <!-- ============================================== -->
+    <!--
+        Este modal espelha o modal de chat de prestadorServicosAgendados.html.
+        É aberto pelo card "Mensagens Não Lidas" no dashboard do prestador.
+        A lógica é idêntica: mesma chave de localStorage, mesmo fluxo bidirecional.
+    -->
+    <div class="modal fade" id="modalChatClientePrestDash" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content agenda-chat-modal">
+                <div class="modal-header" style="background-color:#146ADB; color:#fff;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-chat-dots me-2"></i>
+                        <span>Chat com </span><span id="prest-dash-chat-cliente-nome">Cliente</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="prest-dash-chat-info" class="agenda-chat-info"></div>
+                    <div id="prest-dash-chat-historico" class="agenda-chat-historico" aria-live="polite">
+                        <!-- preenchido via JS -->
+                    </div>
+                    <div class="agenda-chat-composer">
+                        <textarea id="prest-dash-chat-texto"
+                                  class="form-control agenda-chat-textarea"
+                                  rows="3"
+                                  placeholder="Escreva sua mensagem para o cliente..."
+                                  maxlength="1000"></textarea>
+                        <div class="agenda-chat-contador">
+                            <span id="prest-dash-chat-contador">0</span> / 1000 caracteres
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer agenda-chat-rodape">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="prest-dash-btn-limpar">
+                        <i class="bi bi-eraser me-1"></i> Limpar
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="prest-dash-btn-editar">
+                        <i class="bi bi-pencil me-1"></i> Editar
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="prest-dash-btn-cancelar">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" id="prest-dash-btn-enviar">
+                        <i class="bi bi-send me-1"></i> Enviar Mensagem
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1080;">
+        <div id="toastNotificacao" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <span id="toast-mensagem">Ação realizada com sucesso!</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/script.js" defer></script>

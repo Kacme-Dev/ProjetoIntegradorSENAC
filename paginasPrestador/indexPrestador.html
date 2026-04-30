@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ServGo! - Home</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">        
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="/css/estiloServGo.css">
+    </head>
+
+    <body>
+
+         <header>
+
+            <!--TOPO DA PÁGINA-->
+
+            <!--Trabalha sobre os Menus (links)-->
+
+            <nav class="navbar navbar-expand-lg">
+                <div class="container-fluid" style="max-width:1140px; margin:0 auto; padding:0 16px;">
+                    <a class="navbar-brand" href="index.html">
+                        <span class="serv-part">Serv</span><span class="go-part">Go!</span>
+                    </a>
+                        <span class="navbar-logada-info">Olá, Cliente!</span>
+
+                    <!--Botão Sanduíche Quando Estiver em Responsividade (padrão index.html)-->
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+
+                    <!--Menus da Página Home-->
+
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav mx-auto">
+                            <li class="nav-item"><a class="nav-link nav-link-active" href="/index.html">Início</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/paginasSite/avaliacao.html">Avaliações</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/paginasSite/contatoSite.html">Contato</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/paginasSite/faqSite.html">FAQ</a></li>
+                        </ul> 
+                        <li class="nav-item"><a class="nav-link" href="/paginasPrestador/prestadorHotsiteAdm.html">Meu Perfil</a></li>
+                    </div>
+
+                    <!--Menus da Página-->
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto align-items-lg-center">
+                            <li class="nav-item mb-2 mb-lg-0">
+                            <button id="btn-voltar" type="button" class="btn btn-outline-secondary">Voltar</button>
+                            <a class="btn btn-danger" href="/index.html">Sair</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div> 
+            </nav>
+        </header>
+        <!--FIM DO CABEÇALHO DA PÁGINA-->
+
+        <!--Texto de Apresentação, abaIxo do Menu da Página Home-->
+
+        <div class="container-chamada">
+            <div class="header-chamada d-flex flex-column justify-content-center align-items-center text-center text-white">
+                <h1 class="display-4 fw-bold mb-3">A Solução Rápida para Seus Serviços.</h1>
+                <p class="lead MB-4">
+                    Encontre, contrate e avalie os melhores profissionais perto de você.</p>
+            </div>
+        </div>
+
+        <!--Define a Estrutura da Barra de Títulos do Menu Lateral durante a Resposnividade-->
+
+        <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasServices"
+            aria-labelledby="offcanvasServicesLabel">
+            <div class="offcanvas-header bg-primary text-white" style="background-color: #146ADB !important;">
+                <h5 class="offcanvas-title" id="offcanvasServicesLabel">Categorias de Serviço</h5>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+
+            <!--Conteúdo apresentado no Menu Lateral durante a Resposnividade-->
+
+            <div class="offcanvas-body">
+                <ul class="navbar-nav justify-content-start flex-grow-1 pe-3">
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Saúde</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Beleza</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Manutenção Predial</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">TI</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Lazer</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Alimentação</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Design</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Segurança</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Logística</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Consultoria</a></li>
+                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Construção</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!--Barra de Links de Serviços da Página Principal-->
+
+        <div class="servicos">
+            <div class="text-center mb-5 d-none d-lg-block">
+                <div class="p-2 filter-pill mx-auto d-inline-block">
+                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Saúde</a>
+                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Beleza</a>
+                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Manutenção Predial</a>
+                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">TI</a>
+                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Lazer</a>
+                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Alimentação</a>
+                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Design</a>
+                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Segurança</a>
+                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Logística</a>
+                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Consultoria</a>
+                    <a href="/paginasSite/agendarServicos.html" class="px-3">Construção</a>
+                </div>
+            </div>
+        </div>
+
+        <!--INÍCIO DO MAIN-->
+
+        <main class="container">
+
+            <!--INÍCIO DO CARROSSEL-->
+
+            <div id="carouselExampleDark" class="carousel carousel-dark slide">
+
+                <!--TRAÇOS ABAIXO DAS FOTOS DO CARROSSEL-->
+
+                <div class="carousel-indicators">
+                    <button type="button" data-bs-target="#carouselExampleDark" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                    <button type="button" data-bs-target="#carouselExampleDark" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                    <button type="button" data-bs-target="#carouselExampleDark" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                </div>
+
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <img src="/img/pedreiro.png" class="d-block w-100" alt="Slide 1">
+                        <div class="carousel-caption d-none d-md-block">
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="/img/pintor.png" class="d-block w-100" alt="Slide 2">
+                        <div class="carousel-caption d-none d-md-block">
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <img src="/img/eletricista.png" class="d-block w-100" alt="Slide 3">
+                        <div class="carousel-caption d-none d-md-block">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleDark" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Anterior</span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleDark" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Próximo</span>
+                </button>
+            </div>
+
+            <!--FIM DO CARROSSEL-->
+
+            <!--CAMPO DE BUSCA-->
+
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Busque por serviço, profissional ou categoria..." aria-label="Busca">
+                <button class="btn btn-warning" type="button"><i class="bi bi-search"></i> Buscar</button>
+            </div>
+
+            <!--FIM CAMPO DE BUSCA-->
+
+<!--ÁREA DE POSTAGENS DO SITE-->
+
+            <article class="container-article">
+
+                <!--POSTAGEM EM DESTAQUE-->
+
+                <h2 class="container-post-destaque text-center mb-4 fw-light text-uppercase">Post em Destaque</h2>
+                    <div class="align-items-center mb-5 p-4 border rounded shadow-sm highlight-post d-flex flex-wrap flex-md-nowrap">
+                        <div class="col-md-6 mb-4 mb-md-0">
+                            <img src="./img/Post_Destaque.png" alt="Gráfico de inovações tecnológicas e conexões digitais" class="img-fluid rounded shadow-sm">
+                        </div>
+
+                        <div class="col-md-6 ps-md-4">
+                            <span class="badge bg-primary">Desvendando a Nova Era dos Serviços Digitais</span>
+                            <h3 class="mt-2">Navegue pela mais recente atualização do ServGo! e descubra como a integração de inteligência artificial está transformando a busca e a oferta de serviços. Conexões mais rápidas, resultados mais precisos e uma experiência totalmente reinventada esperam por você. Preparado para o futuro?</h3>
+                            <p class="text-muted small">
+                                <i class="bi bi-calendar"></i> Área: Inovação & Tecnologia
+                                <i class="bi bi-calendar"></i> Data: 07 de Novembro, 2025 |
+                                <i class="bi bi-clock"></i> Tempo de Leitura: 4 min
+                            </p>
+                            <p>Novas categorias cadastradas para serviços. Encontre o que você precisa clicando aqui.</p>
+                            <a href="#" class="btn btn-dark btn-sm me-2">Leia Mais</a>
+                            <a href="#" class="btn btn-warning btn-sm">Ver Mais</a>
+                        </div>
+
+                    </div>
+
+                    <!--FIM - POSTAGEM EM DESTAQUE-->
+
+                    <!--ÚILTIMOS ARTIGOS-->
+
+                <h2 class="container-ultimos-artigos text-center mb-4 mt-5 fw-light text-uppercase">Últimos Artigos</h2>
+                <p class="text-center text-muted mb-5">Mantenha-se atualizado com os resultados do setor</p>
+
+                <!--ARTIGO 01-->
+
+                <div class="row g-4">
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card h-100 shadow-sm">
+                            <img src="placeholder_card.png" class="card-img-top" alt="Imagem do Artigo">
+                            <div class="card-body">
+                                <span class="badge">Tipo de Serviço</span>
+                                <h5 class="card-title mt-2">Texto sobre o serviço</h5>
+                                <p class="card-text small text-muted">
+                                    <i class="bi bi-clock"></i> 5 min de leitura
+                                </p>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">Ler</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--ARTIGO 02-->
+
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card h-100 shadow-sm">
+                            <img src="placeholder_card.png" class="card-img-top" alt="Imagem do Artigo">
+                            <div class="card-body">
+                                <span class="badge">Tipo de Serviço</span>
+                                <h5 class="card-title mt-2">Texto sobre o serviço</h5>
+                                <p class="card-text small text-muted">
+                                    <i class="bi bi-clock"></i> 5 min de leitura
+                                </p>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">Ler</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--ARTIGO 03-->
+
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card h-100 shadow-sm">
+                            <img src="placeholder_card.png" class="card-img-top" alt="Imagem do Artigo">
+                            <div class="card-body">
+                                <span class="badge">Tipo de Serviço</span>
+                                <h5 class="card-title mt-2">Texto sobre o serviço</h5>
+                                <p class="card-text small text-muted">
+                                    <i class="bi bi-clock"></i> 5 min de leitura
+                                </p>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">Ler</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--ARTIGO 04-->
+
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card h-100 shadow-sm">
+                            <img src="placeholder_card.png" class="card-img-top" alt="Imagem do Artigo">
+                            <div class="card-body">
+                                <span class="badge">Tipo de Serviço</span>
+                                <h5 class="card-title mt-2">Texto sobre o serviço</h5>
+                                <p class="card-text small text-muted">
+                                    <i class="bi bi-clock"></i> 5 min de leitura
+                                </p>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">Ler</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--ARTIGO 05-->
+
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card h-100 shadow-sm">
+                            <img src="placeholder_card.png" class="card-img-top" alt="Imagem do Artigo">
+                            <div class="card-body">
+                                <span class="badge">Tipo de Serviço</span>
+                                <h5 class="card-title mt-2">Texto sobre o serviço</h5>
+                                <p class="card-text small text-muted">
+                                    <i class="bi bi-clock"></i> 5 min de leitura
+                                </p>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">Ler</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--ARTIGO 06-->
+
+                    <div class="col-lg-4 col-md-6">
+                        <div class="card h-100 shadow-sm">
+                            <img src="placeholder_card.png" class="card-img-top" alt="Imagem do Artigo">
+                            <div class="card-body">
+                                <span class="badge">Tipo de Serviço</span>
+                                <h5 class="card-title mt-2">Texto sobre o serviço</h5>
+                                <p class="card-text small text-muted">
+                                    <i class="bi bi-clock"></i> 5 min de leitura
+                                </p>
+                                <a href="#" class="btn btn-sm btn-outline-secondary">Ler</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!--FIM - ÚLTIMOS ARTIGOS-->     
+                
+                </div>
+
+                <!--BOTÃO - VER TODOS OS ARTIGOS-->
+                
+                <div class="text-center mt-5">
+                    <button class="btn btn-outline-dark px-4 py-2 rounded-pill">Ver todos os Artigos
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!--FIM - BOTÃO VER TODOS OS ARTIGOS-->
+
+            </article>
+
+            <!--FIM - ÁREA DE POSTAGENS DO SITE-->                                   
+
+        </main>
+
+        <!--FIM DO MAIN-->
+
+        <!--NEWSLATTER-->
+
+        <div class="container-footer">
+            <div class="container text-center">
+                <h2 class="fw-light">Receba Conteúdos Exclusivos</h2>
+                <p class="text-conteudo">Assine nossa newsletter e receba em primeira mão artigos, tendências e novidades
+                    do mundo de prestação de serviços.
+                </p>
+                <form class="d-flex justify-content-center mt-4">
+                    <input class="form-control me-2" type="email" placeholder="Digite seu e-mail"
+                        style="max-width: 300px;" aria-label="E-mail">
+                    <button class="btn btn-warning" type="submit">Cadastrar</button>
+                </form>
+            </div>
+        </div>
+
+        <!--FIM - NEWSLATTER-->   
+
+        <!------------------------------------------ INÍCIO DO RODAPÉ ------------------------------------------------>
+
+        <footer class="bg-dark text-white pt-5 pb-4" style="background-color: var(--rodape-fundo) !important;">
+            <div class="container">
+                <div class="row">
+                    <div class="col-md-3 mb-4">
+                        <a class="navbar-footer" href="#">
+                            <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
+                        </a>
+                        <p class="small text-muted">Análise, inovação e conteúdo de valor.</p>
+                        <div class="d-flex social-icons-custom">
+                            <a href="#" class="text-white me-3"><i class="bi bi-linkedin"></i></a>
+                            <a href="#" class="text-white me-3"><i class="bi bi-instagram"></i></a>
+                            <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Links Rápidos</h5>
+                        <ul class="list-unstyled">
+                            <li><a href="#" class="text-white-50 text-decoration-none">Quem Somos</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Serviços</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Fale Conosco</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Nossos Serviços</h5>
+                        <ul class="list-unstyled">
+                            <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                            <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="col-md-3 mb-4">
+                        <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Contato</h5>
+                        <p class="small text-white-50"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</p>
+                        <p class="small text-white-50"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</p>
+                        <p class="small text-white-50"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</p>
+                        <a href="#" class="small text-decoration-none text-warning">Trabalhe Conosco</a>
+                    </div>
+                </div>
+                <hr class="text-white-50">
+                <div class="text-center small text-white-50">
+                    © 2025 ServGo! Todos os direitos reservados.
+                </div>
+            </div>
+        </footer>
+
+        <!-------------------------------------------- FIM DO RODAPÉ ------------------------------------------------>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="/js/script.js" defer></script>
+    </body>
+
+</html>

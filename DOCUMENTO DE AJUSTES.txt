@@ -1,0 +1,361 @@
+Faça a leitura e a análise de todos os arquivos anexados e compreenda o contexto do projeto.
+Não faça nenhuma alteração no código, layout ou estrutura do projeto a não ser que seja solcitado.
+Ao ser solicitada alguma impolementação ou ajuste, executar somente o que for pedido.
+Nunca modificar o que não for citado. Se não for pedido algo, mantenha como está.
+O seu foco é aplicar os ajustes solicitados abaixo, garantido a correta implementação do que está sendo pedido e a sua execução de acordo com o que é esperado.
+Ao concluir, disponibilize todos os arquivos completos, na íntegra e atualizados conforme a solicitação, garantido seu total funcionamento de acordo com a expectativa
+
+
+
+Refatore toda a lógica do JavaScript.
+O que precisa ser feito:
+
+Para o Prestador
+
+Primeira ação - limpar todos os dados do Local Storage e deixar pronto para salvar no Banco de Dados todas a informações.
+
+1- Ao efetuar o login, direcionar o prestador para a página indexPrestador.html
+ajustar a responsividade para que ela ocorra exatamente como na página index.html
+ajustar para que em 
+<span class="navbar-logada-info">Olá, Teste Prestador!</span>
+abaixo do nome esteja escrito "Meu Perfil" em letras menores para que ao ser clicado
+essa parte:
+<nav class="prest-sidebar">
+            <ul>
+                <li><a href="/paginasPrestador/prestadorAreaExclusiva.html" class="prest-nav-ativo"><i class="bi bi-house-door"></i> Área Exclusiva</a></li>
+                <li><a href="/paginasPrestador/prestadorServicosAgendados.html"><i class="bi bi-calendar-check"></i> Meus Agendamentos</a></li>
+                <li><a href="/paginasPrestador/prestadorConfigurarAgenda.html"><i class="bi bi-calendar3"></i> Gerenciar Agenda</a></li>
+                <li><a href="/paginasPrestador/prestadorHotsiteAdm.html"><i class="bi bi-globe"></i> Meu Hot Site</a></li>
+                <li><a href="/paginasPrestador/prestadorAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Feitas</a></li>
+                <li><a href="/paginasPrestador/prestadorAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
+                <li><a href="/paginasPrestador/dashboardPrestador.html"><i class="bi bi-grid-1x2"></i> Dashboard</a></li>
+                <li><a href="/paginasPrestador/prestadorContato.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+            </ul>
+        </nav>
+esteja oculta mas que seja mostrada, abaixo da frase "Meu Perfil", se expandindo na vertical para baixo como um menu oculto e ao ser clicado novamente ele se recolha para cima ficando oculto novamente
+retire os botões voltar e sair dessa página
+no menu oculto, inclua ao final o botão "sair" que permita o logoff da página
+
+2- Na página prestadorHotsiteAdm.html
+excluir <div id="sg-notif-barra-prest" style="margin-bottom: 16px;"><div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#fffbe6;border:1.5px solid #FFC300;border-radius:10px;"><i class="bi bi-bell-fill" style="color:#e6a800;font-size:1.2rem;"></i><strong style="color:#7a5800;">Novas notificações:</strong><button type="button" id="btn-notif-prest-ag" class="btn btn-warning btn-sm" style="font-size:.83rem;"><i class="bi bi-calendar-plus me-1"></i>1 nova(s) solicitação(ões) de agendamento</button><button type="button" id="btn-notif-prest-all" class="btn btn-outline-secondary btn-sm" style="font-size:.83rem;margin-left:auto;"><i class="bi bi-list-check me-1"></i>Ver todas</button></div></div>
+	inserir por default o nome de usuário e o e-mail informados no cadastro. Os demais dados, devem ser preenchidos manualmente.
+	uma vez logado, o prestador poderá navegar entre as páginas sem perder o login ativo, até que ele clique no botão "SAIR" <a class="btn btn-danger" href="/index.html">Sair</a>
+	se não for clicado nesse botão, o prestador deverá continuar com o login ativo.
+	
+3- Cadastrar foto de perfil em <div class="hotsite-avatar" style="margin-bottom: 12px; background-color:#FFC300; color:#000;">TP</div>
+atrelado à busca ao clicar nesse botão <input type="file" id="adm-galeria" accept="image/*" class="hotsiteadm-input" style="padding: 5px;">
+permitir a inserção das mídias no grid, uma mídia para cada grid (imagem ou vídeo). Atualmente está sendo permitido somente no data-slot="0, mas é preciso que ao ser concluída a inserçao de mídia nesse slot, seja permitido inserir no slot seguinte e assim sucessivamente até encerrar a quantidade de slots permitidos.
+implemente a possibilidade de o ciente inserir até 10 slots de mídia sendo os 9 primeiros para imagens e o último para vídeo.
+	<div class="hotsiteadm-galeria-preview" id="galeria-thumbs">
+                            <div class="hotsiteadm-thumb-preview" data-slot="0" style="position:relative;"><i class="bi bi-image"></i> Foto 1<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">×</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="1" style="position:relative;"><i class="bi bi-image"></i> Foto 2<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">×</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="2" style="position:relative;"><i class="bi bi-image"></i> Foto 3<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">×</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="3" style="position:relative;"><i class="bi bi-play-circle"></i> Vídeo<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">×</button></div>
+                        </div>
+atrelado à busca ao clicar neste botão <input type="file" id="adm-galeria-nova" multiple="" accept="image/*,video/*" class="hotsiteadm-input" style="padding: 5px;">
+
+O PREENCHIMENTO DA SELEÇÃO DE
+							<select class="hotsiteadm-select" id="adm-categoria">
+                            <option value="" selected="">Selecione...</option>
+                            <option value="eletricista">Eletricista</option>
+                            <option value="encanador">Encanador</option>
+                            <option value="pintor">Pintor(a)</option>
+                            <option value="diarista">Diarista</option>
+                            <option value="montador">Montador(a) de Móveis</option>
+                            <option value="jardineiro">Jardineiro(a)</option>
+                            <option value="carpinteiro">Carpinteiro(a)</option>
+                            <option value="marido-aluguel">Marido de Aluguel</option>
+							</select>
+DO CAMPO <input class="hotsiteadm-input" type="text" id="adm-cnpj" value="" maxlength="18" placeholder="000.000.000-00 ou 00.000.000/0000-00">
+DO CAMPO <input class="hotsiteadm-input" type="text" id="adm-cidade" value="" placeholder="Cidade(s) de atendimento">
+DO CAMPO <input class="hotsiteadm-input" type="text" id="adm-tel" value="" placeholder="(00) 00000-0000">
+SÃO OBRIGATÓRIOS, O PRESTADOR NÃO PODERÁ SALVAR OS DADOS SEM ESSES CAMPOS ESTAREM PREENCHIDOS
+INCLUA UM * PARA INDICAR AO PRESTADOR QUE SÃO CAMPOS OBRIGATÓRIOS
+
+4- Mostrar as três pultimas avaliações recebidas de clientes em <div class="hotsite-depoimento"></div>
+
+5- mostrar os dados de contato cadastrados (e-mail e telefone) em - <p style="font-size:0.9rem; color:#444; margin:0 0 14px;">
+                            <i class="bi bi-envelope me-1"></i>
+                            &nbsp;&nbsp;
+                            <i class="bi bi-telephone me-1"></i>
+                        </p>
+
+6- mostrar a disponibilidade de agenda em <div class="placeholder" style="margin-bottom: 16px;">
+                            Próximo horário disponível: <strong></strong> (simulado)
+                        </div>
+
+7- permitir salvar e armazenar todos os dados informados, preenchidos nesta página, no banco de dados, imagens e vídeo (mídia), foto de perfil ao clicar em <button type="button" id="btn-salvar-hotsite" class="conf-btn-salvar" style="background-color:#FFC300; color:#000; flex: 1 1 100%; margin-top: 8px;"><i class="bi bi-floppy me-1"></i> Salvar &amp; Publicar</button>
+
+8- permitir limpar os dados informados, com exceção das mídias do grid - <button type="button" id="btn-limpar-hotsite" style="background-color: #6c757d; color: white; border: none; border-radius: 4px; font-weight: bold; padding: 10px 15px; cursor: pointer; flex: 1;"><i class="bi bi-eraser me-1"></i> Limpar</button>
+
+9- cancelar todas as ações e sair da página sem salvar as alterações s eclicado em <a href="prestadorAreaExclusiva.html" class="conf-btn-voltar" style="background-color: #dc3545; color: #fff; border-color: #dc3545; flex: 1; text-align: center;">Cancelar</a>
+	Ao sair, direcionar para a página - indexPrestador.html
+	
+10- Na página prestadorConfigurarAgenda.html permitir a edição das informações de agenda em
+
+<a class="cta" href="prestadorConfigurarAgenda.html" style="width: 100%; text-align: center; background-color: var(--rodape-fundo);">
+                            <i class="bi bi-calendar3 me-1"></i> Configurar Agenda
+                        </a>
+						
+11- ao clicar em <a class="cta" href="#" data-bs-toggle="modal" data-bs-target="#modalAlterarSenha" style="width: 100%; text-align: center; background-color: var(--rodape-fundo); cursor: pointer;">
+                            <i class="bi bi-lock me-1"></i> Alterar Senha
+                        </a>
+abrir o modal <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="senha-atual-geral" class="form-label fw-bold text-dark">Senha Atual:</label>
+                                <input type="password" class="form-control" id="senha-atual-geral" autocomplete="current-password">
+                            </div>
+                            <hr>
+                            <div class="mb-3">
+                                <label for="nova-senha-geral" class="form-label fw-bold text-dark">Nova Senha:</label>
+                                <input type="password" class="form-control" id="nova-senha-geral" autocomplete="new-password">
+                                <small class="text-muted d-block mt-1">Mínimo 8 caracteres, incluindo letras, números e caracteres especiais (Case Sensitive).</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="repita-nova-senha-geral" class="form-label fw-bold text-dark">Repita a Nova Senha:</label>
+                                <input type="password" class="form-control" id="repita-nova-senha-geral" autocomplete="new-password">
+                            </div>
+                        </div>
+e permitir o registro da nova senha.
+Salvar a nova senha no banco de dados
+
+12- na página prestadorServicosAgendados.html
+em <a href="#" class="nav-link nav-link-active agenda-aba-ativa" data-aba="proximos">
+                            Próximos Agendamentos (<span id="contador-proximos">5</span>)
+                        </a>
+clicando em <ul class="agenda-prest-lista" id="agenda-lista"><li class="agenda-prest-item" data-agendamento-id="ag-001"><div><div class="agenda-slot-dia">Hoje</div><div class="agenda-slot-tempo">14:00 - 17:00</div></div><div><div class="agenda-cliente-nome">Maria da Silva</div><p class="agenda-cliente-servico">Serviço: Montagem de Estante</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Rua das Flores, 123 - Centro</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-002"><div><div class="agenda-slot-dia">Amanhã</div><div class="agenda-slot-tempo">09:00 - 11:00</div></div><div><div class="agenda-cliente-nome">Pedro Souza</div><p class="agenda-cliente-servico">Serviço: Pequeno Reparo na Porta</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Av. Principal, 500 - Vila Nova</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-003"><div><div class="agenda-slot-dia">Sáb, 25/Abr</div><div class="agenda-slot-tempo">10:00 - 12:00</div></div><div><div class="agenda-cliente-nome">Ana Lúcia</div><p class="agenda-cliente-servico">Serviço: Restauração de Móvel Antigo</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Bairro Nobre, 330</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-004"><div><div class="agenda-slot-dia">Seg, 27/Abr</div><div class="agenda-slot-tempo">15:00 - 16:30</div></div><div><div class="agenda-cliente-nome">João Pereira</div><p class="agenda-cliente-servico">Serviço: Instalação de Chuveiro Elétrico</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Rua Belo Horizonte, 88 - Jardim América</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-cli-1777417746633"><div><div class="agenda-slot-dia">Qua, 29/Abr às 10:00</div><div class="agenda-slot-tempo">10:00 - 11:00</div></div><div><div class="agenda-cliente-nome">Cliente Teste</div><p class="agenda-cliente-servico">Serviço: encanador</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i></p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li></ul>
+no modal <div class="modal-body" id="modal-detalhes-corpo"><div class="agenda-detalhe-secao"><h6><i class="bi bi-person-circle me-1"></i>Dados do Cliente</h6><div class="agenda-detalhe-grid"><div><strong>Nome</strong><span>Maria da Silva</span></div><div><strong>Telefone</strong><span>(18) 99123-4567</span></div></div><div style="margin-top:8px;"><a href="../paginasCliente/clientePerfil.html" class="btn btn-sm btn-outline-info" target="_blank"><i class="bi bi-person-badge me-1"></i>Ver Perfil do Cliente</a></div></div><div class="agenda-detalhe-secao"><h6><i class="bi bi-calendar-event me-1"></i>Serviço Agendado</h6><div class="agenda-detalhe-grid"><div><strong>Serviço</strong><span>Montagem de Estante</span></div><div><strong>Status</strong><span><span class="agenda-status-tag confirmado">Confirmado</span></span></div><div><strong>Data</strong><span>23/04/2026</span></div><div><strong>Horário</strong><span>14:00 - 17:00</span></div><div style="grid-column: 1/-1;"><strong>Endereço</strong><span><i class="bi bi-geo-alt me-1"></i>Rua das Flores, 123 - Centro</span></div><div><strong>Valor</strong><span>R$ 180,00</span></div><div><strong>Forma de Pagamento</strong><span>PIX</span></div></div></div><div class="agenda-detalhe-secao" id="secao-lembretes"><h6><i class="bi bi-bell me-1"></i>Lembretes <small class="text-muted fw-normal">(editável)</small></h6><div id="agenda-lembretes-lista"><div class="agenda-lembrete-edit-row" style="display:flex;gap:6px;margin-bottom:6px;"><input type="text" class="form-control form-control-sm agenda-lembrete-input" value="Confirmar presença 1h antes via WhatsApp" style="flex:1;"><button type="button" class="btn btn-sm btn-outline-danger agenda-lembrete-del" data-idx="0" title="Remover"><i class="bi bi-trash"></i></button></div><div class="agenda-lembrete-edit-row" style="display:flex;gap:6px;margin-bottom:6px;"><input type="text" class="form-control form-control-sm agenda-lembrete-input" value="Cliente mora no 3º andar sem elevador" style="flex:1;"><button type="button" class="btn btn-sm btn-outline-danger agenda-lembrete-del" data-idx="1" title="Remover"><i class="bi bi-trash"></i></button></div><div class="agenda-lembrete-edit-row" style="display:flex;gap:6px;margin-bottom:6px;"><input type="text" class="form-control form-control-sm agenda-lembrete-input" value="teste" style="flex:1;"><button type="button" class="btn btn-sm btn-outline-danger agenda-lembrete-del" data-idx="2" title="Remover"><i class="bi bi-trash"></i></button></div></div><button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="btn-add-lembrete"><i class="bi bi-plus-circle me-1"></i>Adicionar Lembrete</button></div><div class="agenda-detalhe-secao" id="secao-observacoes"><h6><i class="bi bi-chat-left-text me-1"></i>Observações <small class="text-muted fw-normal">(editável)</small></h6><textarea id="agenda-obs-textarea" class="form-control form-control-sm" rows="3" style="resize:vertical;">Cliente pediu para trazer parafusos extras. A estante é da Tok&amp;Stok modelo Alfa.</textarea></div></div>
+	manter a mesma lógica
+
+13- excluir o botão mensagem
+<ul class="agenda-prest-lista" id="agenda-lista"><li class="agenda-prest-item" data-agendamento-id="ag-001"><div><div class="agenda-slot-dia">Hoje</div><div class="agenda-slot-tempo">14:00 - 17:00</div></div><div><div class="agenda-cliente-nome">Maria da Silva</div><p class="agenda-cliente-servico">Serviço: Montagem de Estante</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Rua das Flores, 123 - Centro</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-002"><div><div class="agenda-slot-dia">Amanhã</div><div class="agenda-slot-tempo">09:00 - 11:00</div></div><div><div class="agenda-cliente-nome">Pedro Souza</div><p class="agenda-cliente-servico">Serviço: Pequeno Reparo na Porta</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Av. Principal, 500 - Vila Nova</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-003"><div><div class="agenda-slot-dia">Sáb, 25/Abr</div><div class="agenda-slot-tempo">10:00 - 12:00</div></div><div><div class="agenda-cliente-nome">Ana Lúcia</div><p class="agenda-cliente-servico">Serviço: Restauração de Móvel Antigo</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Bairro Nobre, 330</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-004"><div><div class="agenda-slot-dia">Seg, 27/Abr</div><div class="agenda-slot-tempo">15:00 - 16:30</div></div><div><div class="agenda-cliente-nome">João Pereira</div><p class="agenda-cliente-servico">Serviço: Instalação de Chuveiro Elétrico</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Rua Belo Horizonte, 88 - Jardim América</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-cli-1777417746633"><div><div class="agenda-slot-dia">Qua, 29/Abr às 10:00</div><div class="agenda-slot-tempo">10:00 - 11:00</div></div><div><div class="agenda-cliente-nome">Cliente Teste</div><p class="agenda-cliente-servico">Serviço: encanador</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i></p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li></ul>
+
+14- excluir o botão cancelar <ul class="agenda-prest-lista" id="agenda-lista"><li class="agenda-prest-item" data-agendamento-id="ag-001"><div><div class="agenda-slot-dia">Hoje</div><div class="agenda-slot-tempo">14:00 - 17:00</div></div><div><div class="agenda-cliente-nome">Maria da Silva</div><p class="agenda-cliente-servico">Serviço: Montagem de Estante</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Rua das Flores, 123 - Centro</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-002"><div><div class="agenda-slot-dia">Amanhã</div><div class="agenda-slot-tempo">09:00 - 11:00</div></div><div><div class="agenda-cliente-nome">Pedro Souza</div><p class="agenda-cliente-servico">Serviço: Pequeno Reparo na Porta</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Av. Principal, 500 - Vila Nova</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-003"><div><div class="agenda-slot-dia">Sáb, 25/Abr</div><div class="agenda-slot-tempo">10:00 - 12:00</div></div><div><div class="agenda-cliente-nome">Ana Lúcia</div><p class="agenda-cliente-servico">Serviço: Restauração de Móvel Antigo</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Bairro Nobre, 330</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-004"><div><div class="agenda-slot-dia">Seg, 27/Abr</div><div class="agenda-slot-tempo">15:00 - 16:30</div></div><div><div class="agenda-cliente-nome">João Pereira</div><p class="agenda-cliente-servico">Serviço: Instalação de Chuveiro Elétrico</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Rua Belo Horizonte, 88 - Jardim América</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-cli-1777417746633"><div><div class="agenda-slot-dia">Qua, 29/Abr às 10:00</div><div class="agenda-slot-tempo">10:00 - 11:00</div></div><div><div class="agenda-cliente-nome">Cliente Teste</div><p class="agenda-cliente-servico">Serviço: encanador</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i></p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li></ul>
+	transferir o botão cancelar <ul class="agenda-prest-lista" id="agenda-lista"><li class="agenda-prest-item" data-agendamento-id="ag-001"><div><div class="agenda-slot-dia">Hoje</div><div class="agenda-slot-tempo">14:00 - 17:00</div></div><div><div class="agenda-cliente-nome">Maria da Silva</div><p class="agenda-cliente-servico">Serviço: Montagem de Estante</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Rua das Flores, 123 - Centro</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-002"><div><div class="agenda-slot-dia">Amanhã</div><div class="agenda-slot-tempo">09:00 - 11:00</div></div><div><div class="agenda-cliente-nome">Pedro Souza</div><p class="agenda-cliente-servico">Serviço: Pequeno Reparo na Porta</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Av. Principal, 500 - Vila Nova</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-003"><div><div class="agenda-slot-dia">Sáb, 25/Abr</div><div class="agenda-slot-tempo">10:00 - 12:00</div></div><div><div class="agenda-cliente-nome">Ana Lúcia</div><p class="agenda-cliente-servico">Serviço: Restauração de Móvel Antigo</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Bairro Nobre, 330</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-004"><div><div class="agenda-slot-dia">Seg, 27/Abr</div><div class="agenda-slot-tempo">15:00 - 16:30</div></div><div><div class="agenda-cliente-nome">João Pereira</div><p class="agenda-cliente-servico">Serviço: Instalação de Chuveiro Elétrico</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>Rua Belo Horizonte, 88 - Jardim América</p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li><li class="agenda-prest-item" data-agendamento-id="ag-cli-1777417746633"><div><div class="agenda-slot-dia">Qua, 29/Abr às 10:00</div><div class="agenda-slot-tempo">10:00 - 11:00</div></div><div><div class="agenda-cliente-nome">Cliente Teste</div><p class="agenda-cliente-servico">Serviço: encanador</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i></p></div><div class="agenda-status-area"><span class="agenda-status-tag confirmado">Confirmado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a><a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Mensagens</a><a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a></div></div></li></ul>
+	para <ul class="agenda-prest-lista" id="agenda-lista"><li class="agenda-lista-vazia"><i class="bi bi-calendar-x"></i>Nenhuma solicitação pendente de confirmação.</li></ul>
+	ao ser clicado, cancelar a solicitação de agendamento realizada pelo cliente-local
+
+15- em <li class="agenda-lista-vazia"><i class="bi bi-calendar-x"></i>Nenhuma solicitação pendente de confirmação.</li>
+incluir o botão confirmar e permitir a confirmação do agendamento realizado pelo cliente ao clicar nesse botão
+
+16- em <a href="#" class="nav-link nav-link-active agenda-aba-ativa" data-aba="historico">
+                            Histórico (<span id="contador-historico">4</span>)
+                        </a>
+manter a mesma lógica, apresentando as informações em tela
+
+17- excluir o botão <a class="cta" href="prestadorConfigurarAgenda.html">
+                    <i class="bi bi-sliders me-1"></i> Configurar Disponibilidade
+                </a>						
+
+18- em <div class="card">
+                <form>
+                    <!-- SEÇÃO: HORÁRIOS -->
+                    <div class="conf-secao">
+                        <h3>Horários de Atendimento Padrão</h3>
+
+                        <div class="conf-dias-grid-header">
+                            <span>Dia da Semana</span>
+                            <span>Início</span>
+                            <span>Fim</span>
+                            <span style="text-align:center;">Ativo?</span>
+                        </div>
+
+                        <div class="conf-dias-grid">
+                            <label class="conf-dias-label">Segunda</label>
+                            <input class="conf-time-input" type="time" id="segunda-inicio" value="08:00">
+                            <input class="conf-time-input" type="time" id="segunda-fim" value="17:00">
+                            <div class="conf-checkbox-wrap"><input type="checkbox" checked=""></div>
+                        </div>
+                        <div class="conf-dias-grid">
+                            <label class="conf-dias-label">Terça</label>
+                            <input class="conf-time-input" type="time" id="terca-inicio" value="08:00">
+                            <input class="conf-time-input" type="time" id="terca-fim" value="17:00">
+                            <div class="conf-checkbox-wrap"><input type="checkbox" checked=""></div>
+                        </div>
+                        <div class="conf-dias-grid">
+                            <label class="conf-dias-label">Quarta</label>
+                            <input class="conf-time-input" type="time" id="quarta-inicio" value="08:00">
+                            <input class="conf-time-input" type="time" id="quarta-fim" value="17:00">
+                            <div class="conf-checkbox-wrap"><input type="checkbox" checked=""></div>
+                        </div>
+                        <div class="conf-dias-grid">
+                            <label class="conf-dias-label">Quinta</label>
+                            <input class="conf-time-input" type="time" id="quinta-inicio" value="08:00">
+                            <input class="conf-time-input" type="time" id="quinta-fim" value="17:00">
+                            <div class="conf-checkbox-wrap"><input type="checkbox" checked=""></div>
+                        </div>
+                        <div class="conf-dias-grid">
+                            <label class="conf-dias-label">Sexta</label>
+                            <input class="conf-time-input" type="time" id="sexta-inicio" value="08:00">
+                            <input class="conf-time-input" type="time" id="sexta-fim" value="17:00">
+                            <div class="conf-checkbox-wrap"><input type="checkbox" checked=""></div>
+                        </div>
+                        <div class="conf-dias-grid">
+                            <label class="conf-dias-label">Sábado</label>
+                            <input class="conf-time-input" type="time" id="sabado-inicio" value="08:00">
+                            <input class="conf-time-input" type="time" id="sabado-fim" value="12:00">
+                            <div class="conf-checkbox-wrap"><input type="checkbox" checked=""></div>
+                        </div>
+                        <div class="conf-dias-grid">
+                            <label class="conf-dias-label">Domingo</label>
+                            <span class="conf-fechado-label">Fechado</span>
+                            <div class="conf-checkbox-wrap"><input type="checkbox" disabled=""></div>
+                        </div>
+                    </div>
+
+                    <!-- SEÇÃO: REGRAS -->
+                    <div class="conf-secao">
+                        <h3>Regras de Agendamento</h3>
+
+                        <div class="conf-regra-grupo">
+                            <label for="duracao-servico">Duração padrão dos serviços (em minutos):</label>
+                            <input class="conf-regra-input" type="number" id="duracao-servico" value="120" min="30" step="30">
+                            <p class="conf-regra-dica">Isso define a duração dos blocos que os clientes podem reservar (Ex: 120 minutos = 2 horas).</p>
+                        </div>
+
+                        <div class="conf-regra-grupo">
+                            <label for="antecedencia">Mínimo de antecedência para agendamento (em horas):</label>
+                            <input class="conf-regra-input" type="number" id="antecedencia" value="24" min="1">
+                            <p class="conf-regra-dica">Impede agendamentos com menos de 24 horas de aviso.</p>
+                        </div>
+
+                        <div class="conf-regra-grupo">
+                            <label for="intervalo">Intervalo entre agendamentos (em minutos):</label>
+                            <select class="conf-select" id="intervalo">
+                                <option value="0">0 minutos (sem intervalo)</option>
+                                <option value="15" selected="">15 minutos</option>
+                                <option value="30">30 minutos</option>
+                            </select>
+                            <p class="conf-regra-dica">Tempo extra para deslocamento ou preparo.</p>
+                        </div>
+                    </div>
+
+                    <!-- RODAPÉ AÇÕES -->
+                    <div class="conf-rodape-acoes">
+                        <button type="button" class="conf-btn-voltar" data-action="voltar" data-voltar-fallback="prestadorAreaExclusiva.html" data-voltar-bound="1"><i class="bi bi-arrow-left"></i> Voltar</button>
+                        <button type="submit" class="conf-btn-salvar"><i class="bi bi-floppy me-1"></i> Salvar Configurações</button>
+                    </div>
+                </form>
+            </div>
+permitir a edição dos dados para agendamento, ICLUINDO O CAMPO PARA DOMIGO <div class="conf-dias-grid">
+                            <label class="conf-dias-label">Domingo</label>
+                            <span class="conf-fechado-label">Fechado</span>
+                            <div class="conf-checkbox-wrap"><input type="checkbox" disabled=""></div>
+                        </div>
+e salvar todas as infomrações no banco de dados ao clicar no botão <button type="submit" class="conf-btn-salvar"><i class="bi bi-floppy me-1"></i> Salvar Configurações</button>
+excluir <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#fffbe6;border:1.5px solid #FFC300;border-radius:10px;"><i class="bi bi-bell-fill" style="color:#e6a800;font-size:1.2rem;"></i><strong style="color:#7a5800;">Novas notificações:</strong><button type="button" id="btn-notif-prest-ag" class="btn btn-warning btn-sm" style="font-size:.83rem;"><i class="bi bi-calendar-plus me-1"></i>1 nova(s) solicitação(ões) de agendamento</button><button type="button" id="btn-notif-prest-all" class="btn btn-outline-secondary btn-sm" style="font-size:.83rem;margin-left:auto;"><i class="bi bi-list-check me-1"></i>Ver todas</button></div>
+ 
+
+19- na página prestadorAvaliacoesFeitas.html
+manter a lógica já implementada permitindo que o prestador de serviços avalie o cliente atendido
+excluir <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#fffbe6;border:1.5px solid #FFC300;border-radius:10px;"><i class="bi bi-bell-fill" style="color:#e6a800;font-size:1.2rem;"></i><strong style="color:#7a5800;">Novas notificações:</strong><button type="button" id="btn-notif-prest-ag" class="btn btn-warning btn-sm" style="font-size:.83rem;"><i class="bi bi-calendar-plus me-1"></i>1 nova(s) solicitação(ões) de agendamento</button><button type="button" id="btn-notif-prest-all" class="btn btn-outline-secondary btn-sm" style="font-size:.83rem;margin-left:auto;"><i class="bi bi-list-check me-1"></i>Ver todas</button></div>
+
+20- na página prestadorAvaliacoesRecebidas.html
+manter a lógica já implementada permitindo que o prestador visualize as avaliações recebidas dos clientes que ele atendeu
+excluir <div id="sg-notif-barra-prest" style="margin-bottom: 16px;"><div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#fffbe6;border:1.5px solid #FFC300;border-radius:10px;"><i class="bi bi-bell-fill" style="color:#e6a800;font-size:1.2rem;"></i><strong style="color:#7a5800;">Novas notificações:</strong><button type="button" id="btn-notif-prest-ag" class="btn btn-warning btn-sm" style="font-size:.83rem;"><i class="bi bi-calendar-plus me-1"></i>1 nova(s) solicitação(ões) de agendamento</button><button type="button" id="btn-notif-prest-all" class="btn btn-outline-secondary btn-sm" style="font-size:.83rem;margin-left:auto;"><i class="bi bi-list-check me-1"></i>Ver todas</button></div></div>
+
+21- na página prestadorContato.html
+permitir que o prestador de serviços entre em contato com os administradores do site ao preencher os dados e clicar no botão <button class="contato-enviar-btn" type="button">Enviar</button>
+excluir <div id="sg-notif-barra-prest" style="margin-bottom: 16px;"><div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#fffbe6;border:1.5px solid #FFC300;border-radius:10px;"><i class="bi bi-bell-fill" style="color:#e6a800;font-size:1.2rem;"></i><strong style="color:#7a5800;">Novas notificações:</strong><button type="button" id="btn-notif-prest-ag" class="btn btn-warning btn-sm" style="font-size:.83rem;"><i class="bi bi-calendar-plus me-1"></i>1 nova(s) solicitação(ões) de agendamento</button><button type="button" id="btn-notif-prest-all" class="btn btn-outline-secondary btn-sm" style="font-size:.83rem;margin-left:auto;"><i class="bi bi-list-check me-1"></i>Ver todas</button></div></div>
+
+22- na página prestadorAreaExclusiva.html
+manter <div id="sg-notif-barra-prest" style="margin-bottom: 16px;"><div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#fffbe6;border:1.5px solid #FFC300;border-radius:10px;"><i class="bi bi-bell-fill" style="color:#e6a800;font-size:1.2rem;"></i><strong style="color:#7a5800;">Novas notificações:</strong><button type="button" id="btn-notif-prest-ag" class="btn btn-warning btn-sm" style="font-size:.83rem;"><i class="bi bi-calendar-plus me-1"></i>1 nova(s) solicitação(ões) de agendamento</button><button type="button" id="btn-notif-prest-all" class="btn btn-outline-secondary btn-sm" style="font-size:.83rem;margin-left:auto;"><i class="bi bi-list-check me-1"></i>Ver todas</button></div></div>
+para que quando for clicado, o prestador seja direcionado para <a href="#" class="nav-link nav-link-active agenda-aba-ativa" data-aba="pendentes">
+                            Pendentes de Confirmação (<span id="contador-pendentes">0</span>)
+                        </a>
+						
+manter <div class="prest-stat-card destaque-amarelo">
+                    <div class="prest-stat-titulo">Próximo Agendamento</div>
+                    <div class="prest-stat-valor" style="font-size:1.2rem;" id="prest-proximo-titulo">Limpeza de Filtro</div>
+                    <div class="prest-stat-info amarelo">
+                        <i class="bi bi-clock"></i> <a href="#" id="link-proximo-agendamento" style="color:inherit; text-decoration:underline; cursor:pointer;">Amanhã, 10:00h</a>
+                    </div>
+                </div>
+sempre mostrando o próximo agendamento válido
+inclua aqui um botão "Ver Todos os Agendamentos" para que ao ser clicado seja mostrado <a href="#" class="nav-link nav-link-active agenda-aba-ativa" data-aba="proximos">
+                            Próximos Agendamentos (<span id="contador-proximos">5</span>)
+                        </a>
+desative o clique de <a href="#" id="link-proximo-agendamento" style="color:inherit; text-decoration:underline; cursor:pointer;">Amanhã, 10:00h</a>
+e mostre somente a informação
+mantenha <div class="prest-stat-card destaque-azul">
+                    <div class="prest-stat-titulo">Avaliação Média</div>
+                    <div class="prest-stat-valor">4.8 <span style="font-size:1rem; color:var(--texto-muted);">/ 5.0</span></div>
+                    <div class="prest-stat-info azul">
+                        <i class="bi bi-star-fill"></i> Baseado em 12 reviews
+                    </div>
+                </div>
+informando a média de avaliação do prestador com base em todas as avaliações recebidas
+mantenha <div class="prest-stat-card destaque-amarelo">
+                    <div class="prest-stat-titulo">Mensagens Não Lidas</div>
+                    <div class="prest-stat-valor" id="prest-qtd-msgs-nao-lidas">0</div>
+                    <div class="prest-stat-info amarelo">
+                        <i class="bi bi-envelope"></i> <a href="#" id="link-ver-msgs-prest" style="color:inherit;text-decoration:underline;">Ver todas</a>
+                    </div>
+                </div>
+mas desative <a href="#" id="link-ver-msgs-prest" style="color:inherit;text-decoration:underline;">Ver todas</a>
+troque o título <div class="prest-stat-titulo">Mensagens Não Lidas</div> para total de média de atendimentos concluídos
+calculando a média entre aceitos e recusados
+informar o valor em R$ faturado para a média dos atendimentos.
+
+22- em <div class="modal-body" id="modal-detalhes-corpo"><div class="agenda-detalhe-secao"><h6><i class="bi bi-person-circle me-1"></i>Dados do Cliente</h6><div class="agenda-detalhe-grid"><div><strong>Nome</strong><span>Maria da Silva</span></div><div><strong>Telefone</strong><span>(18) 99123-4567</span></div></div><div style="margin-top:8px;"><a href="../paginasCliente/clientePerfil.html" class="btn btn-sm btn-outline-info" target="_blank"><i class="bi bi-person-badge me-1"></i>Ver Perfil do Cliente</a></div></div><div class="agenda-detalhe-secao"><h6><i class="bi bi-calendar-event me-1"></i>Serviço Agendado</h6><div class="agenda-detalhe-grid"><div><strong>Serviço</strong><span>Montagem de Estante</span></div><div><strong>Status</strong><span><span class="agenda-status-tag confirmado">Confirmado</span></span></div><div><strong>Data</strong><span>23/04/2026</span></div><div><strong>Horário</strong><span>14:00 - 17:00</span></div><div style="grid-column: 1/-1;"><strong>Endereço</strong><span><i class="bi bi-geo-alt me-1"></i>Rua das Flores, 123 - Centro</span></div><div><strong>Valor</strong><span>R$ 180,00</span></div><div><strong>Forma de Pagamento</strong><span>PIX</span></div></div></div><div class="agenda-detalhe-secao" id="secao-lembretes"><h6><i class="bi bi-bell me-1"></i>Lembretes <small class="text-muted fw-normal">(editável)</small></h6><div id="agenda-lembretes-lista"><div class="agenda-lembrete-edit-row" style="display:flex;gap:6px;margin-bottom:6px;"><input type="text" class="form-control form-control-sm agenda-lembrete-input" value="Confirmar presença 1h antes via WhatsApp" style="flex:1;"><button type="button" class="btn btn-sm btn-outline-danger agenda-lembrete-del" data-idx="0" title="Remover"><i class="bi bi-trash"></i></button></div><div class="agenda-lembrete-edit-row" style="display:flex;gap:6px;margin-bottom:6px;"><input type="text" class="form-control form-control-sm agenda-lembrete-input" value="Cliente mora no 3º andar sem elevador" style="flex:1;"><button type="button" class="btn btn-sm btn-outline-danger agenda-lembrete-del" data-idx="1" title="Remover"><i class="bi bi-trash"></i></button></div><div class="agenda-lembrete-edit-row" style="display:flex;gap:6px;margin-bottom:6px;"><input type="text" class="form-control form-control-sm agenda-lembrete-input" value="teste" style="flex:1;"><button type="button" class="btn btn-sm btn-outline-danger agenda-lembrete-del" data-idx="2" title="Remover"><i class="bi bi-trash"></i></button></div></div><button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="btn-add-lembrete"><i class="bi bi-plus-circle me-1"></i>Adicionar Lembrete</button></div><div class="agenda-detalhe-secao" id="secao-observacoes"><h6><i class="bi bi-chat-left-text me-1"></i>Observações <small class="text-muted fw-normal">(editável)</small></h6><textarea id="agenda-obs-textarea" class="form-control form-control-sm" rows="3" style="resize:vertical;">Cliente pediu para trazer parafusos extras. A estante é da Tok&amp;Stok modelo Alfa.</textarea></div></div>
+em  <div class="modal-body" id="modal-detalhes-corpo"><div class="agenda-detalhe-secao"><h6><i class="bi bi-person-circle me-1"></i>Dados do Cliente</h6><div class="agenda-detalhe-grid"><div><strong>Nome</strong><span>Maria da Silva</span></div><div><strong>Telefone</strong><span>(18) 99123-4567</span></div></div><div style="margin-top:8px;"><a href="../paginasCliente/clientePerfil.html" class="btn btn-sm btn-outline-info" target="_blank"><i class="bi bi-person-badge me-1"></i>Ver Perfil do Cliente</a></div></div><div class="agenda-detalhe-secao"><h6><i class="bi bi-calendar-event me-1"></i>Serviço Agendado</h6><div class="agenda-detalhe-grid"><div><strong>Serviço</strong><span>Montagem de Estante</span></div><div><strong>Status</strong><span><span class="agenda-status-tag confirmado">Confirmado</span></span></div><div><strong>Data</strong><span>23/04/2026</span></div><div><strong>Horário</strong><span>14:00 - 17:00</span></div><div style="grid-column: 1/-1;"><strong>Endereço</strong><span><i class="bi bi-geo-alt me-1"></i>Rua das Flores, 123 - Centro</span></div><div><strong>Valor</strong><span>R$ 180,00</span></div><div><strong>Forma de Pagamento</strong><span>PIX</span></div></div></div><div class="agenda-detalhe-secao" id="secao-lembretes"><h6><i class="bi bi-bell me-1"></i>Lembretes <small class="text-muted fw-normal">(editável)</small></h6><div id="agenda-lembretes-lista"><div class="agenda-lembrete-edit-row" style="display:flex;gap:6px;margin-bottom:6px;"><input type="text" class="form-control form-control-sm agenda-lembrete-input" value="Confirmar presença 1h antes via WhatsApp" style="flex:1;"><button type="button" class="btn btn-sm btn-outline-danger agenda-lembrete-del" data-idx="0" title="Remover"><i class="bi bi-trash"></i></button></div><div class="agenda-lembrete-edit-row" style="display:flex;gap:6px;margin-bottom:6px;"><input type="text" class="form-control form-control-sm agenda-lembrete-input" value="Cliente mora no 3º andar sem elevador" style="flex:1;"><button type="button" class="btn btn-sm btn-outline-danger agenda-lembrete-del" data-idx="1" title="Remover"><i class="bi bi-trash"></i></button></div><div class="agenda-lembrete-edit-row" style="display:flex;gap:6px;margin-bottom:6px;"><input type="text" class="form-control form-control-sm agenda-lembrete-input" value="teste" style="flex:1;"><button type="button" class="btn btn-sm btn-outline-danger agenda-lembrete-del" data-idx="2" title="Remover"><i class="bi bi-trash"></i></button></div></div><button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="btn-add-lembrete"><i class="bi bi-plus-circle me-1"></i>Adicionar Lembrete</button></div><div class="agenda-detalhe-secao" id="secao-observacoes"><h6><i class="bi bi-chat-left-text me-1"></i>Observações <small class="text-muted fw-normal">(editável)</small></h6><textarea id="agenda-obs-textarea" class="form-control form-control-sm" rows="3" style="resize:vertical;">Cliente pediu para trazer parafusos extras. A estante é da Tok&amp;Stok modelo Alfa.</textarea></div></div>
+deixar editável para ser lançado o valor do serviço (registrar esse valor no banco de dados para ser contabilizado)
+em incluir seleção de formas de pagamento (PIX, cartão, dinheiro) e salvar no banco o tipo de pagamento
+em <div class="prest-card-cabecalho">Seu Histórico</div>
+em <li class="prest-historico-item" data-pedido-id="prest-pedido-1" data-cliente="Maria da Silva" data-servico="Troca de Válvula">
+                        <span><strong>Serviço:</strong> Troca de Válvula &nbsp;|&nbsp; <strong>Cliente:</strong> Maria da Silva</span>
+                        <span class="prest-badge concluido">Concluído</span>
+                        <div class="prest-historico-acoes">
+                            <button type="button" class="btn btn-primary btn-prest-avaliar">Avaliar</button>
+                            <button type="button" class="btn btn-warning btn-prest-editar">Editar</button>
+                            <button type="button" class="btn btn-danger btn-prest-excluir">Excluir</button>
+                        </div>
+                    </li>
+não alterar essa lógica
+
+23- Na página dashboardPrestador.html
+apresentar os dados reais das informações registradas no banco de dados para 
+<div class="card">
+                    <h3>Total de clientes atendidos</h3>
+                    <div class="kv">42</div>
+                </div>
+				
+e <div class="card">
+                    <h3>Serviços realizados</h3>
+                    <div class="kv">87</div>
+                </div>
+				
+e <div class="card">
+                    <h3>Faturamento no mês</h3>
+                    <div class="kv">R$ 7.400,00</div>
+                </div>
+				
+e <div class="card">
+                    <h3>Avaliações positivas</h3>
+                    <div class="kv">80%</div>
+                </div>
+				
+implementar o botão de imporimir em 
+<div class="card">
+                <h3>Relatório detalhado (simulado)</h3>
+                <div class="placeholder">Tabela de atendimentos / valores / tempo médio — export CSV disponível na versão final.</div>
+            </div>
+permitindo a impressão dos dados em arquivo PDF, ou Word, ou Excel ou CSV. Para isso, crie um botão com o nome "Imprimir" e na laterla direita do botão, adicnione uma seta de opções permitindo que
+o usuário escolha uma das opçõies de impressão e ao ser escolhido, imprimir o documento no formato escolhido
+
+24- Na página prestadorHotsite.html
+mostrar todos os dados do prestador selecionado para que o ciente possa conhecer melhor o pewrfil do prestador e decidir se contrata ou não o seu serviço
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Para o Cliente
+
+Primeira ação - limpar todos os dados do Local Storage e deixar pronto para salvar no Banco de Dados todas a informações.
+
+
+
+
+
+ 
+
+
