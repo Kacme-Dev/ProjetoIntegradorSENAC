@@ -31,15 +31,11 @@
 
                 <!-- Menus -->
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <!--Menus da Página-->
-                <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto align-items-lg-center">
                         <li class="nav-item mb-2 mb-lg-0">
                             <button id="btn-voltar" type="button" class="btn btn-outline-secondary">Voltar</button>
-                            <a class="btn btn-danger" href="/index.html">Sair</a>
                         </li>
                     </ul>
-                </div>
                 </div>
             </div>
         </nav>
@@ -49,16 +45,17 @@
     <div class="prest-wrapper">
 
         <!-- SIDEBAR -->
-        <nav class="prest-sidebar">
+                <nav class="prest-sidebar">
             <ul>
-                <li><a href="/paginasPrestador/prestadorAreaExclusiva.html" class="prest-nav-ativo"><i class="bi bi-house-door"></i> Área Exclusiva</a></li>
+                <li><a href="/paginasPrestador/prestadorAreaExclusiva.html"><i class="bi bi-house-door"></i> Área Exclusiva</a></li>
                 <li><a href="/paginasPrestador/prestadorServicosAgendados.html"><i class="bi bi-calendar-check"></i> Meus Agendamentos</a></li>
                 <li><a href="/paginasPrestador/prestadorConfigurarAgenda.html"><i class="bi bi-calendar3"></i> Gerenciar Agenda</a></li>
-                <li><a href="/paginasPrestador/prestadorHotsiteAdm.html"><i class="bi bi-globe"></i> Meu Hot Site</a></li>
+                <li><a class="prest-nav-ativo" href="/paginasPrestador/prestadorHotsiteAdm.html"><i class="bi bi-globe"></i> Meu Hot Site</a></li>
                 <li><a href="/paginasPrestador/prestadorAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Feitas</a></li>
-                <li><a href="/paginasPrestador/prestadorAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
+                <li><a href="/paginasPrestador/prestadorAvaliacoesRecebidas.html"><i class="bi bi-star-half"></i> Avaliações Recebidas</a></li>
                 <li><a href="/paginasPrestador/dashboardPrestador.html"><i class="bi bi-grid-1x2"></i> Dashboard</a></li>
                 <li><a href="/paginasPrestador/prestadorContato.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+                <li class="sidebar-sair"><a href="/index.html" id="sidebar-btn-sair"><i class="bi bi-box-arrow-right"></i> Sair</a></li>
             </ul>
         </nav>
 
@@ -88,14 +85,17 @@
                         <label for="adm-categoria">Categoria Principal</label>
                         <select class="hotsiteadm-select" id="adm-categoria">
                             <option value="" selected>Selecione...</option>
-                            <option value="eletricista">Eletricista</option>
-                            <option value="encanador">Encanador</option>
-                            <option value="pintor">Pintor(a)</option>
-                            <option value="diarista">Diarista</option>
-                            <option value="montador">Montador(a) de Móveis</option>
-                            <option value="jardineiro">Jardineiro(a)</option>
-                            <option value="carpinteiro">Carpinteiro(a)</option>
-                            <option value="marido-aluguel">Marido de Aluguel</option>
+                            <option value="Manutenção Predial">Manutenção Predial</option>
+                            <option value="Saúde">Saúde</option>
+                            <option value="Beleza">Beleza</option>
+                            <option value="TI">TI</option>
+                            <option value="Consultoria">Consultoria</option>
+                            <option value="Design">Design</option>
+                            <option value="Logística">Logística</option>
+                            <option value="Segurança">Segurança</option>
+                            <option value="Lazer">Lazer</option>
+                            <option value="Alimentação">Alimentação</option>
+                            <option value="Construção">Construção</option>
                         </select>
                     </div>
 
@@ -129,18 +129,18 @@
                     <div class="hotsiteadm-grupo">
                         <label for="adm-galeria">Foto de Perfil (Avatar)</label>
                         <input type="file" id="adm-galeria" accept="image/*" class="hotsiteadm-input" style="padding: 5px;">
-                        <small style="color:var(--texto-muted); font-size:0.78rem;">Selecione uma imagem para ser exibida no card do perfil ao lado.</small>
+                        <small style="color:var(--texto-muted); font-size:0.78rem;">Ou clique diretamente no avatar ao lado para trocar a foto.</small>
                     </div>
 
                     <div class="hotsiteadm-botoes" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <a href="prestadorAreaExclusiva.html" class="conf-btn-voltar" style="background-color: #dc3545; color: #fff; border-color: #dc3545; flex: 1; text-align: center;">Cancelar</a>
+                        <a href="/paginasPrestador/prestadorAreaExclusiva.html" id="btn-cancelar-hotsite" class="conf-btn-salvar" style="background-color:#dc3545; color:#fff; border:none; border-radius:4px; font-weight:bold; padding:10px 15px; cursor:pointer; flex:1; text-align:center; text-decoration:none; display:inline-block;"><i class="bi bi-x-circle me-1"></i> Cancelar</a>
                         <button type="button" id="btn-limpar-hotsite" style="background-color: #6c757d; color: white; border: none; border-radius: 4px; font-weight: bold; padding: 10px 15px; cursor: pointer; flex: 1;"><i class="bi bi-eraser me-1"></i> Limpar</button>
                         <button type="button" id="btn-salvar-hotsite" class="conf-btn-salvar" style="background-color:#FFC300; color:#000; flex: 1 1 100%; margin-top: 8px;"><i class="bi bi-floppy me-1"></i> Salvar &amp; Publicar</button>
                     </div>
 
                     <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 4px;">
                         <div style="font-size:0.88rem; font-weight:700; color:var(--texto-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom: 10px;">Configurações</div>
-                        <a class="cta" href="prestadorConfigurarAgenda.html" style="width: 100%; text-align: center; background-color: var(--rodape-fundo);">
+                        <a class="cta" href="/paginasPrestador/prestadorConfigurarAgenda.html" style="width: 100%; text-align: center; background-color: var(--rodape-fundo);">
                             <i class="bi bi-calendar3 me-1"></i> Configurar Agenda
                         </a>
                     </div>
@@ -170,7 +170,7 @@
                         <div class="hotsite-atende" style="margin-top: 8px;">
                             <i class="bi bi-geo-alt-fill me-1"></i> Atende em:
                         </div>
-                        <a class="cta" href="prestadorServicosAgendados.html" style="margin-top:12px; width:100%; text-align:center; background-color:#FFC300; color:#000;">
+                        <a class="cta" href="/paginasPrestador/prestadorServicosAgendados.html" style="margin-top:12px; width:100%; text-align:center; background-color:#FFC300; color:#000;">
                             <i class="bi bi-calendar-check me-1"></i> Verificar Agendamentos
                         </a>
                     </div>
@@ -189,27 +189,28 @@
                             <div class="hotsiteadm-thumb-preview" data-slot="0" style="position:relative;"><i class="bi bi-image"></i> Foto 1<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
                             <div class="hotsiteadm-thumb-preview" data-slot="1" style="position:relative;"><i class="bi bi-image"></i> Foto 2<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
                             <div class="hotsiteadm-thumb-preview" data-slot="2" style="position:relative;"><i class="bi bi-image"></i> Foto 3<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
-                            <div class="hotsiteadm-thumb-preview" data-slot="3" style="position:relative;"><i class="bi bi-play-circle"></i> Vídeo<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
-                        </div>
-                        <div style="margin-top: 8px;">
-                            <label style="font-size:0.82rem; font-weight:600; color:var(--texto-muted); display:block; margin-bottom:4px;">Adicionar mídia à galeria</label>
-                            <input type="file" id="adm-galeria-nova" multiple accept="image/*,video/*" class="hotsiteadm-input" style="padding: 5px;">
+                            <div class="hotsiteadm-thumb-preview" data-slot="3" style="position:relative;"><i class="bi bi-image"></i> Foto 4<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="4" style="position:relative;"><i class="bi bi-image"></i> Foto 5<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="5" style="position:relative;"><i class="bi bi-image"></i> Foto 6<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="6" style="position:relative;"><i class="bi bi-image"></i> Foto 7<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="7" style="position:relative;"><i class="bi bi-image"></i> Foto 8<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="8" style="position:relative;"><i class="bi bi-image"></i> Foto 9<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="9" style="position:relative;"><i class="bi bi-play-circle"></i> Vídeo<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
                         </div>
 
                         <div class="hotsite-secao-titulo" style="margin-top: 14px;">Depoimentos (Lidos do Sistema)</div>
                         <div class="hotsite-depoimento"></div>
-                        <div class="hotsite-depoimento"></div>
 
                         <div class="hotsite-secao-titulo" style="margin-top: 14px;">Contatos</div>
-                        <p style="font-size:0.9rem; color:#444; margin:0 0 14px;">
-                            <i class="bi bi-envelope me-1"></i>
+                        <p id="hotsite-preview-contatos" style="font-size:0.9rem; color:#444; margin:0 0 14px;">
+                            <span id="hotsite-preview-email"><i class="bi bi-envelope me-1"></i> —</span>
                             &nbsp;&nbsp;
-                            <i class="bi bi-telephone me-1"></i>
+                            <span id="hotsite-preview-tel"><i class="bi bi-telephone me-1"></i> —</span>
                         </p>
 
                         <div class="hotsite-secao-titulo">Agenda &amp; Disponibilidade</div>
-                        <div class="placeholder" style="margin-bottom: 16px;">
-                            Próximo horário disponível: <strong></strong> (simulado)
+                        <div id="hotsite-preview-disponibilidade" style="margin-bottom:16px; padding:10px 14px; background:#f0f4ff; border-radius:6px; font-size:0.9rem; cursor:default;">
+                            Próximo horário disponível: <strong id="hotsite-preview-proximo-slot">—</strong>
                         </div>
                     </div>
                 </div>
@@ -295,96 +296,12 @@
             </div>
             <hr class="text-white-50">
             <div class="text-center small text-white-50">
-                &copy; 2025 ServGo! Todos os direitos reservados.
+                &copy; 2026 ServGo! Todos os direitos reservados.
             </div>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/script.js" defer></script>
-    <script>
-        // --- Contador de caracteres da descrição ---
-        (function () {
-            var ta = document.getElementById('adm-descricao');
-            var contador = document.getElementById('adm-descricao-contador');
-            if (ta && contador) {
-                ta.addEventListener('input', function () {
-                    contador.textContent = ta.value.length + ' / 2000';
-                });
-            }
-        })();
-
-        // --- Galeria: ao escolher mídia no input adm-galeria-nova, preencher os cards da galeria ---
-        (function () {
-            var inputGaleria = document.getElementById('adm-galeria-nova');
-            if (!inputGaleria) return;
-
-            var labelsDefault = [
-                '<i class="bi bi-image"></i> Foto 1',
-                '<i class="bi bi-image"></i> Foto 2',
-                '<i class="bi bi-image"></i> Foto 3',
-                '<i class="bi bi-play-circle"></i> V\u00eddeo'
-            ];
-
-            function criarBotaoExcluir(slot, slotIdx) {
-                var btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'btn-galeria-excluir';
-                btn.title = 'Excluir m\u00eddia';
-                btn.innerHTML = '&times;';
-                btn.style.cssText = 'position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;z-index:10;';
-                btn.addEventListener('click', function () {
-                    slot.innerHTML = labelsDefault[slotIdx] + '<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button>';
-                    slot.style.padding = '';
-                    slot.style.overflow = '';
-                });
-                return btn;
-            }
-
-            inputGaleria.addEventListener('change', function () {
-                var slots = document.querySelectorAll('#galeria-thumbs .hotsiteadm-thumb-preview');
-                var files = Array.from(this.files);
-                files.forEach(function (file, idx) {
-                    if (idx >= slots.length) return;
-                    var slot = slots[idx];
-                    var reader = new FileReader();
-                    reader.onload = function (e) {
-                        slot.innerHTML = '';
-                        slot.style.position = 'relative';
-                        if (file.type.startsWith('image/')) {
-                            var img = document.createElement('img');
-                            img.src = e.target.result;
-                            img.style.cssText = 'width:100%; height:100%; object-fit:cover; border-radius:6px; display:block;';
-                            slot.style.padding = '0';
-                            slot.style.overflow = 'hidden';
-                            slot.appendChild(img);
-                        } else if (file.type.startsWith('video/')) {
-                            var vid = document.createElement('video');
-                            vid.src = e.target.result;
-                            vid.controls = true;
-                            vid.style.cssText = 'width:100%; height:100%; object-fit:cover; border-radius:6px; display:block;';
-                            slot.style.padding = '0';
-                            slot.style.overflow = 'hidden';
-                            slot.appendChild(vid);
-                        }
-                        slot.appendChild(criarBotaoExcluir(slot, parseInt(slot.dataset.slot)));
-                    };
-                    reader.readAsDataURL(file);
-                });
-                inputGaleria.value = '';
-            });
-
-            document.getElementById('galeria-thumbs').addEventListener('click', function(e) {
-                var btn = e.target.closest('.btn-galeria-excluir');
-                if (!btn) return;
-                var slot = btn.closest('.hotsiteadm-thumb-preview');
-                if (!slot) return;
-                var slotIdx = parseInt(slot.dataset.slot);
-                slot.innerHTML = labelsDefault[slotIdx] + '<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button>';
-                slot.style.padding = '';
-                slot.style.overflow = '';
-            });
-        })();
-    </script>
 </body>
 </html>

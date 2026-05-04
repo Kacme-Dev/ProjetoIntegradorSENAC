@@ -16,6 +16,7 @@
     --branco:              #ffffff;
     --texto-muted:         #6c757d;
     --contraste-principal: #EB9524;
+    --fundo-card:           #ffffff;
 }
 
 /* -------------------------------------------------------
@@ -2779,3 +2780,72 @@ header .navbar-logada-info {
     0%   { outline-color: #FFC300; }
     100% { outline-color: transparent; }
 }
+
+/* -------------------------------------------------------
+   BOTÃO VOLTAR — transformado em ícone de seta + label
+------------------------------------------------------- */
+#btn-voltar {
+    background-color: transparent !important;
+    color: #444 !important;
+    border: 1.5px solid #adb5bd !important;
+    border-radius: 6px;
+    padding: 4px 10px !important;
+    box-shadow: none !important;
+    min-width: 52px;
+    margin-right: 12px;
+}
+#btn-voltar:hover {
+    background-color: var(--cinza-fundo) !important;
+    color: #212529 !important;
+    border-color: #6c757d !important;
+}
+
+/* -------------------------------------------------------
+   SIDEBAR — item "Sair" no rodapé
+------------------------------------------------------- */
+.prest-sidebar ul {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 130px);
+}
+.prest-sidebar .sidebar-sair {
+    margin-top: auto;
+    border-top: 1px solid rgba(0,0,0,.08);
+    padding-top: 6px;
+}
+.prest-sidebar .sidebar-sair a {
+    color: #dc3545 !important;
+    font-weight: 600;
+}
+.prest-sidebar .sidebar-sair a:hover {
+    background-color: #fee2e2 !important;
+    border-left-color: #dc3545 !important;
+    color: #b91c1c !important;
+}
+
+/* -------------------------------------------------------
+   GALERIA — 10 slots (9 imagens + 1 vídeo)
+------------------------------------------------------- */
+.hotsite-galeria {
+    grid-template-columns: repeat(5, 1fr);
+}
+.hotsiteadm-galeria-preview {
+    grid-template-columns: repeat(5, 1fr);
+}
+@media (max-width: 768px) {
+    .hotsite-galeria,
+    .hotsiteadm-galeria-preview {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+@media (max-width: 480px) {
+    .hotsite-galeria,
+    .hotsiteadm-galeria-preview {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* -------------------------------------------------------
+   TOAST — notificação de ação
+------------------------------------------------------- */
+.toast-container { z-index: 1090 !important; }

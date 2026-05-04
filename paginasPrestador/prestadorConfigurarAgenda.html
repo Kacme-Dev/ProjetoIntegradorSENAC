@@ -32,12 +32,9 @@
                 <!-- Menus -->
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <!--Menus da Página-->
-                <div class="collapse navbar-collapse" id="navbarNav">
+                
                     <ul class="navbar-nav ms-auto align-items-lg-center">
-                        <li class="nav-item mb-2 mb-lg-0">
-                            <button id="btn-voltar" type="button" class="btn btn-outline-secondary">Voltar</button>
-                            <a class="btn btn-danger" href="/index.html">Sair</a>
-                        </li>
+                        <li class="nav-item mb-2 mb-lg-0"><button id="btn-voltar" type="button" class="btn btn-outline-secondary">Voltar</button></li>
                     </ul>
                 </div>
                 </div>
@@ -48,15 +45,17 @@
     <!-- WRAPPER SIDEBAR + CONTEÚDO -->
     <div class="prest-wrapper">
 
-        <nav class="prest-sidebar">
+                <nav class="prest-sidebar">
             <ul>
-                <li><a href="prestadorAreaExclusiva.html"><i class="bi bi-house-door"></i> Dashboard</a></li>
-                <li><a href="prestadorServicosAgendados.html"><i class="bi bi-calendar-check"></i> Meus Agendamentos</a></li>
-                <li><a href="prestadorConfigurarAgenda.html" class="prest-nav-ativo"><i class="bi bi-calendar3"></i> Gerenciar Agenda</a></li>
-                <li><a href="prestadorHotsiteAdm.html"><i class="bi bi-globe"></i> Meu Hot Site</a></li>
-                <li><a href="prestadorAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Feitas</a></li>
-                <li><a href="prestadorAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
-                <li><a href="prestadorContato.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+                <li><a href="/paginasPrestador/prestadorAreaExclusiva.html"><i class="bi bi-house-door"></i> Área Exclusiva</a></li>
+                <li><a href="/paginasPrestador/prestadorServicosAgendados.html"><i class="bi bi-calendar-check"></i> Meus Agendamentos</a></li>
+                <li><a class="prest-nav-ativo" href="/paginasPrestador/prestadorConfigurarAgenda.html"><i class="bi bi-calendar3"></i> Gerenciar Agenda</a></li>
+                <li><a href="/paginasPrestador/prestadorHotsiteAdm.html"><i class="bi bi-globe"></i> Meu Hot Site</a></li>
+                <li><a href="/paginasPrestador/prestadorAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Feitas</a></li>
+                <li><a href="/paginasPrestador/prestadorAvaliacoesRecebidas.html"><i class="bi bi-star-half"></i> Avaliações Recebidas</a></li>
+                <li><a href="/paginasPrestador/dashboardPrestador.html"><i class="bi bi-grid-1x2"></i> Dashboard</a></li>
+                <li><a href="/paginasPrestador/prestadorContato.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+                <li class="sidebar-sair"><a href="/index.html" id="sidebar-btn-sair"><i class="bi bi-box-arrow-right"></i> Sair</a></li>
             </ul>
         </nav>
 
@@ -117,8 +116,9 @@
                         </div>
                         <div class="conf-dias-grid">
                             <label class="conf-dias-label">Domingo</label>
-                            <span class="conf-fechado-label">Fechado</span>
-                            <div class="conf-checkbox-wrap"><input type="checkbox" disabled></div>
+                            <input class="conf-time-input" type="time" id="domingo-inicio" value="08:00" disabled>
+                            <input class="conf-time-input" type="time" id="domingo-fim" value="12:00" disabled>
+                            <div class="conf-checkbox-wrap"><input type="checkbox" id="domingo-ativo"></div>
                         </div>
                     </div>
 
@@ -151,7 +151,6 @@
 
                     <!-- RODAPÉ AÇÕES -->
                     <div class="conf-rodape-acoes">
-                        <button type="button" class="conf-btn-voltar" data-action="voltar" data-voltar-fallback="prestadorAreaExclusiva.html"><i class="bi bi-arrow-left"></i> Voltar</button>
                         <button type="submit" class="conf-btn-salvar"><i class="bi bi-floppy me-1"></i> Salvar Configurações</button>
                     </div>
                 </form>
@@ -203,7 +202,7 @@
             </div>
             <hr class="text-white-50">
             <div class="text-center small text-white-50">
-                &copy; 2025 ServGo! Todos os direitos reservados.
+                &copy; 2026 ServGo! Todos os direitos reservados.
             </div>
         </div>
     </footer>
