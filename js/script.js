@@ -369,9 +369,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function redirecionarPorTipo(tipo) {
         switch (tipo) {
-            case 'admin': window.location.href = 'dashboardAdmin.html'; break;
-            case 'prestador': window.location.href = '../indexPrestador.html'; break;
-            case 'cliente': window.location.href = '../paginasCliente/clienteAreaExclusiva.html'; break;
+            case 'admin': window.location.href = '../paginasSite/dashboardAdmin.html'; break;
+            case 'prestador': window.location.href = '../paginasPrestador/indexPrestador.html'; break;
+            case 'cliente': window.location.href = '../paginasCliente/indexCliente.html'; break;
             default: window.location.href = '../index.html';
         }
     }

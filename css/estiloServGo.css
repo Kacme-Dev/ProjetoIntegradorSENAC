@@ -2,7 +2,6 @@
    SERVGO! — CSS ÚNICO UNIFICADO
    Cobre: navbar, footer, newsletter, body, formulários, avaliações, faq, cards, relatório, cadastro, login
    ======================================================================================================= */
-@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap');
 
 :root {
     --blue:                #007bff;
@@ -1125,6 +1124,9 @@ footer {
     font-size: 0.88rem;
     color: var(--texto-muted);
     margin-right: 16px;
+    margin-left: auto; /* Empurra o elemento para a direita */
+    display: flex;
+    align-items: center; /* Alinha verticalmente ao centro */
 }
 
 /* -------------------------------------------------------
