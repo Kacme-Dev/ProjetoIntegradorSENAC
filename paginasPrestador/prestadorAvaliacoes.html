@@ -14,57 +14,91 @@
 
             <!--TOPO DA PÁGINA-->
 
-            <!--Trabalha sobre os Menus (links)-->
+        <!--Trabalha sobre os Menus (links) — estrutura idêntica ao index.html-->
 
-            <nav class="navbar navbar-expand-lg" style="background: #fff; border-bottom: 1px solid #dee2e6; padding: 10px 20px;">
-    <div class="container-fluid" style="max-width:1140px; margin:0 auto; padding:0 16px;">
-        
-        <!-- Mantém a Logo SerGo à esquerda -->
-        <a class="navbar-brand" class="nav-link nav-link-active" href="/paginasPrestador/indexPrestador.html">
-                        <span class="serv-part">Serv</span><span class="go-part">Go!</span>
-                    </a>
+        <nav class="navbar navbar-expand-lg">
 
-        <!-- Bloco de informações do Prestador movido para a direita (ms-auto) -->
-        <span class="navbar-logada-info ms-auto" style="position: relative; display: inline-flex; flex-direction: column; align-items: center; cursor: default;">
-            Olá, Joao!
-            <a id="prest-perfil-toggle" href="#" style="font-size: 0.72rem; color: var(--azul-principal,#146ADB); text-decoration: underline; cursor: pointer; white-space: nowrap;">
-                <i class="bi bi-chevron-down" id="prest-chevron" style="font-size:.65rem;"></i> Meu Perfil
-            </a>
+            <div class="container menu"> <!--Altera o conteúdo dos Menus (links)-->
 
-            <!-- Dropdown Menu -->
-            <div id="prest-perfil-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); right: 0; min-width: 230px; background: var(--fundo-card,#fff); border: 1.5px solid var(--borda,#dee2e6); border-radius: 8px; box-shadow: rgba(0, 0, 0, 0.13) 0px 4px 18px; z-index: 1055; padding: 6px 0px;">
-                <a href="/paginasPrestador/prestadorAreaExclusiva.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
-                    <i class="bi bi-house-door me-2" style="color:#146ADB;"></i>Área Exclusiva
+                <!--Logo — clicar volta para a página do prestador-->
+                <a class="navbar-brand" href="/paginasPrestador/indexPrestador.html">
+                    <span class="serv-part">Serv</span><span class="go-part">Go!</span>
                 </a>
-                <a href="/paginasPrestador/prestadorServicosAgendados.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
-                    <i class="bi bi-calendar-check me-2" style="color:#146ADB;"></i>Meus Agendamentos
-                </a>
-                <a href="/paginasPrestador/prestadorConfigurarAgenda.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
-                    <i class="bi bi-calendar3 me-2" style="color:#146ADB;"></i>Gerenciar Agenda
-                </a>
-                <a href="/paginasPrestador/prestadorHotsiteAdm.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
-                    <i class="bi bi-globe me-2" style="color:#146ADB;"></i>Meu Hot Site
-                </a>
-                <a href="/paginasPrestador/prestadorAvaliacoesFeitas.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
-                    <i class="bi bi-star me-2" style="color:#146ADB;"></i>Avaliações Feitas
-                </a>
-                <a href="/paginasPrestador/prestadorAvaliacoesRecebidas.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
-                    <i class="bi bi-star-half me-2" style="color:#146ADB;"></i>Avaliações Recebidas
-                </a>
-                <a href="/paginasPrestador/dashboardPrestador.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
-                    <i class="bi bi-grid-1x2 me-2" style="color:#146ADB;"></i>Dashboard
-                </a>
-                <a href="/paginasPrestador/prestadorContato.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
-                    <i class="bi bi-chat-text me-2" style="color:#146ADB;"></i>Suporte/Contato
-                </a>
-                <div style="border-top: 1px solid var(--borda,#dee2e6); margin: 6px 0px;"></div>
-                <a href="/index.html" style="display: block; padding: 7px 16px; color: rgb(220, 53, 69); text-decoration: none; font-size: 0.88rem; font-weight: 600;">
-                    <i class="bi bi-box-arrow-right me-2"></i>Sair
-                </a>
+
+                <!--Botão Sanduíche — visível apenas em mobile, expande os itens do menu como dropdown-->
+                <div class="d-flex order-lg-3">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPrestador"
+                        aria-controls="navbarPrestador" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                </div>
+
+                <!--Área colapsável da navbar:
+                    - Desktop: exibe apenas o dropdown "Meu Perfil" à direita
+                    - Mobile: ao clicar no sanduíche, exibe os itens da sidebar como dropdown -->
+                <div class="collapse navbar-collapse" id="navbarPrestador">
+
+                    <!--Itens da sidebar — visíveis somente no collapse mobile (d-lg-none)-->
+                    <ul class="navbar-nav mx-auto d-lg-none">
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorAreaExclusiva.html"><i class="bi bi-house-door me-2"></i>Área Exclusiva</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorServicosAgendados.html"><i class="bi bi-calendar-check me-2"></i>Meus Agendamentos</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorConfigurarAgenda.html"><i class="bi bi-calendar3 me-2"></i>Gerenciar Agenda</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorHotsiteAdm.html"><i class="bi bi-globe me-2"></i>Meu Hot Site</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorAvaliacoesFeitas.html"><i class="bi bi-star me-2"></i>Avaliações Feitas</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorAvaliacoesRecebidas.html"><i class="bi bi-star-half me-2"></i>Avaliações Recebidas</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/dashboardPrestador.html"><i class="bi bi-grid-1x2 me-2"></i>Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorContato.html"><i class="bi bi-chat-text me-2"></i>Suporte/Contato</a></li>
+                        <li class="nav-item border-top mt-2 pt-2"><a class="nav-link fw-bold" href="/index.html" style="color: rgb(220, 53, 69);"><i class="bi bi-box-arrow-right me-2"></i>Sair</a></li>
+                    </ul>
+
+                    <!--Dropdown "Meu Perfil" — alinhado à direita, visível em desktop e no collapse mobile-->
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+                        <li class="nav-item">
+                            <span class="navbar-logada-info" style="position: relative; display: inline-flex; flex-direction: column; align-items: center; cursor: default;">
+
+                                <a id="prest-perfil-toggle" href="#" style="font-size: 0.72rem; color: var(--azul-principal,#146ADB); text-decoration: underline; cursor: pointer; white-space: nowrap;">
+                                    <i class="bi bi-chevron-down" id="prest-chevron" style="font-size:.65rem;"></i> Meu Perfil
+                                </a>
+
+                                <!-- Dropdown Menu -->
+                                <div id="prest-perfil-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); right: 0; min-width: 230px; background: var(--fundo-card,#fff); border: 1.5px solid var(--borda,#dee2e6); border-radius: 8px; box-shadow: rgba(0, 0, 0, 0.13) 0px 4px 18px; z-index: 1055; padding: 6px 0px;">
+                                    <a href="/paginasPrestador/prestadorAreaExclusiva.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-house-door me-2" style="color:#146ADB;"></i>Área Exclusiva
+                                    </a>
+                                    <a href="/paginasPrestador/prestadorServicosAgendados.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-calendar-check me-2" style="color:#146ADB;"></i>Meus Agendamentos
+                                    </a>
+                                    <a href="/paginasPrestador/prestadorConfigurarAgenda.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-calendar3 me-2" style="color:#146ADB;"></i>Gerenciar Agenda
+                                    </a>
+                                    <a href="/paginasPrestador/prestadorHotsiteAdm.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-globe me-2" style="color:#146ADB;"></i>Meu Hot Site
+                                    </a>
+                                    <a href="/paginasPrestador/prestadorAvaliacoesFeitas.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-star me-2" style="color:#146ADB;"></i>Avaliações Feitas
+                                    </a>
+                                    <a href="/paginasPrestador/prestadorAvaliacoesRecebidas.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-star-half me-2" style="color:#146ADB;"></i>Avaliações Recebidas
+                                    </a>
+                                    <a href="/paginasPrestador/dashboardPrestador.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-grid-1x2 me-2" style="color:#146ADB;"></i>Dashboard
+                                    </a>
+                                    <a href="/paginasPrestador/prestadorContato.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-chat-text me-2" style="color:#146ADB;"></i>Suporte/Contato
+                                    </a>
+                                    <div style="border-top: 1px solid var(--borda,#dee2e6); margin: 6px 0px;"></div>
+                                    <a href="/index.html" style="display: block; padding: 7px 16px; color: rgb(220, 53, 69); text-decoration: none; font-size: 0.88rem; font-weight: 600;">
+                                        <i class="bi bi-box-arrow-right me-2"></i>Sair
+                                    </a>
+                                </div>
+                            </span>
+                        </li>
+                    </ul>
+
+                </div>
+
             </div>
-        </span>
-    </div>
-</nav>
+        </nav>
         </header>
         <!--FIM DO CABEÇALHO DA PÁGINA-->
 
