@@ -546,11 +546,21 @@ document.addEventListener('DOMContentLoaded', function () {
             } else { clienteLinha.style.display = 'none'; }
         }
 
-        // Linha de endereço
+        // Linha de telefone do cliente
+        var telefoneLinha = document.getElementById('prest-proximo-telefone-linha');
+        var telefoneSpan = document.getElementById('prest-proximo-telefone');
+        if (telefoneLinha && telefoneSpan) {
+            var telStr = proximo ? (proximo.clienteTel || '') : '';
+            if (telStr) { telefoneSpan.textContent = telStr; telefoneLinha.style.display = ''; }
+            else { telefoneLinha.style.display = 'none'; }
+        }
+
+        // Linha de endereço do cliente
         var enderecoLinha = document.getElementById('prest-proximo-endereco-linha');
         var enderecoSpan = document.getElementById('prest-proximo-endereco');
         if (enderecoLinha && enderecoSpan) {
-            var endStr = proximo ? (proximo.endereco || proximo.local || '') : '';
+            // clienteEndereco: salvo no booking via perfil do cliente (adm-endereco)
+            var endStr = proximo ? (proximo.clienteEndereco || proximo.endereco || proximo.local || '') : '';
             if (endStr) { enderecoSpan.textContent = endStr; enderecoLinha.style.display = ''; }
             else { enderecoLinha.style.display = 'none'; }
         }
@@ -627,20 +637,81 @@ document.addEventListener('DOMContentLoaded', function () {
         var linkVer = document.getElementById('link-ver-msgs-prest');
         if (linkVer) { linkVer.style.pointerEvents = 'none'; linkVer.style.textDecoration = 'none'; linkVer.style.cursor = 'default'; }
 
-        // — Histórico: mostrar SOMENTE concluídos —
+        // — Histórico: lista dinâmica de serviços concluídos —
         var listaHistorico = document.getElementById('prest-historico-lista');
         if (listaHistorico) {
-            var itens = listaHistorico.querySelectorAll('.prest-historico-item');
-            itens.forEach(function (li) {
+
+            // 1. Oculta itens estáticos do HTML que NÃO sejam concluídos
+            listaHistorico.querySelectorAll('.prest-historico-item').forEach(function (li) {
                 var badge = li.querySelector('.prest-badge');
                 if (!badge || !badge.classList.contains('concluido')) li.style.display = 'none';
             });
+
+            // 2. Injeta todos os agendamentos com status 'concluido' do localStorage
+            var OCULTO_KEY = 'historicoOculto_' + emailPrest;
+            var ocultos = DB.get(OCULTO_KEY) || [];
+
+            var agsConcluidos = obterAgendamentosPrestador(emailPrest)
+                .filter(function (a) { return a.status === 'concluido' && !ocultos.includes(a.id); });
+
+            // Ordena do mais recente para o mais antigo
+            agsConcluidos.sort(function (a, b) {
+                var tA = a.concluidoEm || a.data || '';
+                var tB = b.concluidoEm || b.data || '';
+                return tB > tA ? 1 : -1;
+            });
+
+            agsConcluidos.forEach(function (ag) {
+                // Evita duplicata caso o item já exista como HTML estático
+                if (listaHistorico.querySelector('[data-pedido-id="' + ag.id + '"]')) return;
+
+                var li = document.createElement('li');
+                li.className = 'prest-historico-item';
+                li.dataset.pedidoId = ag.id;
+                li.dataset.cliente  = ag.cliente  || '—';
+                li.dataset.servico  = ag.servico  || '—';
+
+                // Data legível
+                var dataLabel = ag.data
+                    ? ag.data.split('-').reverse().join('/')
+                    : '—';
+
+                li.innerHTML =
+                    '<span class="prest-info-label">' +
+                        '<strong>Serviço:</strong> ' + _escaparHtml(ag.servico || '—') +
+                        ' &nbsp;|&nbsp; <strong>Cliente:</strong> ' + _escaparHtml(ag.cliente || '—') +
+                        ' &nbsp;|&nbsp; <strong>Data:</strong> ' + dataLabel +
+                    '</span>' +
+                    '<span class="prest-badge concluido">Concluído</span>' +
+                    '<div class="prest-historico-acoes">' +
+                        '<button type="button" class="btn btn-primary btn-prest-avaliar">Avaliar</button>' +
+                        '<button type="button" class="btn btn-warning btn-prest-editar">Editar</button>' +
+                        '<button type="button" class="btn btn-danger btn-prest-excluir">Excluir</button>' +
+                    '</div>';
+
+                listaHistorico.appendChild(li);
+            });
+
+            // 3. Se nenhum item ficou visível, exibe mensagem de lista vazia
+            var algumVisivel = Array.from(
+                listaHistorico.querySelectorAll('.prest-historico-item')
+            ).some(function (li) { return li.style.display !== 'none'; });
+
+            if (!algumVisivel) {
+                var msgVazia = document.createElement('li');
+                msgVazia.id = 'historico-vazio-msg';
+                msgVazia.style.cssText = 'text-align:center;color:var(--texto-muted,#6c757d);' +
+                    'font-style:italic;padding:20px;list-style:none;';
+                msgVazia.innerHTML =
+                    '<i class="bi bi-inbox me-2"></i>Nenhum serviço concluído ainda.';
+                listaHistorico.appendChild(msgVazia);
+            }
         }
 
         // — Barra de notificações —
         _inicializarBarraNotifPrestAreaExclusiva(emailPrest);
 
-        // — Modais de avaliar / editar no histórico —
+        // — Modais de avaliar / editar no histórico (funciona nos itens dinâmicos também) —
         _inicializarHistoricoAcoesPrestador(emailPrest);
     }
 
@@ -684,11 +755,15 @@ document.addEventListener('DOMContentLoaded', function () {
         function obterAvals() { return DB.get(AVAL_KEY) || []; }
         function salvarAvals(arr) { DB.set(AVAL_KEY, arr); }
 
-        // — Garante rótulo de serviço/cliente em todos os itens concluídos —
+        // — Garante rótulo de serviço/cliente + texto do badge em todos os itens concluídos —
         lista.querySelectorAll('.prest-historico-item').forEach(function (li) {
             var badge = li.querySelector('.prest-badge');
             if (!badge || !badge.classList.contains('concluido')) return;
-            // Só injeta se ainda não há um <span> com o texto informativo
+
+            // Preenche texto do badge se ainda estiver vazio
+            if (!badge.textContent.trim()) badge.textContent = 'Concluído';
+
+            // Injeta span de info se ainda não existir
             if (li.querySelector('span.prest-info-label')) return;
             var infoSpan = document.createElement('span');
             infoSpan.className = 'prest-info-label';
@@ -783,8 +858,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!confirm('Excluir este item do histórico?')) return;
                 var avsEx = obterAvals().filter(function (a) { return a.pedidoId !== liEx.dataset.pedidoId; });
                 salvarAvals(avsEx);
+                // Persiste o ID como "oculto" para não reaparecer após reload
+                var OCULTO_KEY = 'historicoOculto_' + emailPrest;
+                var ocultos = DB.get(OCULTO_KEY) || [];
+                if (!ocultos.includes(liEx.dataset.pedidoId)) ocultos.push(liEx.dataset.pedidoId);
+                DB.set(OCULTO_KEY, ocultos);
                 liEx.remove();
-                alert('Excluído com sucesso!');
+                exibirToast('Item removido do histórico.');
             }
         });
 
@@ -1659,8 +1739,29 @@ document.addEventListener('DOMContentLoaded', function () {
         var dias = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
         dias.forEach(function (dia) {
             var ini = document.getElementById(dia + '-inicio'); var fim = document.getElementById(dia + '-fim');
-            if (confSalva[dia]) { if (ini) ini.value = confSalva[dia].inicio || ini.value; if (fim) fim.value = confSalva[dia].fim || fim.value; }
+            if (confSalva[dia]) {
+                if (ini) ini.value = confSalva[dia].inicio || ini.value;
+                if (fim) fim.value = confSalva[dia].fim || fim.value;
+                // Restaurar estado do checkbox para todos os dias
+                var cbkId = dia + '-ativo';
+                var cbkEl = document.getElementById(cbkId);
+                if (cbkEl && confSalva[dia].ativo !== undefined) {
+                    cbkEl.checked = !!confSalva[dia].ativo;
+                    // Se o dia tem inputs de tempo, sincronizar disabled com o estado do checkbox
+                    if (ini) ini.disabled = !cbkEl.checked;
+                    if (fim) fim.disabled = !cbkEl.checked;
+                }
+            }
         });
+        // Caso especial: domingo salvo como ativo → garantir que inputs fiquem habilitados
+        if (confSalva.domingo && confSalva.domingo.ativo) {
+            var domIni = document.getElementById('domingo-inicio');
+            var domFim = document.getElementById('domingo-fim');
+            var domCkSalvo = document.getElementById('domingo-ativo');
+            if (domCkSalvo) domCkSalvo.checked = true;
+            if (domIni) domIni.disabled = false;
+            if (domFim) domFim.disabled = false;
+        }
         if (confSalva.duracaoServico) { var el = document.getElementById('duracao-servico'); if (el) el.value = confSalva.duracaoServico; }
         if (confSalva.antecedencia) { var el2 = document.getElementById('antecedencia'); if (el2) el2.value = confSalva.antecedencia; }
         if (confSalva.intervalo) { var el3 = document.getElementById('intervalo'); if (el3) el3.value = confSalva.intervalo; }
@@ -2205,21 +2306,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         function proximoHorario(emailPrest) {
-            var ags = obterAgendamentosPrestador(emailPrest);
-            var ocupados = {};
-            ags.forEach(function (a) { if (a.status === 'cancelado') return; var ini = (a.horario || '').split(' - ')[0]; if (ini && a.data) ocupados[a.data + ' ' + ini] = true; });
-            var agora = new Date();
-            for (var d = 0; d < 30; d++) {
-                var dia = new Date(agora); dia.setDate(agora.getDate() + d);
-                if (dia.getDay() === 0 || dia.getDay() === 6) continue;
-                var dataStr = dia.toISOString().substring(0, 10);
-                for (var h = 8; h < 18; h++) {
-                    if (d === 0 && h <= agora.getHours()) continue;
-                    var hor = String(h).padStart(2, '0') + ':00';
-                    if (!ocupados[dataStr + ' ' + hor]) return { data: dataStr, horario: hor, label: _formatarDiaLabel(dataStr) + ' às ' + hor };
-                }
-            }
-            return null;
+            var slots = _calcularSlotsDisponiveis(emailPrest, 30);
+            if (slots.length === 0) return null;
+            var primeiro = slots[0];
+            return { data: primeiro.data, horario: primeiro.slots[0], label: primeiro.label + ' às ' + primeiro.slots[0] };
         }
 
         var slotAtual = null;
@@ -2248,21 +2338,24 @@ document.addEventListener('DOMContentLoaded', function () {
             btnAgendar.addEventListener('click', function () {
                 if (!estaLogado) { _modalLoginNecessario(); return; }
                 if (!selectPrestador.value) { alert('Selecione um prestador.'); return; }
-                if (!slotAtual) { alert('Sem horários disponíveis.'); return; }
-                var ags = obterAgendamentosPrestador(selectPrestador.value);
-                var ocupado = ags.some(function (a) { return a.status !== 'cancelado' && a.data === slotAtual.data && (a.horario || '').split(' - ')[0] === slotAtual.horario; });
-                if (ocupado) { alert('Horário já ocupado. Atualizando disponibilidade...'); atualizarInfoPrestador(selectPrestador.value); return; }
-                var novoId = 'ag-cli-' + Date.now();
-                var fimH = String(parseInt(slotAtual.horario.split(':')[0]) + 1).padStart(2, '0') + ':00';
-                ags.push({ id: novoId, status: 'pendente', data: slotAtual.data, horario: slotAtual.horario + ' - ' + fimH, cliente: usu.nome, clienteEmail: usu.email, servico: selectTipo.value || 'Serviço', observacoes: '', lembretes: [], valor: 0, formaPagamento: '' });
-                salvarAgendamentosPrestador(selectPrestador.value, ags);
-                var cliAgs = DB.get('clienteAgendamentos_' + usu.email) || [];
-                var store = obterStorePrestadores(); var nomePrest = (store[selectPrestador.value] || {}).nome || selectPrestador.value;
-                cliAgs.push({ id: novoId, emailPrestador: selectPrestador.value, nomePrestador: nomePrest, servico: selectTipo.value, data: slotAtual.data, horario: slotAtual.horario + ' - ' + fimH, status: 'pendente', criadoEm: new Date().toISOString() });
-                DB.set('clienteAgendamentos_' + usu.email, cliAgs);
-                sgCriarNotificacao(selectPrestador.value, 'agendamento', { agendamentoId: novoId, clienteNome: usu.nome, clienteEmail: usu.email, servico: selectTipo.value, data: slotAtual.data, label: slotAtual.label });
-                alert('Agendamento solicitado!\nPrestador: ' + nomePrest + '\nHorário: ' + slotAtual.label + '\n\nAguarde confirmação.');
-                atualizarInfoPrestador(selectPrestador.value);
+                _abrirModalAgenda(selectPrestador.value, function (slotAtual) {
+                    var ags = obterAgendamentosPrestador(selectPrestador.value);
+                    var ocupado = ags.some(function (a) { return a.status !== 'cancelado' && a.data === slotAtual.data && (a.horario || '').split(' - ')[0] === slotAtual.horario; });
+                    if (ocupado) { alert('Horário já ocupado. Atualizando disponibilidade...'); atualizarInfoPrestador(selectPrestador.value); return; }
+                    var novoId = 'ag-cli-' + Date.now();
+                    var fimH = String(parseInt(slotAtual.horario.split(':')[0]) + 1).padStart(2, '0') + ':00';
+                    var usuData = obterUsuariosCadastrados()[usu.email] || {};
+                    var perfil = usuData.perfil || {};
+                    ags.push({ id: novoId, status: 'pendente', data: slotAtual.data, horario: slotAtual.horario + ' - ' + fimH, cliente: usu.nome, clienteEmail: usu.email, clienteTel: perfil.tel || '', clienteEndereco: perfil.endereco || '', servico: selectTipo.value || 'Serviço', observacoes: '', lembretes: [], valor: 0, formaPagamento: '' });
+                    salvarAgendamentosPrestador(selectPrestador.value, ags);
+                    var cliAgs = DB.get('clienteAgendamentos_' + usu.email) || [];
+                    var store = obterStorePrestadores(); var nomePrest = (store[selectPrestador.value] || {}).nome || selectPrestador.value;
+                    cliAgs.push({ id: novoId, emailPrestador: selectPrestador.value, nomePrestador: nomePrest, servico: selectTipo.value, data: slotAtual.data, horario: slotAtual.horario + ' - ' + fimH, status: 'pendente', criadoEm: new Date().toISOString() });
+                    DB.set('clienteAgendamentos_' + usu.email, cliAgs);
+                    sgCriarNotificacao(selectPrestador.value, 'agendamento', { agendamentoId: novoId, clienteNome: usu.nome, clienteEmail: usu.email, servico: selectTipo.value, data: slotAtual.data, label: slotAtual.label });
+                    alert('Agendamento solicitado!\nPrestador: ' + nomePrest + '\nHorário: ' + slotAtual.label + '\n\nAguarde confirmação.');
+                    atualizarInfoPrestador(selectPrestador.value);
+                });
             });
         }
 
@@ -2299,6 +2392,156 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         DB.set(HOTSITE_KEY, store);
         salvarUsuariosCadastrados(usuarios);
+    }
+
+    // =========================================================
+    // HELPER — configuração de agenda do prestador
+    // Retorna o config salvo ou defaults (seg–sex 08:00–18:00).
+    // Usado em _abrirModalAgenda, proximoHorario e hotsite.
+    // =========================================================
+    function _obterConfigAgenda(emailPrest) {
+        var CONF_KEY = 'agendaConfig_' + emailPrest;
+        var conf = DB.get(CONF_KEY) || {};
+        // Defaults para dias não configurados
+        var diasMap = { 0: 'domingo', 1: 'segunda', 2: 'terca', 3: 'quarta', 4: 'quinta', 5: 'sexta', 6: 'sabado' };
+        var resultado = {};
+        for (var dow = 0; dow <= 6; dow++) {
+            var nome = diasMap[dow];
+            var c = conf[nome];
+            if (c) {
+                resultado[dow] = { ativo: c.ativo === undefined ? true : !!c.ativo, inicio: c.inicio || '08:00', fim: c.fim || '18:00' };
+            } else {
+                // Default: seg–sex abertos, sab e dom fechados
+                resultado[dow] = { ativo: dow >= 1 && dow <= 5, inicio: '08:00', fim: '18:00' };
+            }
+        }
+        return resultado;
+    }
+
+    // Gera lista de { data, horario, label } respeitando a config do prestador
+    function _calcularSlotsDisponiveis(emailPrest, maxDias) {
+        maxDias = maxDias || 30;
+        var config  = _obterConfigAgenda(emailPrest);
+        var ags     = obterAgendamentosPrestador(emailPrest);
+        var ocupados = {};
+        ags.forEach(function (a) {
+            if (a.status === 'cancelado') return;
+            var ini = (a.horario || '').split(' - ')[0];
+            if (ini && a.data) ocupados[a.data + ' ' + ini] = true;
+        });
+
+        var agora = new Date();
+        var diasDisponiveis = [];
+
+        for (var d = 0; d < maxDias; d++) {
+            var dia = new Date(agora);
+            dia.setDate(agora.getDate() + d);
+            var dow = dia.getDay();
+            var confDia = config[dow];
+            if (!confDia || !confDia.ativo) continue;
+
+            var hIni = parseInt((confDia.inicio || '08:00').split(':')[0]);
+            var hFim = parseInt((confDia.fim   || '18:00').split(':')[0]);
+            var dataStr = dia.toISOString().substring(0, 10);
+            var slots = [];
+
+            for (var h = hIni; h < hFim; h++) {
+                if (d === 0 && h <= agora.getHours()) continue;
+                var horS = String(h).padStart(2, '0') + ':00';
+                if (!ocupados[dataStr + ' ' + horS]) slots.push(horS);
+            }
+            if (slots.length > 0) {
+                diasDisponiveis.push({ data: dataStr, label: _formatarDiaLabel(dataStr), slots: slots });
+            }
+        }
+        return diasDisponiveis;
+    }
+
+    // =========================================================
+    // MODAL AGENDA — exibe slots disponíveis e confirma booking
+    // Reutilizado em clienteAgendarServicos e prestadorHotsite
+    // =========================================================
+    function _abrirModalAgenda(emailPrest, onConfirmar) {
+        var modal = document.getElementById('modalAgendaPrestador');
+        if (!modal) return;
+
+        var nomeEl        = document.getElementById('agenda-modal-nome-prestador');
+        var slotsEl       = document.getElementById('agenda-modal-slots');
+        var selecionadoEl = document.getElementById('agenda-modal-selecionado');
+        var labelEl       = document.getElementById('agenda-modal-slot-label');
+        var btnConfirmar  = document.getElementById('btn-confirmar-agendamento');
+
+        // Preenche nome do prestador
+        var dados = obterStorePrestadores()[emailPrest] || {};
+        if (nomeEl) nomeEl.textContent = dados.nome || emailPrest;
+
+        // Calcula slots disponíveis respeitando config de agenda do prestador (7 dias à frente)
+        var diasDisponiveis = _calcularSlotsDisponiveis(emailPrest, 7);
+
+        // Renderiza grid de slots
+        if (slotsEl) {
+            if (diasDisponiveis.length === 0) {
+                slotsEl.innerHTML = '<p class="text-center text-muted py-4"><i class="bi bi-calendar-x me-2"></i>Sem disponibilidade nos próximos 30 dias.</p>';
+            } else {
+                slotsEl.innerHTML = diasDisponiveis.map(function (item) {
+                    var btns = item.slots.map(function (s) {
+                        return '<button type="button" class="btn btn-outline-secondary btn-sm agenda-slot-btn me-1 mb-1" ' +
+                            'data-data="' + item.data + '" ' +
+                            'data-horario="' + s + '" ' +
+                            'data-label="' + item.label + ' às ' + s + '">' + s + '</button>';
+                    }).join('');
+                    return '<div style="margin-bottom:14px;">' +
+                        '<div style="font-weight:700;font-size:.88rem;color:#333;margin-bottom:6px;border-bottom:1px solid #dee2e6;padding-bottom:4px;">' +
+                        '<i class="bi bi-calendar2-check me-1" style="color:#FFC300;"></i>' + item.label + '</div>' +
+                        '<div>' + btns + '</div></div>';
+                }).join('');
+            }
+        }
+
+        // Reset estado de seleção
+        var slotSelecionado = null;
+        if (selecionadoEl) selecionadoEl.style.display = 'none';
+
+        // Substitui btnConfirmar para evitar listeners duplicados ao reabrir o modal
+        if (btnConfirmar) {
+            var btnNovo = btnConfirmar.cloneNode(true);
+            btnConfirmar.parentNode.replaceChild(btnNovo, btnConfirmar);
+            btnConfirmar = btnNovo;
+            btnConfirmar.disabled = true;
+        }
+
+        // Delegação de clique nos slots
+        if (slotsEl) {
+            var _onSlotClick = function (e) {
+                var btn = e.target.closest('.agenda-slot-btn');
+                if (!btn) return;
+                slotsEl.querySelectorAll('.agenda-slot-btn').forEach(function (b) {
+                    b.classList.remove('btn-warning', 'fw-bold');
+                    b.classList.add('btn-outline-secondary');
+                });
+                btn.classList.remove('btn-outline-secondary');
+                btn.classList.add('btn-warning', 'fw-bold');
+                slotSelecionado = { data: btn.dataset.data, horario: btn.dataset.horario, label: btn.dataset.label };
+                if (labelEl) labelEl.textContent = slotSelecionado.label;
+                if (selecionadoEl) selecionadoEl.style.display = '';
+                if (btnConfirmar) btnConfirmar.disabled = false;
+            };
+            // Remove listener anterior (cloneNode já cuidou do btnConfirmar; para slotsEl, reassignamos innerHTML sempre)
+            slotsEl.onclick = _onSlotClick;
+        }
+
+        // Confirmar agendamento
+        if (btnConfirmar) {
+            btnConfirmar.addEventListener('click', function () {
+                if (!slotSelecionado) return;
+                var bsModal = bootstrap.Modal.getInstance(modal);
+                if (bsModal) bsModal.hide();
+                onConfirmar(slotSelecionado);
+            });
+        }
+
+        var bsModal = bootstrap.Modal.getOrCreateInstance(modal);
+        bsModal.show();
     }
 
     function _modalLoginNecessario() {
@@ -2408,25 +2651,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 }).join('') : '<p class="text-muted" style="font-size:.85rem;">Nenhuma avaliação recebida ainda.</p>';
             }
 
-            // Próximo horário disponível
+            // Próximo horário disponível (respeita config de agenda)
             var slotEl = document.getElementById('hotsite-preview-proximo-slot');
             if (slotEl) {
                 slotEl.style.cursor = 'default'; slotEl.style.pointerEvents = 'none';
-                var ags = obterAgendamentosPrestador(emailPrest);
-                var ocupados = {};
-                ags.forEach(function (a) { if (a.status === 'cancelado') return; var ini = (a.horario || '').split(' - ')[0]; if (ini && a.data) ocupados[a.data + ' ' + ini] = true; });
-                var agora = new Date(); var encontrado = false;
-                for (var d = 0; d < 30 && !encontrado; d++) {
-                    var dia = new Date(agora); dia.setDate(agora.getDate() + d);
-                    if (dia.getDay() === 0 || dia.getDay() === 6) continue;
-                    var dataStr = dia.toISOString().substring(0, 10);
-                    for (var hh = 8; hh < 18; hh++) {
-                        if (d === 0 && hh <= agora.getHours()) continue;
-                        var horS = String(hh).padStart(2, '0') + ':00';
-                        if (!ocupados[dataStr + ' ' + horS]) { slotEl.textContent = _formatarDiaLabel(dataStr) + ' às ' + horS; encontrado = true; break; }
-                    }
+                var slotsDisp = _calcularSlotsDisponiveis(emailPrest, 30);
+                if (slotsDisp.length > 0) {
+                    slotEl.textContent = slotsDisp[0].label + ' às ' + slotsDisp[0].slots[0];
+                } else {
+                    slotEl.textContent = 'Sem disponibilidade nos próximos 30 dias';
                 }
-                if (!encontrado) slotEl.textContent = 'Sem disponibilidade nos próximos 30 dias';
             }
         }
 
@@ -2436,9 +2670,25 @@ document.addEventListener('DOMContentLoaded', function () {
             btnAgendar.addEventListener('click', function (e) {
                 e.preventDefault();
                 if (!estaLogado) { _modalLoginHotsite(); return; }
-                var url = '/paginasCliente/clienteAgendarServicos.html';
-                if (emailPrest) url += '?prestador=' + encodeURIComponent(emailPrest);
-                window.location.href = url;
+                var usuLogado = obterUsuarioLogado();
+                _abrirModalAgenda(emailPrest, function (slotAtual) {
+                    if (!usuLogado) return;
+                    var ags = obterAgendamentosPrestador(emailPrest);
+                    var ocupado = ags.some(function (a) { return a.status !== 'cancelado' && a.data === slotAtual.data && (a.horario || '').split(' - ')[0] === slotAtual.horario; });
+                    if (ocupado) { alert('Horário já ocupado. Tente outro horário.'); return; }
+                    var novoId = 'ag-cli-' + Date.now();
+                    var fimH = String(parseInt(slotAtual.horario.split(':')[0]) + 1).padStart(2, '0') + ':00';
+                    var usuData = obterUsuariosCadastrados()[usuLogado.email] || {};
+                    var perfil = usuData.perfil || {};
+                    ags.push({ id: novoId, status: 'pendente', data: slotAtual.data, horario: slotAtual.horario + ' - ' + fimH, cliente: usuLogado.nome, clienteEmail: usuLogado.email, clienteTel: perfil.tel || '', clienteEndereco: perfil.endereco || '', servico: dados ? (dados.categoria || 'Serviço') : 'Serviço', observacoes: '', lembretes: [], valor: 0, formaPagamento: '' });
+                    salvarAgendamentosPrestador(emailPrest, ags);
+                    var cliAgs = DB.get('clienteAgendamentos_' + usuLogado.email) || [];
+                    var nomePrest = dados ? (dados.nome || emailPrest) : emailPrest;
+                    cliAgs.push({ id: novoId, emailPrestador: emailPrest, nomePrestador: nomePrest, servico: dados ? (dados.categoria || 'Serviço') : 'Serviço', data: slotAtual.data, horario: slotAtual.horario + ' - ' + fimH, status: 'pendente', criadoEm: new Date().toISOString() });
+                    DB.set('clienteAgendamentos_' + usuLogado.email, cliAgs);
+                    sgCriarNotificacao(emailPrest, 'agendamento', { agendamentoId: novoId, clienteNome: usuLogado.nome, clienteEmail: usuLogado.email, servico: dados ? dados.categoria : 'Serviço', data: slotAtual.data, label: slotAtual.label });
+                    alert('Agendamento solicitado!\nPrestador: ' + nomePrest + '\nHorário: ' + slotAtual.label + '\n\nAguarde confirmação.');
+                });
             });
         }
     }
@@ -2462,14 +2712,166 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!mainEl || !document.querySelector('.cli-pedidos-lista')) return;
         var usu = obterUsuarioLogado(); if (!usu) return;
         var emailCli = usu.email;
-        var notifs = sgObterNotificacoes(emailCli).filter(function (n) { return !n.lida; });
+
+        var todas = sgObterNotificacoes(emailCli);
+        var notifs = todas.filter(function (n) { return !n.lida; });
         if (notifs.length === 0) return;
+
+        // Notificações que são retorno do prestador (confirmação / cancelamento / conclusão)
+        var notifsRetorno = notifs.filter(function (n) {
+            return n.tipo === 'confirmacao' || n.tipo === 'cancelamento' || n.tipo === 'conclusao';
+        });
+
         var barra = document.createElement('div');
-        barra.id = 'sg-notif-barra-cli'; barra.style.cssText = 'margin-bottom:16px;';
-        barra.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#e8f4fd;border:1.5px solid #146ADB;border-radius:10px;"><i class="bi bi-bell-fill" style="color:#146ADB;font-size:1.2rem;"></i><strong style="color:#0d3d78;">Você tem ' + notifs.length + ' nova(s) notificação(ões)</strong><button type="button" class="btn btn-outline-secondary btn-sm" id="btn-notif-cli-marcar-lidas">Marcar como lidas</button></div>';
+        barra.id = 'sg-notif-barra-cli';
+        barra.style.cssText = 'margin-bottom:16px;';
+        barra.innerHTML =
+            '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;' +
+            'padding:10px 16px;background:#e8f4fd;border:1.5px solid #146ADB;border-radius:10px;">' +
+            '<i class="bi bi-bell-fill" style="color:#146ADB;font-size:1.2rem;"></i>' +
+            '<strong style="color:#0d3d78;">Você tem ' + notifs.length + ' nova(s) notificação(ões)</strong>' +
+            (notifsRetorno.length > 0
+                ? '<button type="button" class="btn btn-sm" id="btn-notif-cli-visualizar" ' +
+                  'style="background:#146ADB;border-color:#146ADB;color:#fff;font-weight:600;">' +
+                  '<i class="bi bi-eye me-1"></i>Visualizar (' + notifsRetorno.length + ')</button>'
+                : '') +
+            '<button type="button" class="btn btn-outline-secondary btn-sm" ' +
+            'id="btn-notif-cli-marcar-lidas">Marcar como lidas</button>' +
+            '</div>';
+
         mainEl.insertBefore(barra, mainEl.firstChild);
+
         var btnMarcar = document.getElementById('btn-notif-cli-marcar-lidas');
-        if (btnMarcar) btnMarcar.addEventListener('click', function () { sgMarcarTodasLidas(emailCli); barra.remove(); });
+        if (btnMarcar) {
+            btnMarcar.addEventListener('click', function () {
+                sgMarcarTodasLidas(emailCli);
+                barra.remove();
+            });
+        }
+
+        var btnVis = document.getElementById('btn-notif-cli-visualizar');
+        if (btnVis) {
+            btnVis.addEventListener('click', function () {
+                _abrirModalNotificacoesCliente(emailCli, notifsRetorno, function () {
+                    sgMarcarTodasLidas(emailCli);
+                    barra.remove();
+                });
+            });
+        }
+    }
+
+    // =========================================================
+    // MODAL NOTIFICAÇÕES CLIENTE — retornos dos prestadores
+    // Exibe confirmações, cancelamentos e conclusões recebidas.
+    // =========================================================
+    function _abrirModalNotificacoesCliente(emailCli, notifs, onMarcarLidas) {
+        var id = 'modalNotifRetornoPrestador';
+        var ex = document.getElementById(id); if (ex) ex.remove();
+
+        // Agendamentos do cliente para cruzar dados (data, horário, prestador)
+        var cliAgs = DB.get('clienteAgendamentos_' + emailCli) || [];
+
+        function _icone(tipo) {
+            if (tipo === 'confirmacao') return '<i class="bi bi-check-circle-fill me-2" style="color:#198754;font-size:1rem;"></i>';
+            if (tipo === 'cancelamento') return '<i class="bi bi-x-circle-fill me-2" style="color:#dc3545;font-size:1rem;"></i>';
+            if (tipo === 'conclusao')   return '<i class="bi bi-star-fill me-2" style="color:#FFC300;font-size:1rem;"></i>';
+            return '<i class="bi bi-bell-fill me-2" style="color:#146ADB;font-size:1rem;"></i>';
+        }
+        function _titulo(tipo) {
+            if (tipo === 'confirmacao') return 'Serviço Confirmado!';
+            if (tipo === 'cancelamento') return 'Serviço Cancelado';
+            if (tipo === 'conclusao')   return 'Serviço Concluído';
+            return 'Notificação';
+        }
+        function _borda(tipo) {
+            if (tipo === 'confirmacao') return '#198754';
+            if (tipo === 'cancelamento') return '#dc3545';
+            if (tipo === 'conclusao')   return '#FFC300';
+            return '#146ADB';
+        }
+
+        var itensHtml = notifs.map(function (n) {
+            var d = n.dados || {};
+
+            // Cruzar com o agendamento mais recente do mesmo serviço
+            var ag = cliAgs.slice().reverse().find(function (a) {
+                return a.servico === d.servico;
+            }) || {};
+
+            var dataLabel = ag.data ? ag.data.split('-').reverse().join('/') : '';
+            var horario   = ag.horario ? ag.horario.split(' - ')[0] : '';
+            var prestNome = d.prestadorNome || ag.nomePrestador || '';
+            var ts = n.timestamp
+                ? new Date(n.timestamp).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
+                : '';
+
+            var linhas = '';
+            if (d.servico)   linhas += '<p style="margin:3px 0;font-size:.85rem;">' +
+                '<i class="bi bi-tools me-1" style="color:#6c757d;"></i>' +
+                '<strong>Serviço:</strong> ' + _escaparHtml(d.servico) + '</p>';
+            if (prestNome)   linhas += '<p style="margin:3px 0;font-size:.85rem;">' +
+                '<i class="bi bi-person-fill me-1" style="color:#6c757d;"></i>' +
+                '<strong>Prestador:</strong> ' + _escaparHtml(prestNome) + '</p>';
+            if (dataLabel)   linhas += '<p style="margin:3px 0;font-size:.85rem;">' +
+                '<i class="bi bi-calendar3 me-1" style="color:#6c757d;"></i>' +
+                '<strong>Data:</strong> ' + dataLabel + (horario ? ' às ' + horario : '') + '</p>';
+            if (n.tipo === 'cancelamento' && d.motivo)
+                             linhas += '<p style="margin:3px 0;font-size:.85rem;color:#dc3545;">' +
+                '<i class="bi bi-exclamation-circle me-1"></i>' +
+                '<strong>Motivo:</strong> ' + _escaparHtml(d.motivo) + '</p>';
+            if (ts)          linhas += '<p style="margin:6px 0 0;font-size:.76rem;color:#adb5bd;">' +
+                '<i class="bi bi-clock me-1"></i>' + ts + '</p>';
+
+            return '<div style="border-left:4px solid ' + _borda(n.tipo) + ';' +
+                'padding:10px 14px;background:#f8f9fa;border-radius:0 8px 8px 0;margin-bottom:10px;">' +
+                '<div style="font-weight:700;font-size:.92rem;margin-bottom:6px;">' +
+                _icone(n.tipo) + _titulo(n.tipo) + '</div>' +
+                linhas + '</div>';
+        }).join('');
+
+        if (!itensHtml) {
+            itensHtml = '<p class="text-muted text-center py-3">' +
+                '<i class="bi bi-inbox me-2"></i>Nenhum retorno do prestador.</p>';
+        }
+
+        var modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = id;
+        modal.setAttribute('tabindex', '-1');
+        modal.innerHTML =
+            '<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">' +
+            '<div class="modal-content">' +
+            '<div class="modal-header" style="background:#146ADB;color:#fff;">' +
+            '<h5 class="modal-title">' +
+            '<i class="bi bi-bell-fill me-2"></i>Retornos dos Prestadores' +
+            '</h5>' +
+            '<button type="button" class="btn-close btn-close-white" ' +
+            'data-bs-dismiss="modal" aria-label="Fechar"></button>' +
+            '</div>' +
+            '<div class="modal-body" style="padding:16px;">' + itensHtml + '</div>' +
+            '<div class="modal-footer">' +
+            '<button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">' +
+            '<i class="bi bi-x-circle me-1"></i>Fechar</button>' +
+            '<button type="button" class="btn btn-sm" id="btn-modal-notif-lidas" ' +
+            'style="background:#146ADB;border-color:#146ADB;color:#fff;font-weight:600;">' +
+            '<i class="bi bi-check-all me-1"></i>Marcar como lidas</button>' +
+            '</div>' +
+            '</div></div>';
+
+        document.body.appendChild(modal);
+        var bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+
+        // Limpa o modal do DOM ao fechar para evitar acúmulo
+        modal.addEventListener('hidden.bs.modal', function () { modal.remove(); });
+
+        var btnLidas = document.getElementById('btn-modal-notif-lidas');
+        if (btnLidas) {
+            btnLidas.addEventListener('click', function () {
+                bsModal.hide();
+                if (onMarcarLidas) onMarcarLidas();
+            });
+        }
     }
 
     // =========================================================

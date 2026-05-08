@@ -203,7 +203,7 @@
                     </div>
 
                     <!-- BOTÃO AGENDAR — amarelo como no preview do Adm -->
-                    <a class="cta-agendar" href="/paginasCliente/clienteAgendarServicos.html">
+                    <a class="cta-agendar" href="#" data-bs-toggle="modal" data-bs-target="#modalAgendaPrestador">
                         <i class="bi bi-calendar-check me-1"></i> Agendar Serviço
                     </a>                    
                 </aside>
@@ -348,6 +348,44 @@
                     <button type="button" class="btn btn-primary btn-sm" id="hs-btn-chat-enviar"
                             style="background-color:#146ADB; border-color:#146ADB;">
                         <i class="bi bi-send me-1"></i> Enviar Mensagem
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!--  MODAL: AGENDA DE DATAS DISPONÍVEIS DO PRESTADOR            -->
+    <!-- ============================================================ -->
+    <div class="modal fade" id="modalAgendaPrestador" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background:#FFC300; color:#000;">
+                    <h5 class="modal-title">
+                        <i class="bi bi-calendar3 me-2"></i>
+                        Agenda de <span id="agenda-modal-nome-prestador">Prestador</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-3" style="font-size:.88rem;">
+                        <i class="bi bi-info-circle me-1"></i>Selecione um horário disponível para solicitar o agendamento.
+                    </p>
+                    <div id="agenda-modal-slots" style="max-height:380px; overflow-y:auto; padding-right:4px;">
+                        <!-- Preenchido via JS -->
+                    </div>
+                    <div id="agenda-modal-selecionado" style="display:none; margin-top:14px; padding:12px 16px; background:#f0f4ff; border:1.5px solid #146ADB; border-radius:8px;">
+                        <strong><i class="bi bi-check-circle-fill text-success me-1"></i>Horário selecionado:</strong>
+                        <span id="agenda-modal-slot-label" style="color:#146ADB; font-weight:600; margin-left:4px;"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-warning fw-bold" id="btn-confirmar-agendamento" disabled
+                            style="background:#FFC300; border-color:#e6b000; color:#000;">
+                        <i class="bi bi-calendar-check me-1"></i> Confirmar Agendamento
                     </button>
                 </div>
             </div>
