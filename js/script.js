@@ -987,8 +987,8 @@ document.addEventListener('DOMContentLoaded', function () {
             var dt = new Date(ag.data + 'T' + (ag.horario || '08:00').split(' - ')[0]);
             return dt > agora;
         }
-        function isPendente(ag) { return ag.status === 'pendente' || ag.status === 'orcamento_pendente' || ag.status === 'orcamento_enviado' || ag.status === 'orcamento_aceito'; }
-        function isHistorico(ag) { return ag.status === 'concluido' || ag.status === 'cancelado' || ag.status === 'orcamento_recusado'; }
+        function isPendente(ag) { return ag.status === 'pendente' || ag.status === 'orcamento_pendente' || ag.status === 'orcamento_enviado' || ag.status === 'orcamento_aceito' || ag.status === 'orcamento_recusado'; }
+        function isHistorico(ag) { return ag.status === 'concluido' || ag.status === 'cancelado'; }
 
         function atualizarContadores() {
             var prox = agendamentos.filter(isProximo).length;
@@ -1026,7 +1026,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     orcamento_pendente: { tag: 'pendente',    texto: 'Orçamento Solicitado' },
                     orcamento_enviado:  { tag: 'pendente',    texto: 'Orçamento Enviado' },
                     orcamento_aceito:   { tag: 'confirmado',  texto: 'Orçamento Aceito' },
-                    orcamento_recusado: { tag: 'cancelado',   texto: 'Orçamento Recusado' }
+                    orcamento_recusado: { tag: 'cancelado',   texto: 'Recusado pelo Cliente' }
                 };
                 var sm = statusMap[ag.status] || { tag: ag.status, texto: ag.status };
                 var statusTag   = sm.tag;
@@ -1050,6 +1050,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     botoesHTML += '<a href="#" class="agenda-btn confirmar" data-acao="confirmar" style="background:#198754;color:#fff;"><i class="bi bi-check me-1"></i>Confirmar</a>';
                     botoesHTML += '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
                     botoesHTML += '<a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a>';
+                } else if (ag.status === 'orcamento_recusado') {
+                    // Sprint 3 — cliente recusou: prestador pode refazer a proposta
+                    botoesHTML += '<a href="#" class="agenda-btn" data-acao="refazer" style="background:#FFC300;color:#000;border-color:#e6b000;font-weight:600;"><i class="bi bi-arrow-repeat me-1"></i>Refazer Proposta</a>';
                 } else {
                     botoesHTML += '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
                     if (aba === 'pendentes') {
@@ -1076,6 +1079,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (acao === 'concluir') _concluirAgendamento(ag, agendamentos, salvarAgs, emailPrest, function () { renderizarAba(abaAtiva); atualizarContadores(); });
                 if (acao === 'confirmar') _confirmarAgendamento(ag, agendamentos, salvarAgs, function () { renderizarAba(abaAtiva); atualizarContadores(); });
                 if (acao === 'cancelar') _abrirModalCancelar(ag, agendamentos, salvarAgs, function () { renderizarAba(abaAtiva); atualizarContadores(); });
+                // Sprint 3 — Refazer Proposta: volta para orcamento_pendente e abre modal de edição
+                if (acao === 'refazer') {
+                    var idxR = agendamentos.findIndex(function (a) { return a.id === ag.id; });
+                    if (idxR >= 0) {
+                        agendamentos[idxR].status = 'orcamento_pendente';
+                        salvarAgs();
+                        if (ag.clienteEmail) _atualizarStatusClienteAgendamento(ag.id, ag.clienteEmail, 'orcamento_pendente');
+                        renderizarAba(abaAtiva);
+                        atualizarContadores();
+                        _abrirModalDetalhes(agendamentos[idxR], emailPrest, agendamentos, salvarAgs);
+                    }
+                }
             }, { once: false });
         }
 
@@ -1175,58 +1190,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // =========================================================
     // CONCLUIR AGENDAMENTO
+    // Sprint 1 — conclusão direta pelo prestador, sem validação do cliente.
+    // O serviço é movido imediatamente para Histórico (status 'concluido').
     // =========================================================
     function _concluirAgendamento(ag, agendamentos, salvarAgs, emailPrest, callback) {
-        var modalEl = document.getElementById('modalDetalhesAgendamento');
-        if (!modalEl) return;
+        if (!confirm('Confirmar conclusão do serviço "' + (ag.servico || 'Serviço') + '" com ' + (ag.cliente || 'cliente') + '?\n\nO serviço será movido para o Histórico.')) return;
 
-        // Abre o modal de detalhes para o prestador conferir/editar o valor
-        _abrirModalDetalhes(ag, emailPrest, agendamentos, salvarAgs);
+        var idx = agendamentos.findIndex(function (a) { return a.id === ag.id; });
+        if (idx < 0) return;
 
-        // Após o modal abrir, injeta o botão "Concluir Serviço" no rodapé
-        function injetarBtnConcluir() {
-            modalEl.removeEventListener('shown.bs.modal', injetarBtnConcluir);
-            var footer = modalEl.querySelector('.modal-footer');
-            if (!footer || footer.querySelector('#btn-concluir-servico')) return;
+        agendamentos[idx].status      = 'concluido';
+        agendamentos[idx].concluidoEm = new Date().toISOString();
+        salvarAgs();
 
-            var btnConcluir = document.createElement('button');
-            btnConcluir.type = 'button';
-            btnConcluir.id = 'btn-concluir-servico';
-            btnConcluir.className = 'btn btn-success';
-            btnConcluir.innerHTML = '<i class="bi bi-check-circle me-1"></i>Concluir Servi\u00e7o';
-            btnConcluir.style.cssText = 'font-weight:600;order:-1;';
-            footer.insertBefore(btnConcluir, footer.firstChild);
+        // Registra o recebimento (usa valor já salvo no agendamento, se houver)
+        registrarRecebimento(emailPrest, agendamentos[idx]);
 
-            btnConcluir.addEventListener('click', function () {
-                // Lê o valor do campo editável no modal (pode ter sido alterado pelo prestador)
-                var inputValor = document.getElementById('det-valor');
-                var valorFinal = inputValor ? (parseFloat(inputValor.value) || 0) : (ag.valor || 0);
-
-                var idx = agendamentos.findIndex(function (a) { return a.id === ag.id; });
-                if (idx < 0) return;
-                agendamentos[idx].valor = valorFinal;
-                agendamentos[idx].formaPagamento = (document.getElementById('det-pagamento') || {}).value || agendamentos[idx].formaPagamento || '';
-                agendamentos[idx].parcelas     = (document.getElementById('det-parcelas-qtd')   || {}).value || agendamentos[idx].parcelas   || '';
-                agendamentos[idx].valorParcela = (document.getElementById('det-parcelas-valor') || {}).value || agendamentos[idx].valorParcela || '';
-                agendamentos[idx].status = 'concluido';
-                agendamentos[idx].concluidoEm = new Date().toISOString();
-                salvarAgs();
-
-                // Registra o recebimento
-                registrarRecebimento(emailPrest, agendamentos[idx]);
-
-                // Notifica o cliente
-                if (ag.clienteEmail) {
-                    _atualizarStatusClienteAgendamento(ag.id, ag.clienteEmail, 'concluido');
-                    sgCriarNotificacao(ag.clienteEmail, 'conclusao', { servico: ag.servico });
-                }
-
-                bootstrap.Modal.getInstance(modalEl).hide();
-                exibirToast('Servi\u00e7o conclu\u00eddo! R$ ' + valorFinal.toFixed(2).replace('.', ',') + ' registrado nos recebimentos.');
-                if (callback) callback();
-            });
+        // Notifica o cliente — apenas informativo, sem necessidade de ação
+        if (ag.clienteEmail) {
+            _atualizarStatusClienteAgendamento(ag.id, ag.clienteEmail, 'concluido');
+            sgCriarNotificacao(ag.clienteEmail, 'conclusao', { servico: ag.servico });
         }
-        modalEl.addEventListener('shown.bs.modal', injetarBtnConcluir);
+
+        exibirToast('Servi\u00e7o conclu\u00eddo! Movido para o Hist\u00f3rico.');
+        if (callback) callback();
     }
 
     function _abrirModalCancelar(ag, agendamentos, salvarAgs, callback) {
@@ -1270,6 +1257,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var lembretes = ag.lembretes || [];
         var obs = ag.observacoes || '';
         var valor = ag.valor || 0;
+        var jurosPct  = (ag.jurosPct !== undefined && ag.jurosPct !== '') ? ag.jurosPct : '';
         var pagamento = ag.formaPagamento || '';
         var pagPref   = ag.formaPagamentoPreferida || '';
         // Pre-seleciona: usa o valor já salvo pelo prestador; se vazio, usa a preferência do cliente
@@ -1282,6 +1270,18 @@ document.addEventListener('DOMContentLoaded', function () {
               '<i class="bi bi-info-circle me-1"></i><strong>Preferência de pagamento do cliente:</strong> ' +
               _escaparHtml(pagPref) + '</div>'
             : '';
+
+        // ---- Dados de contato do CLIENTE (Sprint 1) ----
+        // Prioridade: campo salvo no booking (clienteTel / clienteEndereco).
+        // Fallback: perfil do cliente em usuariosCadastrados (cobre bookings antigos).
+        var cliTelefone = ag.clienteTel || '';
+        var cliEndereco = ag.clienteEndereco || '';
+        if ((!cliTelefone || !cliEndereco) && ag.clienteEmail) {
+            var _usuCli = obterUsuariosCadastrados()[ag.clienteEmail] || {};
+            var _perfilCli = _usuCli.perfil || {};
+            if (!cliTelefone) cliTelefone = _perfilCli.tel || '';
+            if (!cliEndereco) cliEndereco = _perfilCli.endereco || '';
+        }
 
         // Bloco de parcelamento (visível somente quando Cartão for selecionado)
         var parcelas   = ag.parcelas   || '';
@@ -1306,15 +1306,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         corpo.innerHTML =
             '<div class="agenda-detalhe-secao"><h6><i class="bi bi-person-circle me-1"></i>Dados do Cliente</h6>' +
-            '<div class="agenda-detalhe-grid"><div><strong>Nome</strong><span>' + (ag.cliente || '—') + '</span></div><div><strong>Telefone</strong><span>' + (ag.telefone || '—') + '</span></div></div></div>' +
+            '<div class="agenda-detalhe-grid"><div><strong>Nome</strong><span>' + (ag.cliente || '—') + '</span></div><div><strong>Telefone</strong><span>' + (cliTelefone || '—') + '</span></div></div></div>' +
             '<div class="agenda-detalhe-secao"><h6><i class="bi bi-calendar-event me-1"></i>Serviço Agendado</h6>' +
             '<div class="agenda-detalhe-grid">' +
             '<div><strong>Serviço</strong><span>' + (ag.servico || '—') + '</span></div>' +
             '<div><strong>Status</strong><span><span class="agenda-status-tag ' + ag.status + '">' + ag.status + '</span></span></div>' +
             '<div><strong>Data</strong><span>' + (ag.data || '—') + '</span></div>' +
             '<div><strong>Horário</strong><span>' + (ag.horario || '—') + '</span></div>' +
-            '<div style="grid-column:1/-1"><strong>Endereço</strong><span><i class="bi bi-geo-alt me-1"></i>' + (ag.endereco || '—') + '</span></div>' +
+            '<div style="grid-column:1/-1"><strong>Endereço</strong><span><i class="bi bi-geo-alt me-1"></i>' + (cliEndereco || '—') + '</span></div>' +
             '<div><strong>Valor (R$)</strong><span><input type="number" id="det-valor" class="form-control form-control-sm" value="' + valor + '" min="0" step="0.01" style="max-width:120px;"></span></div>' +
+            '<div><strong>Juros ao mês (%)</strong><span><input type="number" id="det-juros-pct" class="form-control form-control-sm" value="' + _escaparHtml(String(jurosPct)) + '" min="0" step="0.01" placeholder="ex: 2" style="max-width:100px;" title="Taxa de juros simples aplicada ao parcelamento"></span></div>' +
             '<div><strong>Forma de Pagamento</strong><span><select id="det-pagamento" class="form-select form-select-sm" style="max-width:150px;"><option value="">Selecione</option><option value="PIX"' + (pagSelecionado === 'PIX' ? ' selected' : '') + '>PIX</option><option value="Cartão"' + (pagSelecionado === 'Cartão' ? ' selected' : '') + '>Cartão</option><option value="Dinheiro"' + (pagSelecionado === 'Dinheiro' ? ' selected' : '') + '>Dinheiro</option></select></span></div>' +
             infoPrefHtml +
             parcelasHtml +
@@ -1347,6 +1348,31 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
+        // ---- Cálculo automático de parcela com juros simples (Sprint 2) ----
+        // Fórmula: J = V * i * n  |  M = V + J  |  P = M / n
+        // Dispara sempre que Valor, Juros % ou Qtd. Parcelas mudar.
+        function _calcularParcelaComJuros() {
+            var elValor = document.getElementById('det-valor');
+            var elJuros = document.getElementById('det-juros-pct');
+            var elQtd   = document.getElementById('det-parcelas-qtd');
+            var elParcV = document.getElementById('det-parcelas-valor');
+            if (!elValor || !elJuros || !elQtd || !elParcV) return;
+            var V = parseFloat(elValor.value) || 0;
+            var i = parseFloat(elJuros.value) || 0;
+            var n = parseInt(elQtd.value, 10) || 0;
+            if (V > 0 && n > 0) {
+                var J = V * (i / 100) * n;
+                var M = V + J;
+                elParcV.value = (M / n).toFixed(2);
+            }
+        }
+        ['det-valor', 'det-juros-pct', 'det-parcelas-qtd'].forEach(function (fId) {
+            var fEl = document.getElementById(fId);
+            if (fEl) fEl.addEventListener('input', _calcularParcelaComJuros);
+        });
+        // Calcula imediatamente se valores já estiverem preenchidos (reabertura do modal)
+        _calcularParcelaComJuros();
+
         // Lembretes: adicionar / remover
         corpo.querySelector('#btn-add-lembrete').addEventListener('click', function () {
             var lDiv = corpo.querySelector('#agenda-lembretes-lista');
@@ -1372,6 +1398,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var idx = agendamentos.findIndex(function (a) { return a.id === ag.id; });
             if (idx < 0) return;
             agendamentos[idx].valor = parseFloat((document.getElementById('det-valor') || {}).value) || 0;
+            agendamentos[idx].jurosPct     = parseFloat((document.getElementById('det-juros-pct')    || {}).value) || 0;
             agendamentos[idx].formaPagamento = (document.getElementById('det-pagamento') || {}).value || '';
             agendamentos[idx].parcelas     = (document.getElementById('det-parcelas-qtd')   || {}).value || '';
             agendamentos[idx].valorParcela = (document.getElementById('det-parcelas-valor') || {}).value || '';
@@ -2602,12 +2629,30 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (cliServBloco) cliServBloco.style.display = 'none';
                 var bpCli = document.getElementById('bloco-pagamento-cli');
                 if (bpCli) bpCli.style.display = 'none';
+                var btnVD0 = document.getElementById('btn-ver-disponibilidade');
+                if (btnVD0) btnVD0.style.display = 'none';
                 return;
             }
             var dados = obterStorePrestadores()[email] || {};
             slotAtual = proximoHorario(email);
             if (blocoHorario) blocoHorario.innerHTML = slotAtual ? '<strong>' + slotAtual.label + '</strong>' : '<em>Sem disponibilidade.</em>';
             if (blocoContato) blocoContato.innerHTML = '<i class="bi bi-telephone me-1"></i>' + (dados.tel || '—') + '<br><i class="bi bi-envelope me-1"></i>' + (dados.email || email);
+
+            // Sprint 4 — exibe e conecta o botão de calendário
+            var btnVerDisp = document.getElementById('btn-ver-disponibilidade');
+            if (btnVerDisp) {
+                btnVerDisp.style.display = '';
+                // Reatribui onclick a cada troca de prestador (evita capturar email antigo)
+                btnVerDisp.onclick = function () {
+                    _abrirModalAgenda(email, function (slot) {
+                        // Persiste a escolha do cliente e atualiza o display
+                        slotAtual = { data: slot.data, horario: slot.horario, label: slot.label };
+                        if (blocoHorario) blocoHorario.innerHTML =
+                            '<strong><i class="bi bi-check-circle-fill text-success me-1"></i>' +
+                            slotAtual.label + '</strong>';
+                    });
+                };
+            }
 
             // Subcategorias como checkboxes (prioridade) ou descrição como fallback
             var subcatBloco = document.getElementById('prest-subcategorias-bloco');
@@ -2718,13 +2763,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 var pagamentoPref = (document.getElementById('cli-forma-pagamento') || {}).value || '';
 
-                // Calcula próximo slot disponível (proposta inicial de horário)
-                var slots = _calcularSlotsDisponiveis(selectPrestador.value, 30);
+                // Sprint 4 — usa slot escolhido pelo cliente no calendário; senão calcula o primeiro disponível
                 var novoId = 'orc-cli-' + Date.now();
-                var dataSlot = slots.length > 0 ? slots[0].data : '';
-                var fimH = slots.length > 0 ? String(parseInt(slots[0].slots[0].split(':')[0]) + 1).padStart(2, '0') + ':00' : '';
-                var horarioSlot = slots.length > 0 ? (slots[0].slots[0] + ' - ' + fimH) : '';
-                var labelSlot = slots.length > 0 ? (slots[0].label + ' às ' + slots[0].slots[0]) : '—';
+                var dataSlot, horarioSlot, labelSlot;
+                if (slotAtual && slotAtual.data && slotAtual.horario) {
+                    dataSlot   = slotAtual.data;
+                    var _hFimCal = String(parseInt(slotAtual.horario.split(':')[0]) + 1).padStart(2, '0') + ':00';
+                    horarioSlot  = slotAtual.horario + ' - ' + _hFimCal;
+                    labelSlot    = slotAtual.label;
+                } else {
+                    var slots = _calcularSlotsDisponiveis(selectPrestador.value, 30);
+                    dataSlot   = slots.length > 0 ? slots[0].data : '';
+                    var fimH   = slots.length > 0 ? String(parseInt(slots[0].slots[0].split(':')[0]) + 1).padStart(2, '0') + ':00' : '';
+                    horarioSlot  = slots.length > 0 ? (slots[0].slots[0] + ' - ' + fimH) : '';
+                    labelSlot    = slots.length > 0 ? (slots[0].label + ' às ' + slots[0].slots[0]) : '—';
+                }
 
                 var ags = obterAgendamentosPrestador(selectPrestador.value);
                 var usuData = obterUsuariosCadastrados()[usu.email] || {};
@@ -2833,12 +2886,16 @@ document.addEventListener('DOMContentLoaded', function () {
         var ags     = obterAgendamentosPrestador(emailPrest);
         var ocupados = {};
         ags.forEach(function (a) {
-            if (a.status === 'cancelado') return;
+            // Sprint 1 — slots de orçamentos recusados pelo cliente também ficam livres
+            if (a.status === 'cancelado' || a.status === 'orcamento_recusado') return;
             var ini = (a.horario || '').split(' - ')[0];
             if (ini && a.data) ocupados[a.data + ' ' + ini] = true;
         });
 
         var agora = new Date();
+        // Sprint 4 — cliente não pode agendar com menos de 12 horas de antecedência.
+        // Se não houver slots ≥ 12h à frente, o loop naturalmente retorna o próximo dia válido.
+        var minima = new Date(agora.getTime() + 12 * 60 * 60 * 1000);
         var diasDisponiveis = [];
 
         for (var d = 0; d < maxDias; d++) {
@@ -2854,7 +2911,9 @@ document.addEventListener('DOMContentLoaded', function () {
             var slots = [];
 
             for (var h = hIni; h < hFim; h++) {
-                if (d === 0 && h <= agora.getHours()) continue;
+                // Bloqueia qualquer slot que esteja menos de 12 h no futuro
+                var slotDt = new Date(dataStr + 'T' + String(h).padStart(2, '0') + ':00:00');
+                if (slotDt.getTime() < minima.getTime()) continue;
                 var horS = String(h).padStart(2, '0') + ':00';
                 if (!ocupados[dataStr + ' ' + horS]) slots.push(horS);
             }
@@ -3382,17 +3441,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 var cardEl  = btn.closest('.notif-item-cli');
                 var notifId = cardEl ? cardEl.dataset.notifId : '';
 
+                // Sprint 3 — Aceitar e Agendar: confirma diretamente, sem etapa adicional do prestador
                 // Atualiza no storage do prestador
                 var agsPrest = obterAgendamentosPrestador(prestEmail);
                 var idxP = agsPrest.findIndex(function (a) { return a.id === agId; });
-                if (idxP >= 0) { agsPrest[idxP].status = 'orcamento_aceito'; salvarAgendamentosPrestador(prestEmail, agsPrest); }
+                if (idxP >= 0) { agsPrest[idxP].status = 'confirmado'; salvarAgendamentosPrestador(prestEmail, agsPrest); }
 
                 // Atualiza no storage do cliente
                 var usuCli = obterUsuarioLogado();
-                if (usuCli) _atualizarStatusClienteAgendamento(agId, usuCli.email, 'orcamento_aceito');
+                if (usuCli) _atualizarStatusClienteAgendamento(agId, usuCli.email, 'confirmado');
 
-                // Notifica o prestador
-                sgCriarNotificacao(prestEmail, 'orcamento_aceito', {
+                // Notifica o prestador que o agendamento foi confirmado pelo cliente
+                sgCriarNotificacao(prestEmail, 'confirmacao', {
                     agendamentoId: agId, servico: servico,
                     clienteNome: usuCli ? usuCli.nome : ''
                 });
@@ -3402,7 +3462,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // Remove o card do modal; mantém os demais abertos
                 _removerItemEVerificar(notifId, usuCli ? usuCli.email : '');
-                exibirToast('Orçamento aceito! Prestador: ' + prestNome + ' — Aguarde confirmação do agendamento.');
+                exibirToast('Agendamento confirmado! Seu serviço com ' + prestNome + ' está agendado.');
             });
         });
     }
