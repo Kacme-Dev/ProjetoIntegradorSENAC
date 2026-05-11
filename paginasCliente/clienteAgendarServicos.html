@@ -83,6 +83,47 @@
                 <option></option>
             </select>
 
+            <!-- Descrição dos serviços cadastrados pelo prestador no Hotsite -->
+            <div id="prest-descricao-bloco" style="display:none; margin-bottom:16px;">
+                <label class="agendar-label" style="margin-bottom:6px;">
+                    <i class="bi bi-info-circle me-1" style="color:#FFC300;"></i>Serviços oferecidos por este Prestador
+                </label>
+                <div id="prest-descricao-texto"
+                     style="background:#fffbe6; border-left:4px solid #FFC300; border-radius:0 8px 8px 0;
+                            padding:12px 16px; font-size:.88rem; white-space:pre-wrap; color:#4a3800;
+                            max-height:180px; overflow-y:auto; line-height:1.6;">
+                </div>
+            </div>
+
+            <!-- Subcategorias como checkboxes (preenchido via JS quando prestador tem subcategorias) -->
+            <div id="prest-subcategorias-bloco" style="display:none; margin-bottom:16px;">
+                <label class="agendar-label" style="margin-bottom:6px;">
+                    <i class="bi bi-list-check me-1" style="color:#FFC300;"></i>Selecione os Serviços Desejados
+                    <small class="text-muted fw-normal ms-1">(múltipla seleção)</small>
+                </label>
+                <div id="prest-subcategorias-lista"
+                     style="background:#fffbe6; border-left:4px solid #FFC300; border-radius:0 8px 8px 0;
+                            padding:12px 16px; font-size:.9rem; color:#4a3800; display:flex;
+                            flex-wrap:wrap; gap:8px;">
+                </div>
+            </div>
+
+            <!-- Caixa para o cliente descrever o serviço desejado -->
+            <div id="cli-servico-desejado-bloco" style="display:none; margin-bottom:16px;">
+                <label class="agendar-label" for="cli-servico-desejado">
+                    Informações Adicionais <span style="color:#dc3545;">*</span>
+                </label>
+                <textarea id="cli-servico-desejado"
+                          class="form-control"
+                          rows="4"
+                          maxlength="1000"
+                          placeholder="Descreva com detalhes o serviço que você precisa (ex.: troca de torneira, instalação elétrica, corte de cabelo...)."
+                          style="resize:vertical; font-size:.9rem;"></textarea>
+                <div class="d-flex justify-content-end mt-1">
+                    <small class="text-muted"><span id="cli-servico-contador">0</span> / 1000 caracteres</small>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="agendar-row" style="margin-top:16px;">
                     <div>
@@ -95,9 +136,25 @@
                     </div>
                 </div>
 
+                <!-- Opções de pagamento do prestador selecionado -->
+                <div id="bloco-pagamento-cli" style="display:none; padding:0 16px 12px;">
+                    <label class="form-label fw-bold" style="font-size:.88rem; margin-bottom:6px;">
+                        <i class="bi bi-credit-card me-1" style="color:#FFC300;"></i>Forma de Pagamento Preferida
+                    </label>
+                    <select id="cli-forma-pagamento" class="form-select form-select-sm" style="max-width:240px;">
+                        <option value="">-- Selecione --</option>
+                    </select>
+                    <div id="aviso-boleto" style="display:none; margin-top:8px; padding:8px 12px;
+                         background:#fff3cd; border-left:4px solid #ffc107;
+                         border-radius:0 6px 6px 0; font-size:.85rem; color:#856404;">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        <strong>Atenção:</strong> Poderá incorrer taxa de parcelamento para pagamento por boleto.
+                    </div>
+                </div>
+
                 <div class="agendar-acoes">
-                    <button class="cta" data-bs-toggle="modal" data-bs-target="#modalAgendaPrestador">
-                        <i class="bi bi-calendar3 me-1"></i> Solicitar Agendamento
+                    <button class="cta" id="btn-solicitar-orcamento">
+                        <i class="bi bi-file-earmark-text me-1"></i> Solicitar Orçamento
                     </button>
                     <a class="agendar-link" href="/paginasPrestador/prestadorHotsite.html">Ver Hotsite</a>
                 </div>

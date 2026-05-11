@@ -83,6 +83,12 @@ document.addEventListener('DOMContentLoaded', function () {
         lista.forEach(function (n) { n.lida = true; });
         sgSalvarNotificacoes(email, lista);
     }
+    function sgMarcarNotifLidaPorId(email, notifId) {
+        if (!email || !notifId) return;
+        var lista = sgObterNotificacoes(email);
+        lista.forEach(function (n) { if (n.id === notifId) n.lida = true; });
+        sgSalvarNotificacoes(email, lista);
+    }
 
     // =========================================================
     // AGENDAMENTOS — helpers compartilhados
@@ -536,6 +542,20 @@ document.addEventListener('DOMContentLoaded', function () {
         var horarioSpan = document.getElementById('prest-proximo-horario');
         if (horarioSpan) horarioSpan.textContent = proximo ? (_formatarDiaLabel(proximo.data) + ' às ' + (proximo.horario || '').split(' - ')[0]) : '—';
 
+        // Linha de tipo de serviço solicitado
+        var servicoLinha = document.getElementById('prest-proximo-servico-linha');
+        var servicoSpan  = document.getElementById('prest-proximo-servico');
+        if (servicoLinha && servicoSpan) {
+            var servStr = proximo ? (proximo.servico || '') : '';
+            var descStr = proximo ? (proximo.descricaoCliente || '') : '';
+            if (servStr || descStr) {
+                servicoSpan.textContent = servStr + (descStr ? ' — ' + descStr : '');
+                servicoLinha.style.display = '';
+            } else {
+                servicoLinha.style.display = 'none';
+            }
+        }
+
         // Linha de cliente
         var clienteLinha = document.getElementById('prest-proximo-cliente');
         var clienteNomeSpan = document.getElementById('prest-proximo-cliente-nome');
@@ -676,13 +696,22 @@ document.addEventListener('DOMContentLoaded', function () {
                     ? ag.data.split('-').reverse().join('/')
                     : '—';
 
+                // Data de conclusão legível
+                var concluidoLabel = '—';
+                if (ag.concluidoEm) {
+                    var dConc = new Date(ag.concluidoEm);
+                    concluidoLabel = String(dConc.getDate()).padStart(2, '0') + '/' +
+                        String(dConc.getMonth() + 1).padStart(2, '0') + '/' + dConc.getFullYear();
+                } else if (ag.data) {
+                    concluidoLabel = ag.data.split('-').reverse().join('/');
+                }
+
                 li.innerHTML =
                     '<span class="prest-info-label">' +
                         '<strong>Serviço:</strong> ' + _escaparHtml(ag.servico || '—') +
                         ' &nbsp;|&nbsp; <strong>Cliente:</strong> ' + _escaparHtml(ag.cliente || '—') +
-                        ' &nbsp;|&nbsp; <strong>Data:</strong> ' + dataLabel +
+                        ' &nbsp;|&nbsp; <strong>Concluído em:</strong> ' + concluidoLabel +
                     '</span>' +
-                    '<span class="prest-badge concluido">Concluído</span>' +
                     '<div class="prest-historico-acoes">' +
                         '<button type="button" class="btn btn-primary btn-prest-avaliar">Avaliar</button>' +
                         '<button type="button" class="btn btn-warning btn-prest-editar">Editar</button>' +
@@ -733,15 +762,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
         function renderBarra() {
             var notifs = sgObterNotificacoes(emailPrest).filter(function (n) { return !n.lida; });
-            var qtdAg = notifs.filter(function (n) { return n.tipo === 'agendamento'; }).length;
-            if (qtdAg === 0) { barraExistente.innerHTML = ''; return; }
-            barraExistente.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#fffbe6;border:1.5px solid #FFC300;border-radius:10px;"><i class="bi bi-bell-fill" style="color:#e6a800;font-size:1.2rem;"></i><strong style="color:#7a5800;">Novas notificações:</strong><button type="button" id="btn-notif-prest-ag" class="btn btn-warning btn-sm" style="font-size:.83rem;"><i class="bi bi-calendar-plus me-1"></i>' + qtdAg + ' nova(s) solicitação(ões) de agendamento</button></div>';
+            var qtdAg = notifs.filter(function (n) { return n.tipo === 'agendamento' || n.tipo === 'orcamento_solicitado'; }).length;
+            var qtdOrcAceito = notifs.filter(function (n) { return n.tipo === 'orcamento_aceito'; }).length;
+            if (qtdAg === 0 && qtdOrcAceito === 0) { barraExistente.innerHTML = ''; return; }
+            var html = '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#fffbe6;border:1.5px solid #FFC300;border-radius:10px;"><i class="bi bi-bell-fill" style="color:#e6a800;font-size:1.2rem;"></i><strong style="color:#7a5800;">Novas notificações:</strong>';
+            if (qtdAg > 0) html += '<button type="button" id="btn-notif-prest-ag" class="btn btn-warning btn-sm" style="font-size:.83rem;"><i class="bi bi-calendar-plus me-1"></i>' + qtdAg + ' nova(s) solicitação(ões)</button>';
+            if (qtdOrcAceito > 0) html += '<button type="button" id="btn-notif-prest-orc-aceito" class="btn btn-success btn-sm" style="font-size:.83rem;"><i class="bi bi-check-circle me-1"></i>' + qtdOrcAceito + ' orçamento(s) aceito(s)</button>';
+            html += '</div>';
+            barraExistente.innerHTML = html;
             var btnAg = document.getElementById('btn-notif-prest-ag');
-            if (btnAg) {
-                btnAg.addEventListener('click', function () {
-                    window.location.href = '/paginasPrestador/prestadorServicosAgendados.html?aba=pendentes';
-                });
-            }
+            if (btnAg) { btnAg.addEventListener('click', function () { window.location.href = '/paginasPrestador/prestadorServicosAgendados.html?aba=pendentes'; }); }
+            var btnOrcAc = document.getElementById('btn-notif-prest-orc-aceito');
+            if (btnOrcAc) { btnOrcAc.addEventListener('click', function () { window.location.href = '/paginasPrestador/prestadorServicosAgendados.html?aba=pendentes'; }); }
         }
         renderBarra();
         setInterval(renderBarra, 5000);
@@ -933,8 +965,8 @@ document.addEventListener('DOMContentLoaded', function () {
             var dt = new Date(ag.data + 'T' + (ag.horario || '08:00').split(' - ')[0]);
             return dt > agora;
         }
-        function isPendente(ag) { return ag.status === 'pendente'; }
-        function isHistorico(ag) { return ag.status === 'concluido' || ag.status === 'cancelado'; }
+        function isPendente(ag) { return ag.status === 'pendente' || ag.status === 'orcamento_pendente' || ag.status === 'orcamento_enviado' || ag.status === 'orcamento_aceito'; }
+        function isHistorico(ag) { return ag.status === 'concluido' || ag.status === 'cancelado' || ag.status === 'orcamento_recusado'; }
 
         function atualizarContadores() {
             var prox = agendamentos.filter(isProximo).length;
@@ -964,8 +996,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 li.className = 'agenda-prest-item';
                 li.dataset.agendamentoId = ag.id;
 
-                var statusTag = ag.status === 'confirmado' ? 'confirmado' : ag.status === 'pendente' ? 'pendente' : ag.status === 'cancelado' ? 'cancelado' : 'concluido';
-                var statusTexto = ag.status === 'confirmado' ? 'Confirmado' : ag.status === 'pendente' ? 'Pendente' : ag.status === 'cancelado' ? 'Cancelado' : 'Concluído';
+                var statusMap = {
+                    confirmado:         { tag: 'confirmado',  texto: 'Confirmado' },
+                    pendente:           { tag: 'pendente',    texto: 'Pendente' },
+                    cancelado:          { tag: 'cancelado',   texto: 'Cancelado' },
+                    concluido:          { tag: 'concluido',   texto: 'Concluído' },
+                    orcamento_pendente: { tag: 'pendente',    texto: 'Orçamento Solicitado' },
+                    orcamento_enviado:  { tag: 'pendente',    texto: 'Orçamento Enviado' },
+                    orcamento_aceito:   { tag: 'confirmado',  texto: 'Orçamento Aceito' },
+                    orcamento_recusado: { tag: 'cancelado',   texto: 'Orçamento Recusado' }
+                };
+                var sm = statusMap[ag.status] || { tag: ag.status, texto: ag.status };
+                var statusTag   = sm.tag;
+                var statusTexto = sm.texto;
                 var diaLabel = _formatarDiaLabel(ag.data);
                 var horario = ag.horario || '—';
 
@@ -976,13 +1019,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 // Botão Detalhes sempre presente
-                botoesHTML += '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
-                if (aba === 'pendentes') {
+                if (ag.status === 'orcamento_pendente') {
+                    botoesHTML += '<a href="#" class="agenda-btn" data-acao="detalhes" style="background:#FFC300;color:#000;border-color:#e6b000;font-weight:600;"><i class="bi bi-file-earmark-text me-1"></i>Enviar Orçamento</a>';
+                    botoesHTML += '<a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Rejeitar</a>';
+                } else if (ag.status === 'orcamento_enviado') {
+                    botoesHTML += '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
+                } else if (ag.status === 'orcamento_aceito') {
                     botoesHTML += '<a href="#" class="agenda-btn confirmar" data-acao="confirmar" style="background:#198754;color:#fff;"><i class="bi bi-check me-1"></i>Confirmar</a>';
+                    botoesHTML += '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
                     botoesHTML += '<a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a>';
-                }
-                if (aba === 'historico') {
-                    // Só detalhes
+                } else {
+                    botoesHTML += '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
+                    if (aba === 'pendentes') {
+                        botoesHTML += '<a href="#" class="agenda-btn confirmar" data-acao="confirmar" style="background:#198754;color:#fff;"><i class="bi bi-check me-1"></i>Confirmar</a>';
+                        botoesHTML += '<a href="#" class="agenda-btn cancelar" data-acao="cancelar"><i class="bi bi-x me-1"></i>Cancelar</a>';
+                    }
                 }
 
                 li.innerHTML = '<div><div class="agenda-slot-dia">' + diaLabel + '</div><div class="agenda-slot-tempo">' + horario + '</div></div><div><div class="agenda-cliente-nome">' + (ag.cliente || '—') + '</div><p class="agenda-cliente-servico">Serviço: ' + (ag.servico || '—') + '</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>' + (ag.endereco || '') + '</p></div><div class="agenda-status-area"><span class="agenda-status-tag ' + statusTag + '">' + statusTexto + '</span><div class="agenda-botoes">' + botoesHTML + '</div></div>';
@@ -1059,7 +1110,21 @@ document.addEventListener('DOMContentLoaded', function () {
         salvarAgs();
         if (ag.clienteEmail) {
             _atualizarStatusClienteAgendamento(ag.id, ag.clienteEmail, 'confirmado');
-            sgCriarNotificacao(ag.clienteEmail, 'confirmacao', { servico: ag.servico, prestadorNome: ag.prestador || '' });
+            sgCriarNotificacao(ag.clienteEmail, 'confirmacao', {
+                servico: ag.servico,
+                prestadorNome: ag.prestador || '',
+                valor: ag.valor || 0,
+                formaPagamento: ag.formaPagamento || '',
+                data: ag.data,
+                horario: ag.horario
+            });
+            // Marcar notificação de orcamento_aceito como lida para o prestador
+            var usPrest = obterUsuarioLogado();
+            if (usPrest) {
+                var notifsP = sgObterNotificacoes(usPrest.email);
+                notifsP.forEach(function (n) { if (n.tipo === 'orcamento_aceito' && (n.dados || {}).agendamentoId === ag.id) n.lida = true; });
+                sgSalvarNotificacoes(usPrest.email, notifsP);
+            }
         }
         exibirToast('Agendamento confirmado com sucesso!');
         if (callback) callback();
@@ -1119,6 +1184,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (idx < 0) return;
                 agendamentos[idx].valor = valorFinal;
                 agendamentos[idx].formaPagamento = (document.getElementById('det-pagamento') || {}).value || agendamentos[idx].formaPagamento || '';
+                agendamentos[idx].parcelas     = (document.getElementById('det-parcelas-qtd')   || {}).value || agendamentos[idx].parcelas   || '';
+                agendamentos[idx].valorParcela = (document.getElementById('det-parcelas-valor') || {}).value || agendamentos[idx].valorParcela || '';
                 agendamentos[idx].status = 'concluido';
                 agendamentos[idx].concluidoEm = new Date().toISOString();
                 salvarAgs();
@@ -1182,6 +1249,38 @@ document.addEventListener('DOMContentLoaded', function () {
         var obs = ag.observacoes || '';
         var valor = ag.valor || 0;
         var pagamento = ag.formaPagamento || '';
+        var pagPref   = ag.formaPagamentoPreferida || '';
+        // Pre-seleciona: usa o valor já salvo pelo prestador; se vazio, usa a preferência do cliente
+        var pagSelecionado = pagamento || pagPref;
+
+        // Linha informativa sobre a preferência do cliente
+        var infoPrefHtml = pagPref
+            ? '<div style="grid-column:1/-1;margin-top:-6px;margin-bottom:4px;font-size:.82rem;' +
+              'color:#0d3d78;background:#e8f4fd;border-left:3px solid #146ADB;padding:5px 10px;border-radius:0 6px 6px 0;">' +
+              '<i class="bi bi-info-circle me-1"></i><strong>Preferência de pagamento do cliente:</strong> ' +
+              _escaparHtml(pagPref) + '</div>'
+            : '';
+
+        // Bloco de parcelamento (visível somente quando Cartão for selecionado)
+        var parcelas   = ag.parcelas   || '';
+        var valorParc  = ag.valorParcela || '';
+        var parcelasHtml =
+            '<div id="det-parcelas-bloco" style="grid-column:1/-1;display:' + (pagSelecionado === 'Cartão' ? 'block' : 'none') + ';' +
+            'margin-top:8px;padding:10px 14px;background:#fff8e1;border-left:3px solid #FFC300;border-radius:0 8px 8px 0;">' +
+            '<p style="font-weight:700;font-size:.85rem;margin:0 0 8px;color:#6d4c00;">' +
+            '<i class="bi bi-credit-card me-1"></i>Parcelamento no Cartão</p>' +
+            '<div style="display:flex;flex-wrap:wrap;gap:12px;">' +
+            '<div><label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:3px;">Máx. de Parcelas</label>' +
+            '<input type="number" id="det-parcelas-qtd" class="form-control form-control-sm" min="1" max="24" step="1" ' +
+            'value="' + _escaparHtml(String(parcelas)) + '" placeholder="ex: 12" style="max-width:100px;"></div>' +
+            '<div><label style="font-size:.82rem;font-weight:600;display:block;margin-bottom:3px;">Valor de cada Parcela (R$)</label>' +
+            '<input type="number" id="det-parcelas-valor" class="form-control form-control-sm" min="0" step="0.01" ' +
+            'value="' + _escaparHtml(String(valorParc)) + '" placeholder="ex: 50,00" style="max-width:120px;"></div>' +
+            '</div>' +
+            '<p style="font-size:.78rem;color:#856404;margin:6px 0 0;">' +
+            '<i class="bi bi-exclamation-triangle me-1"></i>' +
+            'Esta informação será enviada ao cliente junto com o orçamento.</p>' +
+            '</div>';
 
         corpo.innerHTML =
             '<div class="agenda-detalhe-secao"><h6><i class="bi bi-person-circle me-1"></i>Dados do Cliente</h6>' +
@@ -1194,8 +1293,20 @@ document.addEventListener('DOMContentLoaded', function () {
             '<div><strong>Horário</strong><span>' + (ag.horario || '—') + '</span></div>' +
             '<div style="grid-column:1/-1"><strong>Endereço</strong><span><i class="bi bi-geo-alt me-1"></i>' + (ag.endereco || '—') + '</span></div>' +
             '<div><strong>Valor (R$)</strong><span><input type="number" id="det-valor" class="form-control form-control-sm" value="' + valor + '" min="0" step="0.01" style="max-width:120px;"></span></div>' +
-            '<div><strong>Forma de Pagamento</strong><span><select id="det-pagamento" class="form-select form-select-sm" style="max-width:150px;"><option value="">Selecione</option><option value="PIX"' + (pagamento === 'PIX' ? ' selected' : '') + '>PIX</option><option value="Cartão"' + (pagamento === 'Cartão' ? ' selected' : '') + '>Cartão</option><option value="Dinheiro"' + (pagamento === 'Dinheiro' ? ' selected' : '') + '>Dinheiro</option></select></span></div>' +
+            '<div><strong>Forma de Pagamento</strong><span><select id="det-pagamento" class="form-select form-select-sm" style="max-width:150px;"><option value="">Selecione</option><option value="PIX"' + (pagSelecionado === 'PIX' ? ' selected' : '') + '>PIX</option><option value="Cartão"' + (pagSelecionado === 'Cartão' ? ' selected' : '') + '>Cartão</option><option value="Dinheiro"' + (pagSelecionado === 'Dinheiro' ? ' selected' : '') + '>Dinheiro</option></select></span></div>' +
+            infoPrefHtml +
+            parcelasHtml +
             '</div></div>' +
+            (ag.descricaoCliente ? '<div class="agenda-detalhe-secao"><h6><i class="bi bi-chat-quote me-1"></i>Serviço Desejado pelo Cliente</h6><p style="white-space:pre-wrap;background:#f0f4ff;border-left:3px solid #146ADB;padding:10px 12px;border-radius:0 6px 6px 0;font-size:.88rem;margin:0;">' + _escaparHtml(ag.descricaoCliente) + '</p></div>' : '') +
+            (ag.subcategoriasCliente && ag.subcategoriasCliente.length > 0
+                ? '<div class="agenda-detalhe-secao"><h6><i class="bi bi-list-check me-1"></i>Serviços Selecionados pelo Cliente</h6>' +
+                  '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">' +
+                  ag.subcategoriasCliente.map(function (sc) {
+                      return '<span style="display:inline-block;background:#FFC300;color:#000;font-size:.82rem;font-weight:700;' +
+                          'padding:3px 12px;border-radius:20px;">' + _escaparHtml(sc) + '</span>';
+                  }).join('') +
+                  '</div></div>'
+                : '') +
             '<div class="agenda-detalhe-secao" id="secao-lembretes"><h6><i class="bi bi-bell me-1"></i>Lembretes <small class="text-muted fw-normal">(editável)</small></h6>' +
             '<div id="agenda-lembretes-lista">' + lembretes.map(function (l, i) {
                 return '<div class="agenda-lembrete-edit-row" style="display:flex;gap:6px;margin-bottom:6px;"><input type="text" class="form-control form-control-sm agenda-lembrete-input" value="' + _escaparHtml(l) + '" style="flex:1;"><button type="button" class="btn btn-sm btn-outline-danger agenda-lembrete-del" data-idx="' + i + '" title="Remover"><i class="bi bi-trash"></i></button></div>';
@@ -1204,6 +1315,15 @@ document.addEventListener('DOMContentLoaded', function () {
             '<div class="agenda-detalhe-secao"><h6><i class="bi bi-chat-left-text me-1"></i>Observações <small class="text-muted fw-normal">(editável)</small></h6>' +
             '<textarea id="agenda-obs-textarea" class="form-control form-control-sm" rows="3" style="resize:vertical;">' + _escaparHtml(obs) + '</textarea></div>' +
             '<div class="mt-3 text-end"><button type="button" class="btn btn-warning btn-sm" id="btn-salvar-detalhes"><i class="bi bi-floppy me-1"></i>Salvar Detalhes</button></div>';
+
+        // Listener: exibe bloco de parcelamento quando Cartão for selecionado
+        var detPagEl = document.getElementById('det-pagamento');
+        var detParcBloco = document.getElementById('det-parcelas-bloco');
+        if (detPagEl && detParcBloco) {
+            detPagEl.addEventListener('change', function () {
+                detParcBloco.style.display = detPagEl.value === 'Cartão' ? 'block' : 'none';
+            });
+        }
 
         // Lembretes: adicionar / remover
         corpo.querySelector('#btn-add-lembrete').addEventListener('click', function () {
@@ -1220,16 +1340,54 @@ document.addEventListener('DOMContentLoaded', function () {
             if (btnDel) btnDel.closest('.agenda-lembrete-edit-row').remove();
         });
 
-        // Salvar
+        // Salvar / Enviar Orçamento
+        var btnSalvarLabel = (ag.status === 'orcamento_pendente') ? 'Enviar Orçamento' : 'Salvar Detalhes';
+        var btnSalvarIcon  = (ag.status === 'orcamento_pendente') ? 'bi-send' : 'bi-floppy';
+        corpo.querySelector('#btn-salvar-detalhes').textContent = '';
+        corpo.querySelector('#btn-salvar-detalhes').innerHTML = '<i class="bi ' + btnSalvarIcon + ' me-1"></i>' + btnSalvarLabel;
+
         corpo.querySelector('#btn-salvar-detalhes').addEventListener('click', function () {
             var idx = agendamentos.findIndex(function (a) { return a.id === ag.id; });
             if (idx < 0) return;
             agendamentos[idx].valor = parseFloat((document.getElementById('det-valor') || {}).value) || 0;
             agendamentos[idx].formaPagamento = (document.getElementById('det-pagamento') || {}).value || '';
+            agendamentos[idx].parcelas     = (document.getElementById('det-parcelas-qtd')   || {}).value || '';
+            agendamentos[idx].valorParcela = (document.getElementById('det-parcelas-valor') || {}).value || '';
             agendamentos[idx].observacoes = (document.getElementById('agenda-obs-textarea') || {}).value || '';
             agendamentos[idx].lembretes = Array.from(corpo.querySelectorAll('.agenda-lembrete-input')).map(function (inp) { return inp.value.trim(); }).filter(Boolean);
-            salvarAgs();
-            exibirToast('Detalhes salvos!');
+
+            if (ag.status === 'orcamento_pendente') {
+                // Enviar orçamento ao cliente
+                agendamentos[idx].status = 'orcamento_enviado';
+                salvarAgs();
+                // Atualizar no storage do cliente
+                if (ag.clienteEmail) {
+                    _atualizarStatusClienteAgendamento(ag.id, ag.clienteEmail, 'orcamento_enviado');
+                    var usuPrest = obterUsuarioLogado();
+                    var nomePrestador = usuPrest ? (usuPrest.nome || emailPrest) : emailPrest;
+                    var storeP = obterStorePrestadores();
+                    if (storeP[emailPrest]) nomePrestador = storeP[emailPrest].nome || nomePrestador;
+                    sgCriarNotificacao(ag.clienteEmail, 'orcamento_enviado', {
+                        agendamentoId: ag.id,
+                        servico: ag.servico,
+                        prestadorNome: nomePrestador,
+                        prestadorEmail: emailPrest,
+                        valor: agendamentos[idx].valor,
+                        formaPagamento: agendamentos[idx].formaPagamento,
+                        parcelas: agendamentos[idx].parcelas || '',
+                        valorParcela: agendamentos[idx].valorParcela || '',
+                        data: ag.data,
+                        horario: ag.horario,
+                        descricaoCliente: ag.descricaoCliente || '',
+                        subcategoriasCliente: ag.subcategoriasCliente || []
+                    });
+                }
+                bootstrap.Modal.getInstance(modalEl).hide();
+                exibirToast('Orçamento enviado ao cliente!');
+            } else {
+                salvarAgs();
+                exibirToast('Detalhes salvos!');
+            }
         });
 
         bootstrap.Modal.getOrCreateInstance(modalEl).show();
@@ -1425,6 +1583,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var inputNome = document.getElementById('adm-nome');
         var inputCategoria = document.getElementById('adm-categoria');
+        var inputSubcatInput = document.getElementById('adm-subcategorias-input');
         var inputCidade = document.getElementById('adm-cidade');
         var inputDescricao = document.getElementById('adm-descricao');
         var inputEndereco = document.getElementById('adm-endereco');
@@ -1451,6 +1610,85 @@ document.addEventListener('DOMContentLoaded', function () {
         if (inputDescricao) inputDescricao.value = dadosSalvos.descricao || '';
         if (inputEndereco) inputEndereco.value = dadosSalvos.endereco || '';
         if (inputTel) inputTel.value = dadosSalvos.tel || '';
+
+        // Injetar bloco de subcategorias abaixo do select de categoria (se ainda não existir)
+        if (inputCategoria && !document.getElementById('adm-subcategorias-grupo')) {
+            var subcatGrupo = document.createElement('div');
+            subcatGrupo.id = 'adm-subcategorias-grupo';
+            subcatGrupo.className = 'hotsiteadm-grupo';
+            subcatGrupo.innerHTML =
+                '<label for="adm-subcategorias-input">Sub-categorias de Serviço ' +
+                '<small style="color:var(--texto-muted);font-weight:400;">(opcional)</small></label>' +
+                '<div style="display:flex;gap:6px;">' +
+                '<input class="hotsiteadm-input" type="text" id="adm-subcategorias-input" ' +
+                'placeholder="Ex.: Troca de torneira, Instalação elétrica…" style="flex:1;margin-bottom:0;">' +
+                '<button type="button" id="btn-add-subcategoria" class="btn btn-warning btn-sm" ' +
+                'style="white-space:nowrap;"><i class="bi bi-plus-circle me-1"></i>Adicionar</button>' +
+                '</div>' +
+                '<small style="color:var(--texto-muted);font-size:.78rem;display:block;margin-top:4px;">' +
+                'Pressione <kbd>Enter</kbd> ou clique em Adicionar. ' +
+                'Serão exibidas como opções de seleção para o cliente.</small>' +
+                '<div id="adm-subcategorias-lista" ' +
+                'style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;min-height:28px;"></div>';
+            inputCategoria.closest('.hotsiteadm-grupo').insertAdjacentElement('afterend', subcatGrupo);
+            inputSubcatInput = document.getElementById('adm-subcategorias-input');
+        }
+
+        // Subcategorias
+        var subcategoriasDados = (dadosSalvos.subcategorias && Array.isArray(dadosSalvos.subcategorias))
+            ? dadosSalvos.subcategorias.slice() : [];
+
+        function _renderSubcategorias() {
+            var listaEl = document.getElementById('adm-subcategorias-lista');
+            if (!listaEl) return;
+            listaEl.innerHTML = '';
+            subcategoriasDados.forEach(function (sc, idx) {
+                var chip = document.createElement('span');
+                chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:#FFC300;color:#000;' +
+                    'font-size:.82rem;font-weight:600;padding:3px 10px 3px 12px;border-radius:20px;cursor:default;';
+                chip.innerHTML = _escaparHtml(sc) +
+                    '<button type="button" data-idx="' + idx + '" style="background:none;border:none;padding:0;' +
+                    'cursor:pointer;color:#000;font-size:1rem;line-height:1;margin-left:2px;" title="Remover">&times;</button>';
+                chip.querySelector('button').addEventListener('click', function () {
+                    subcategoriasDados.splice(parseInt(this.dataset.idx), 1);
+                    _renderSubcategorias();
+                });
+                listaEl.appendChild(chip);
+            });
+            if (subcategoriasDados.length === 0) {
+                listaEl.innerHTML = '<span style="color:#6c757d;font-size:.82rem;font-style:italic;">' +
+                    'Nenhuma subcategoria cadastrada.</span>';
+            }
+        }
+        _renderSubcategorias();
+
+        if (inputSubcatInput) {
+            // Adiciona ao pressionar Enter ou vírgula
+            inputSubcatInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    var val = inputSubcatInput.value.replace(/,/g, '').trim();
+                    if (val && !subcategoriasDados.includes(val)) {
+                        subcategoriasDados.push(val);
+                        _renderSubcategorias();
+                    }
+                    inputSubcatInput.value = '';
+                }
+            });
+            // Botão de adicionar ao lado do input
+            var btnAddSub = document.getElementById('btn-add-subcategoria');
+            if (btnAddSub) {
+                btnAddSub.addEventListener('click', function () {
+                    var val = inputSubcatInput.value.replace(/,/g, '').trim();
+                    if (val && !subcategoriasDados.includes(val)) {
+                        subcategoriasDados.push(val);
+                        _renderSubcategorias();
+                    }
+                    inputSubcatInput.value = '';
+                    inputSubcatInput.focus();
+                });
+            }
+        }
 
         // Avatar
         function aplicarAvatar(src) {
@@ -1658,6 +1896,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     nome: inputNome ? inputNome.value : '', email: emailLogado,
                     cnpj: inputCnpj ? inputCnpj.value : '',
                     categoria: inputCategoria ? inputCategoria.value : '',
+                    subcategorias: subcategoriasDados.slice(),
                     cidade: inputCidade ? inputCidade.value : '',
                     descricao: inputDescricao ? inputDescricao.value : '',
                     endereco: inputEndereco ? inputEndereco.value : '',
@@ -1681,6 +1920,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (inputDescricao) inputDescricao.value = '';
                 if (inputEndereco) inputEndereco.value = '';
                 if (inputTel) inputTel.value = '';
+                subcategoriasDados.length = 0;
+                _renderSubcategorias();
                 aplicarAvatar(null);
                 atualizarPreview();
             });
@@ -2324,38 +2565,190 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         function atualizarInfoPrestador(email) {
             slotAtual = null;
-            if (!email) { if (blocoHorario) blocoHorario.innerHTML = ''; if (blocoContato) blocoContato.innerHTML = ''; return; }
+            var descBloco   = document.getElementById('prest-descricao-bloco');
+            var descTexto   = document.getElementById('prest-descricao-texto');
+            var cliServBloco = document.getElementById('cli-servico-desejado-bloco');
+            var cliServInput = document.getElementById('cli-servico-desejado');
+            var cliServCont  = document.getElementById('cli-servico-contador');
+
+            if (!email) {
+                if (blocoHorario) blocoHorario.innerHTML = '';
+                if (blocoContato) blocoContato.innerHTML = '';
+                if (descBloco) descBloco.style.display = 'none';
+                var subcatBlocoEl = document.getElementById('prest-subcategorias-bloco');
+                if (subcatBlocoEl) subcatBlocoEl.style.display = 'none';
+                if (cliServBloco) cliServBloco.style.display = 'none';
+                var bpCli = document.getElementById('bloco-pagamento-cli');
+                if (bpCli) bpCli.style.display = 'none';
+                return;
+            }
             var dados = obterStorePrestadores()[email] || {};
             slotAtual = proximoHorario(email);
             if (blocoHorario) blocoHorario.innerHTML = slotAtual ? '<strong>' + slotAtual.label + '</strong>' : '<em>Sem disponibilidade.</em>';
             if (blocoContato) blocoContato.innerHTML = '<i class="bi bi-telephone me-1"></i>' + (dados.tel || '—') + '<br><i class="bi bi-envelope me-1"></i>' + (dados.email || email);
+
+            // Subcategorias como checkboxes (prioridade) ou descrição como fallback
+            var subcatBloco = document.getElementById('prest-subcategorias-bloco');
+            var subcatLista = document.getElementById('prest-subcategorias-lista');
+            var subcats = (dados.subcategorias && dados.subcategorias.length > 0) ? dados.subcategorias : [];
+            if (subcats.length > 0 && subcatBloco && subcatLista) {
+                subcatLista.innerHTML = '';
+                subcats.forEach(function (sc, idx) {
+                    var cbId = 'subcat-cb-' + idx;
+                    var lbl = document.createElement('label');
+                    lbl.htmlFor = cbId;
+                    lbl.style.cssText = 'display:inline-flex;align-items:center;gap:6px;cursor:pointer;' +
+                        'background:#fff;border:1.5px solid #FFC300;border-radius:20px;padding:4px 14px;' +
+                        'font-size:.87rem;font-weight:500;transition:background .15s,color .15s;user-select:none;';
+                    var cb = document.createElement('input');
+                    cb.type = 'checkbox'; cb.id = cbId; cb.value = sc;
+                    cb.className = 'prest-subcat-cb'; cb.style.accentColor = '#FFC300';
+                    cb.addEventListener('change', function () {
+                        lbl.style.background = cb.checked ? '#FFC300' : '#fff';
+                        lbl.style.color = cb.checked ? '#000' : '';
+                        lbl.style.fontWeight = cb.checked ? '700' : '500';
+                    });
+                    lbl.appendChild(cb);
+                    lbl.appendChild(document.createTextNode(sc));
+                    subcatLista.appendChild(lbl);
+                });
+                subcatBloco.style.display = '';
+                if (descBloco) descBloco.style.display = 'none';
+            } else {
+                if (subcatBloco) subcatBloco.style.display = 'none';
+                // Exibe a descrição de serviços do prestador (fallback)
+                if (descBloco && descTexto) {
+                    var desc = (dados.descricao || '').trim();
+                    if (desc) { descTexto.textContent = desc; descBloco.style.display = ''; }
+                    else descBloco.style.display = 'none';
+                }
+            }
+
+            // Exibe a caixa para o cliente descrever o serviço desejado
+            if (cliServBloco) {
+                cliServBloco.style.display = '';
+                if (cliServInput) cliServInput.value = '';
+                if (cliServCont) cliServCont.textContent = '0';
+            }
+            // Contador de caracteres
+            if (cliServInput && cliServCont) {
+                cliServInput.oninput = function () {
+                    cliServCont.textContent = cliServInput.value.length;
+                };
+            }
+
+            // Exibe as opções de pagamento do prestador
+            var blocoPagemento = document.getElementById('bloco-pagamento-cli');
+            var selectPagemento = document.getElementById('cli-forma-pagamento');
+            if (blocoPagemento && selectPagemento) {
+                var pagOpcoes = (dados.formasPagamento && dados.formasPagamento.length > 0)
+                    ? dados.formasPagamento
+                    : ['PIX', 'Cartão', 'Dinheiro'];
+                selectPagemento.innerHTML = '<option value="">-- Selecione --</option>';
+                pagOpcoes.forEach(function (op) {
+                    var opt = document.createElement('option');
+                    opt.value = op; opt.textContent = op;
+                    selectPagemento.appendChild(opt);
+                });
+                blocoPagemento.style.display = '';
+                selectPagemento.onchange = function () {
+                    var aviso = document.getElementById('aviso-boleto');
+                    if (aviso) aviso.style.display = selectPagemento.value === 'Boleto' ? '' : 'none';
+                };
+            }
         }
 
         selectTipo.addEventListener('change', function () { preencherPrestadores(selectTipo.value); atualizarInfoPrestador(''); });
         selectPrestador.addEventListener('change', function () { atualizarInfoPrestador(selectPrestador.value); });
 
+        // Pré-seleciona tipo e prestador vindos da URL (ex.: quando cliente vem do hotsite)
+        var urlParamsAg = new URLSearchParams(window.location.search);
+        var tipoUrl  = urlParamsAg.get('tipo')      || '';
+        var prestUrl = urlParamsAg.get('prestador') || '';
+        if (tipoUrl || prestUrl) {
+            preencherTipos();
+            if (tipoUrl) {
+                selectTipo.value = tipoUrl;
+                preencherPrestadores(tipoUrl);
+                if (prestUrl) {
+                    selectPrestador.value = prestUrl;
+                    atualizarInfoPrestador(prestUrl);
+                }
+            }
+        } else {
+            preencherTipos();
+        }
+
+        var btnAgendar = mainAgendar.querySelector('#btn-solicitar-orcamento, .cta');
         if (btnAgendar) {
-            btnAgendar.addEventListener('click', function () {
+            btnAgendar.addEventListener('click', function (e) {
+                e.preventDefault();
                 if (!estaLogado) { _modalLoginNecessario(); return; }
                 if (!selectPrestador.value) { alert('Selecione um prestador.'); return; }
-                _abrirModalAgenda(selectPrestador.value, function (slotAtual) {
-                    var ags = obterAgendamentosPrestador(selectPrestador.value);
-                    var ocupado = ags.some(function (a) { return a.status !== 'cancelado' && a.data === slotAtual.data && (a.horario || '').split(' - ')[0] === slotAtual.horario; });
-                    if (ocupado) { alert('Horário já ocupado. Atualizando disponibilidade...'); atualizarInfoPrestador(selectPrestador.value); return; }
-                    var novoId = 'ag-cli-' + Date.now();
-                    var fimH = String(parseInt(slotAtual.horario.split(':')[0]) + 1).padStart(2, '0') + ':00';
-                    var usuData = obterUsuariosCadastrados()[usu.email] || {};
-                    var perfil = usuData.perfil || {};
-                    ags.push({ id: novoId, status: 'pendente', data: slotAtual.data, horario: slotAtual.horario + ' - ' + fimH, cliente: usu.nome, clienteEmail: usu.email, clienteTel: perfil.tel || '', clienteEndereco: perfil.endereco || '', servico: selectTipo.value || 'Serviço', observacoes: '', lembretes: [], valor: 0, formaPagamento: '' });
-                    salvarAgendamentosPrestador(selectPrestador.value, ags);
-                    var cliAgs = DB.get('clienteAgendamentos_' + usu.email) || [];
-                    var store = obterStorePrestadores(); var nomePrest = (store[selectPrestador.value] || {}).nome || selectPrestador.value;
-                    cliAgs.push({ id: novoId, emailPrestador: selectPrestador.value, nomePrestador: nomePrest, servico: selectTipo.value, data: slotAtual.data, horario: slotAtual.horario + ' - ' + fimH, status: 'pendente', criadoEm: new Date().toISOString() });
-                    DB.set('clienteAgendamentos_' + usu.email, cliAgs);
-                    sgCriarNotificacao(selectPrestador.value, 'agendamento', { agendamentoId: novoId, clienteNome: usu.nome, clienteEmail: usu.email, servico: selectTipo.value, data: slotAtual.data, label: slotAtual.label });
-                    alert('Agendamento solicitado!\nPrestador: ' + nomePrest + '\nHorário: ' + slotAtual.label + '\n\nAguarde confirmação.');
-                    atualizarInfoPrestador(selectPrestador.value);
+                var cliServInputV = document.getElementById('cli-servico-desejado');
+                var descricaoCliente = cliServInputV ? (cliServInputV.value || '').trim() : '';
+                if (!descricaoCliente) { alert('Preencha o campo "Informações Adicionais" antes de solicitar o orçamento.'); return; }
+
+                // Coleta subcategorias selecionadas pelo cliente
+                var subcatsSelecionadas = Array.from(
+                    mainAgendar.querySelectorAll('.prest-subcat-cb:checked')
+                ).map(function (cb) { return cb.value; });
+
+                var pagamentoPref = (document.getElementById('cli-forma-pagamento') || {}).value || '';
+
+                // Calcula próximo slot disponível (proposta inicial de horário)
+                var slots = _calcularSlotsDisponiveis(selectPrestador.value, 30);
+                var novoId = 'orc-cli-' + Date.now();
+                var dataSlot = slots.length > 0 ? slots[0].data : '';
+                var fimH = slots.length > 0 ? String(parseInt(slots[0].slots[0].split(':')[0]) + 1).padStart(2, '0') + ':00' : '';
+                var horarioSlot = slots.length > 0 ? (slots[0].slots[0] + ' - ' + fimH) : '';
+                var labelSlot = slots.length > 0 ? (slots[0].label + ' às ' + slots[0].slots[0]) : '—';
+
+                var ags = obterAgendamentosPrestador(selectPrestador.value);
+                var usuData = obterUsuariosCadastrados()[usu.email] || {};
+                var perfil = usuData.perfil || {};
+                ags.push({
+                    id: novoId, status: 'orcamento_pendente',
+                    data: dataSlot, horario: horarioSlot,
+                    cliente: usu.nome, clienteEmail: usu.email,
+                    clienteTel: perfil.tel || '', clienteEndereco: perfil.endereco || '',
+                    servico: selectTipo.value || 'Serviço',
+                    descricaoCliente: descricaoCliente,
+                    subcategoriasCliente: subcatsSelecionadas,
+                    formaPagamentoPreferida: pagamentoPref,
+                    observacoes: '', lembretes: [], valor: 0, formaPagamento: ''
                 });
+                salvarAgendamentosPrestador(selectPrestador.value, ags);
+
+                var cliAgs = DB.get('clienteAgendamentos_' + usu.email) || [];
+                var storeV = obterStorePrestadores();
+                var nomePrest = (storeV[selectPrestador.value] || {}).nome || selectPrestador.value;
+                cliAgs.push({
+                    id: novoId, emailPrestador: selectPrestador.value, nomePrestador: nomePrest,
+                    servico: selectTipo.value, descricaoCliente: descricaoCliente,
+                    subcategoriasCliente: subcatsSelecionadas,
+                    formaPagamentoPreferida: pagamentoPref, data: dataSlot, horario: horarioSlot,
+                    status: 'orcamento_pendente', criadoEm: new Date().toISOString()
+                });
+                DB.set('clienteAgendamentos_' + usu.email, cliAgs);
+
+                sgCriarNotificacao(selectPrestador.value, 'orcamento_solicitado', {
+                    agendamentoId: novoId, clienteNome: usu.nome, clienteEmail: usu.email,
+                    servico: selectTipo.value, descricaoCliente: descricaoCliente,
+                    subcategoriasCliente: subcatsSelecionadas, label: labelSlot
+                });
+
+                alert('Solicitação de orçamento enviada!\nPrestador: ' + nomePrest + '\n\nAguarde o retorno com o orçamento.');
+                // Resetar formulário
+                if (cliServInputV) cliServInputV.value = '';
+                var cnt = document.getElementById('cli-servico-contador'); if (cnt) cnt.textContent = '0';
+                var avBol = document.getElementById('aviso-boleto'); if (avBol) avBol.style.display = 'none';
+                mainAgendar.querySelectorAll('.prest-subcat-cb:checked').forEach(function (cb) {
+                    cb.checked = false;
+                    var lbl = cb.closest('label');
+                    if (lbl) { lbl.style.background = '#fff'; lbl.style.color = ''; lbl.style.fontWeight = '500'; }
+                });
+                atualizarInfoPrestador(selectPrestador.value);
             });
         }
 
@@ -2368,22 +2761,15 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        preencherTipos();
-        var params = new URLSearchParams(window.location.search);
-        var prestParam = params.get('prestador');
-        if (prestParam) {
-            var dadosPre = obterStorePrestadores()[prestParam];
-            if (dadosPre && dadosPre.categoria) { selectTipo.value = dadosPre.categoria; preencherPrestadores(dadosPre.categoria); selectPrestador.value = prestParam; atualizarInfoPrestador(prestParam); }
-        }
     }
 
     function _semearPrestadoresDemo() {
         var store = obterStorePrestadores();
         if (Object.keys(store).length > 0) return;
         var demos = [
-            { email: 'prestador@servgo.com', nome: 'Prestador Demo', categoria: 'Manutenção Predial', cidade: 'Presidente Prudente, SP', tel: '(18) 99123-4567', descricao: 'Especializado em montagem de móveis, reparos elétricos e hidráulicos.', cnpj: '', endereco: 'Rua das Flores, 100 - Centro', foto: '' },
-            { email: 'saude@servgo.com', nome: 'Dra. Ana Lima', categoria: 'Saúde', cidade: 'Presidente Prudente, SP', tel: '(18) 99234-5678', descricao: 'Clínica geral e nutrição.', cnpj: '', endereco: 'Av. Manoel Goulart, 200', foto: '' },
-            { email: 'beleza@servgo.com', nome: 'Studio Beleza & Cia', categoria: 'Beleza', cidade: 'Presidente Prudente, SP', tel: '(18) 98765-4321', descricao: 'Salão completo.', cnpj: '', endereco: 'Rua Coronel José Soares Marcondes, 45', foto: '' }
+            { email: 'prestador@servgo.com', nome: 'Prestador Demo', categoria: 'Manutenção Predial', cidade: 'Presidente Prudente, SP', tel: '(18) 99123-4567', descricao: 'Especializado em montagem de móveis, reparos elétricos e hidráulicos.', cnpj: '', endereco: 'Rua das Flores, 100 - Centro', foto: '', formasPagamento: ['PIX', 'Cartão', 'Dinheiro'] },
+            { email: 'saude@servgo.com', nome: 'Dra. Ana Lima', categoria: 'Saúde', cidade: 'Presidente Prudente, SP', tel: '(18) 99234-5678', descricao: 'Clínica geral e nutrição.', cnpj: '', endereco: 'Av. Manoel Goulart, 200', foto: '', formasPagamento: ['PIX', 'Cartão', 'Boleto'] },
+            { email: 'beleza@servgo.com', nome: 'Studio Beleza & Cia', categoria: 'Beleza', cidade: 'Presidente Prudente, SP', tel: '(18) 98765-4321', descricao: 'Salão completo.', cnpj: '', endereco: 'Rua Coronel José Soares Marcondes, 45', foto: '', formasPagamento: ['PIX', 'Dinheiro'] }
         ];
         var usuarios = obterUsuariosCadastrados();
         demos.forEach(function (d) {
@@ -2664,31 +3050,20 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
 
-        // Botão Agendar Serviço
+        // Botão Agendar Serviço — redireciona para clienteAgendarServicos com dados pré-selecionados
         var btnAgendar = document.querySelector('.cta-agendar');
         if (btnAgendar) {
             btnAgendar.addEventListener('click', function (e) {
                 e.preventDefault();
                 if (!estaLogado) { _modalLoginHotsite(); return; }
-                var usuLogado = obterUsuarioLogado();
-                _abrirModalAgenda(emailPrest, function (slotAtual) {
-                    if (!usuLogado) return;
-                    var ags = obterAgendamentosPrestador(emailPrest);
-                    var ocupado = ags.some(function (a) { return a.status !== 'cancelado' && a.data === slotAtual.data && (a.horario || '').split(' - ')[0] === slotAtual.horario; });
-                    if (ocupado) { alert('Horário já ocupado. Tente outro horário.'); return; }
-                    var novoId = 'ag-cli-' + Date.now();
-                    var fimH = String(parseInt(slotAtual.horario.split(':')[0]) + 1).padStart(2, '0') + ':00';
-                    var usuData = obterUsuariosCadastrados()[usuLogado.email] || {};
-                    var perfil = usuData.perfil || {};
-                    ags.push({ id: novoId, status: 'pendente', data: slotAtual.data, horario: slotAtual.horario + ' - ' + fimH, cliente: usuLogado.nome, clienteEmail: usuLogado.email, clienteTel: perfil.tel || '', clienteEndereco: perfil.endereco || '', servico: dados ? (dados.categoria || 'Serviço') : 'Serviço', observacoes: '', lembretes: [], valor: 0, formaPagamento: '' });
-                    salvarAgendamentosPrestador(emailPrest, ags);
-                    var cliAgs = DB.get('clienteAgendamentos_' + usuLogado.email) || [];
-                    var nomePrest = dados ? (dados.nome || emailPrest) : emailPrest;
-                    cliAgs.push({ id: novoId, emailPrestador: emailPrest, nomePrestador: nomePrest, servico: dados ? (dados.categoria || 'Serviço') : 'Serviço', data: slotAtual.data, horario: slotAtual.horario + ' - ' + fimH, status: 'pendente', criadoEm: new Date().toISOString() });
-                    DB.set('clienteAgendamentos_' + usuLogado.email, cliAgs);
-                    sgCriarNotificacao(emailPrest, 'agendamento', { agendamentoId: novoId, clienteNome: usuLogado.nome, clienteEmail: usuLogado.email, servico: dados ? dados.categoria : 'Serviço', data: slotAtual.data, label: slotAtual.label });
-                    alert('Agendamento solicitado!\nPrestador: ' + nomePrest + '\nHorário: ' + slotAtual.label + '\n\nAguarde confirmação.');
-                });
+                // Monta URL com tipo e email do prestador (se disponíveis a partir dos params da página)
+                var tipoParam  = dados ? (dados.categoria || '') : '';
+                var prestParam = emailPrest || '';
+                var baseUrl = '/paginasCliente/clienteAgendarServicos.html';
+                var query   = [];
+                if (tipoParam)  query.push('tipo='  + encodeURIComponent(tipoParam));
+                if (prestParam) query.push('prestador=' + encodeURIComponent(prestParam));
+                window.location.href = baseUrl + (query.length ? '?' + query.join('&') : '');
             });
         }
     }
@@ -2717,9 +3092,9 @@ document.addEventListener('DOMContentLoaded', function () {
         var notifs = todas.filter(function (n) { return !n.lida; });
         if (notifs.length === 0) return;
 
-        // Notificações que são retorno do prestador (confirmação / cancelamento / conclusão)
+        // Notificações que são retorno do prestador (confirmação / cancelamento / conclusão / orçamento)
         var notifsRetorno = notifs.filter(function (n) {
-            return n.tipo === 'confirmacao' || n.tipo === 'cancelamento' || n.tipo === 'conclusao';
+            return n.tipo === 'confirmacao' || n.tipo === 'cancelamento' || n.tipo === 'conclusao' || n.tipo === 'orcamento_enviado';
         });
 
         var barra = document.createElement('div');
@@ -2772,21 +3147,24 @@ document.addEventListener('DOMContentLoaded', function () {
         var cliAgs = DB.get('clienteAgendamentos_' + emailCli) || [];
 
         function _icone(tipo) {
-            if (tipo === 'confirmacao') return '<i class="bi bi-check-circle-fill me-2" style="color:#198754;font-size:1rem;"></i>';
-            if (tipo === 'cancelamento') return '<i class="bi bi-x-circle-fill me-2" style="color:#dc3545;font-size:1rem;"></i>';
-            if (tipo === 'conclusao')   return '<i class="bi bi-star-fill me-2" style="color:#FFC300;font-size:1rem;"></i>';
+            if (tipo === 'confirmacao')     return '<i class="bi bi-check-circle-fill me-2" style="color:#198754;font-size:1rem;"></i>';
+            if (tipo === 'cancelamento')    return '<i class="bi bi-x-circle-fill me-2" style="color:#dc3545;font-size:1rem;"></i>';
+            if (tipo === 'conclusao')       return '<i class="bi bi-star-fill me-2" style="color:#FFC300;font-size:1rem;"></i>';
+            if (tipo === 'orcamento_enviado') return '<i class="bi bi-file-earmark-text me-2" style="color:#146ADB;font-size:1rem;"></i>';
             return '<i class="bi bi-bell-fill me-2" style="color:#146ADB;font-size:1rem;"></i>';
         }
         function _titulo(tipo) {
-            if (tipo === 'confirmacao') return 'Serviço Confirmado!';
-            if (tipo === 'cancelamento') return 'Serviço Cancelado';
-            if (tipo === 'conclusao')   return 'Serviço Concluído';
+            if (tipo === 'confirmacao')     return 'Serviço Confirmado!';
+            if (tipo === 'cancelamento')    return 'Serviço Cancelado';
+            if (tipo === 'conclusao')       return 'Serviço Concluído';
+            if (tipo === 'orcamento_enviado') return 'Orçamento Recebido do Prestador';
             return 'Notificação';
         }
         function _borda(tipo) {
-            if (tipo === 'confirmacao') return '#198754';
-            if (tipo === 'cancelamento') return '#dc3545';
-            if (tipo === 'conclusao')   return '#FFC300';
+            if (tipo === 'confirmacao')     return '#198754';
+            if (tipo === 'cancelamento')    return '#dc3545';
+            if (tipo === 'conclusao')       return '#FFC300';
+            if (tipo === 'orcamento_enviado') return '#146ADB';
             return '#146ADB';
         }
 
@@ -2795,37 +3173,65 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Cruzar com o agendamento mais recente do mesmo serviço
             var ag = cliAgs.slice().reverse().find(function (a) {
-                return a.servico === d.servico;
+                return a.id === d.agendamentoId || a.servico === d.servico;
             }) || {};
 
-            var dataLabel = ag.data ? ag.data.split('-').reverse().join('/') : '';
-            var horario   = ag.horario ? ag.horario.split(' - ')[0] : '';
+            var dataLabel = d.data ? d.data.split('-').reverse().join('/') : (ag.data ? ag.data.split('-').reverse().join('/') : '');
+            var horario   = d.horario ? d.horario.split(' - ')[0] : (ag.horario ? ag.horario.split(' - ')[0] : '');
             var prestNome = d.prestadorNome || ag.nomePrestador || '';
             var ts = n.timestamp
                 ? new Date(n.timestamp).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
                 : '';
 
             var linhas = '';
-            if (d.servico)   linhas += '<p style="margin:3px 0;font-size:.85rem;">' +
-                '<i class="bi bi-tools me-1" style="color:#6c757d;"></i>' +
-                '<strong>Serviço:</strong> ' + _escaparHtml(d.servico) + '</p>';
-            if (prestNome)   linhas += '<p style="margin:3px 0;font-size:.85rem;">' +
-                '<i class="bi bi-person-fill me-1" style="color:#6c757d;"></i>' +
-                '<strong>Prestador:</strong> ' + _escaparHtml(prestNome) + '</p>';
-            if (dataLabel)   linhas += '<p style="margin:3px 0;font-size:.85rem;">' +
-                '<i class="bi bi-calendar3 me-1" style="color:#6c757d;"></i>' +
-                '<strong>Data:</strong> ' + dataLabel + (horario ? ' às ' + horario : '') + '</p>';
-            if (n.tipo === 'cancelamento' && d.motivo)
-                             linhas += '<p style="margin:3px 0;font-size:.85rem;color:#dc3545;">' +
-                '<i class="bi bi-exclamation-circle me-1"></i>' +
-                '<strong>Motivo:</strong> ' + _escaparHtml(d.motivo) + '</p>';
-            if (ts)          linhas += '<p style="margin:6px 0 0;font-size:.76rem;color:#adb5bd;">' +
-                '<i class="bi bi-clock me-1"></i>' + ts + '</p>';
+            if (d.servico)   linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-tools me-1" style="color:#6c757d;"></i><strong>Serviço:</strong> ' + _escaparHtml(d.servico) + '</p>';
+            if (prestNome)   linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-person-fill me-1" style="color:#6c757d;"></i><strong>Prestador:</strong> ' + _escaparHtml(prestNome) + '</p>';
+            if (dataLabel)   linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-calendar3 me-1" style="color:#6c757d;"></i><strong>Data:</strong> ' + dataLabel + (horario ? ' às ' + horario : '') + '</p>';
 
-            return '<div style="border-left:4px solid ' + _borda(n.tipo) + ';' +
-                'padding:10px 14px;background:#f8f9fa;border-radius:0 8px 8px 0;margin-bottom:10px;">' +
-                '<div style="font-weight:700;font-size:.92rem;margin-bottom:6px;">' +
-                _icone(n.tipo) + _titulo(n.tipo) + '</div>' +
+            if (n.tipo === 'orcamento_enviado') {
+                if (d.valor !== undefined && d.valor !== null)
+                    linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-cash-coin me-1" style="color:#6c757d;"></i><strong>Valor:</strong> R$ ' + parseFloat(d.valor || 0).toFixed(2).replace('.', ',') + '</p>';
+                if (d.formaPagamento)
+                    linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-credit-card me-1" style="color:#6c757d;"></i><strong>Pagamento:</strong> ' + _escaparHtml(d.formaPagamento) + '</p>';
+                if (d.formaPagamento === 'Cartão' && d.parcelas)
+                    linhas += '<p style="margin:3px 0;font-size:.85rem;padding:5px 10px;background:#fff8e1;border-left:3px solid #FFC300;border-radius:0 6px 6px 0;">' +
+                        '<i class="bi bi-credit-card me-1" style="color:#e6a800;"></i>' +
+                        '<strong>Parcelamento:</strong> até ' + _escaparHtml(String(d.parcelas)) + ' parcela(s)' +
+                        (d.valorParcela ? ' de R$ ' + parseFloat(d.valorParcela).toFixed(2).replace('.', ',') : '') + '</p>';
+                if (d.descricaoCliente)
+                    linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-chat-quote me-1" style="color:#6c757d;"></i><strong>Serviço solicitado:</strong> ' + _escaparHtml(d.descricaoCliente) + '</p>';
+                if (d.subcategoriasCliente && d.subcategoriasCliente.length > 0)
+                    linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-list-check me-1" style="color:#6c757d;"></i><strong>Serviços selecionados:</strong> ' +
+                        d.subcategoriasCliente.map(function (sc) {
+                            return '<span style="display:inline-block;background:#FFC300;color:#000;font-size:.78rem;' +
+                                'font-weight:700;padding:1px 8px;border-radius:12px;margin:1px 2px;">' + _escaparHtml(sc) + '</span>';
+                        }).join('') + '</p>';
+                // Botões de ação
+                linhas += '<div style="display:flex;gap:8px;margin-top:10px;">' +
+                    '<button type="button" class="btn btn-danger btn-sm btn-orc-recusar" ' +
+                        'data-ag-id="' + _escaparHtml(d.agendamentoId || '') + '" ' +
+                        'data-prest-email="' + _escaparHtml(d.prestadorEmail || '') + '" ' +
+                        'data-servico="' + _escaparHtml(d.servico || '') + '">' +
+                        '<i class="bi bi-x-circle me-1"></i>Recusar Orçamento</button>' +
+                    '<button type="button" class="btn btn-success btn-sm btn-orc-aceitar" ' +
+                        'data-ag-id="' + _escaparHtml(d.agendamentoId || '') + '" ' +
+                        'data-prest-email="' + _escaparHtml(d.prestadorEmail || '') + '" ' +
+                        'data-prest-nome="' + _escaparHtml(prestNome || '') + '" ' +
+                        'data-servico="' + _escaparHtml(d.servico || '') + '">' +
+                        '<i class="bi bi-calendar-check me-1"></i>Aceitar e Agendar</button>' +
+                    '</div>';
+            }
+
+            if (n.tipo === 'cancelamento' && d.motivo)
+                linhas += '<p style="margin:3px 0;font-size:.85rem;color:#dc3545;"><i class="bi bi-exclamation-circle me-1"></i><strong>Motivo:</strong> ' + _escaparHtml(d.motivo) + '</p>';
+            if (n.tipo === 'confirmacao') {
+                if (d.valor) linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-cash-coin me-1" style="color:#6c757d;"></i><strong>Valor:</strong> R$ ' + parseFloat(d.valor).toFixed(2).replace('.', ',') + '</p>';
+                if (d.formaPagamento) linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-credit-card me-1" style="color:#6c757d;"></i><strong>Pagamento:</strong> ' + _escaparHtml(d.formaPagamento) + '</p>';
+            }
+            if (ts) linhas += '<p style="margin:6px 0 0;font-size:.76rem;color:#adb5bd;"><i class="bi bi-clock me-1"></i>' + ts + '</p>';
+
+            return '<div class="notif-item-cli" data-notif-id="' + _escaparHtml(n.id || '') + '" style="border-left:4px solid ' + _borda(n.tipo) + ';padding:10px 14px;background:#f8f9fa;border-radius:0 8px 8px 0;margin-bottom:10px;">' +
+                '<div style="font-weight:700;font-size:.92rem;margin-bottom:6px;">' + _icone(n.tipo) + _titulo(n.tipo) + '</div>' +
                 linhas + '</div>';
         }).join('');
 
@@ -2872,6 +3278,111 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (onMarcarLidas) onMarcarLidas();
             });
         }
+
+        // ---- Helper: remove item do DOM e verifica se ainda há pendentes ----
+        function _removerItemEVerificar(notifId, emailCli) {
+            // Remove o card da notificação tratada
+            var itemEl = modal.querySelector('.notif-item-cli[data-notif-id="' + notifId + '"]');
+            if (itemEl) {
+                itemEl.style.transition = 'opacity .3s';
+                itemEl.style.opacity = '0';
+                setTimeout(function () { itemEl.remove(); _verificarPendentes(); }, 320);
+            } else {
+                _verificarPendentes();
+            }
+        }
+
+        function _verificarPendentes() {
+            var bodyEl = modal.querySelector('.modal-body');
+            var restantes = modal.querySelectorAll('.notif-item-cli');
+
+            // Conta apenas os itens que ainda têm botões de ação (orcamento pendente de resposta)
+            var comAcao = modal.querySelectorAll('.btn-orc-recusar, .btn-orc-aceitar').length;
+
+            if (restantes.length === 0) {
+                // Nenhuma notificação restante: exibe mensagem e fecha
+                if (bodyEl) bodyEl.innerHTML =
+                    '<p class="text-muted text-center py-4">' +
+                    '<i class="bi bi-check-all me-2" style="color:#198754;font-size:1.2rem;"></i>' +
+                    'Todos os retornos foram tratados!</p>';
+                setTimeout(function () { bsModal.hide(); if (onMarcarLidas) onMarcarLidas(); }, 1200);
+            } else if (comAcao === 0) {
+                // Restam apenas informativos (sem botões de ação) — atualiza contador no rodapé
+                var rodape = modal.querySelector('.modal-footer');
+                if (rodape && !rodape.querySelector('#notif-pendentes-aviso')) {
+                    var aviso = document.createElement('span');
+                    aviso.id = 'notif-pendentes-aviso';
+                    aviso.style.cssText = 'font-size:.82rem;color:#198754;font-weight:600;margin-right:auto;';
+                    aviso.innerHTML = '<i class="bi bi-check-circle me-1"></i>Orçamentos resolvidos';
+                    rodape.insertBefore(aviso, rodape.firstChild);
+                }
+            }
+        }
+
+        // ---- Botões de ação de orçamento ----
+        modal.querySelectorAll('.btn-orc-recusar').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var agId       = btn.dataset.agId;
+                var prestEmail = btn.dataset.prestEmail;
+                var servico    = btn.dataset.servico;
+                // Recupera o id da notificação a partir do card pai
+                var cardEl  = btn.closest('.notif-item-cli');
+                var notifId = cardEl ? cardEl.dataset.notifId : '';
+                if (!confirm('Tem certeza que deseja recusar este orçamento?')) return;
+
+                // Atualiza no storage do prestador
+                var agsPrest = obterAgendamentosPrestador(prestEmail);
+                var idxP = agsPrest.findIndex(function (a) { return a.id === agId; });
+                if (idxP >= 0) { agsPrest[idxP].status = 'orcamento_recusado'; salvarAgendamentosPrestador(prestEmail, agsPrest); }
+
+                // Atualiza no storage do cliente
+                var usuCli = obterUsuarioLogado();
+                if (usuCli) _atualizarStatusClienteAgendamento(agId, usuCli.email, 'orcamento_recusado');
+
+                // Notifica o prestador
+                sgCriarNotificacao(prestEmail, 'orcamento_recusado', { agendamentoId: agId, servico: servico });
+
+                // Marca APENAS esta notificação como lida
+                if (usuCli) sgMarcarNotifLidaPorId(usuCli.email, notifId);
+
+                // Remove o card do modal; mantém os demais abertos
+                _removerItemEVerificar(notifId, usuCli ? usuCli.email : '');
+                exibirToast('Orçamento recusado. O prestador foi notificado.');
+            });
+        });
+
+        modal.querySelectorAll('.btn-orc-aceitar').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var agId       = btn.dataset.agId;
+                var prestEmail = btn.dataset.prestEmail;
+                var prestNome  = btn.dataset.prestNome;
+                var servico    = btn.dataset.servico;
+                var cardEl  = btn.closest('.notif-item-cli');
+                var notifId = cardEl ? cardEl.dataset.notifId : '';
+
+                // Atualiza no storage do prestador
+                var agsPrest = obterAgendamentosPrestador(prestEmail);
+                var idxP = agsPrest.findIndex(function (a) { return a.id === agId; });
+                if (idxP >= 0) { agsPrest[idxP].status = 'orcamento_aceito'; salvarAgendamentosPrestador(prestEmail, agsPrest); }
+
+                // Atualiza no storage do cliente
+                var usuCli = obterUsuarioLogado();
+                if (usuCli) _atualizarStatusClienteAgendamento(agId, usuCli.email, 'orcamento_aceito');
+
+                // Notifica o prestador
+                sgCriarNotificacao(prestEmail, 'orcamento_aceito', {
+                    agendamentoId: agId, servico: servico,
+                    clienteNome: usuCli ? usuCli.nome : ''
+                });
+
+                // Marca APENAS esta notificação como lida
+                if (usuCli) sgMarcarNotifLidaPorId(usuCli.email, notifId);
+
+                // Remove o card do modal; mantém os demais abertos
+                _removerItemEVerificar(notifId, usuCli ? usuCli.email : '');
+                exibirToast('Orçamento aceito! Prestador: ' + prestNome + ' — Aguarde confirmação do agendamento.');
+            });
+        });
     }
 
     // =========================================================
