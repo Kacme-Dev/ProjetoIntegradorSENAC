@@ -710,6 +710,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<span class="prest-info-label">' +
                         '<strong>Serviço:</strong> ' + _escaparHtml(ag.servico || '—') +
                         ' &nbsp;|&nbsp; <strong>Cliente:</strong> ' + _escaparHtml(ag.cliente || '—') +
+                        (ag.subcategoriasCliente && ag.subcategoriasCliente.length > 0 
+                            ? ' &nbsp;|&nbsp; <strong>Serviços:</strong> ' + _formatarSubcategorias(ag.subcategoriasCliente)
+                            : '') +
                         ' &nbsp;|&nbsp; <strong>Concluído em:</strong> ' + concluidoLabel +
                     '</span>' +
                     '<div class="prest-historico-acoes">' +
@@ -756,6 +759,19 @@ document.addEventListener('DOMContentLoaded', function () {
         return diasS[d.getDay()] + ', ' + String(d.getDate()).padStart(2, '0') + '/' + meses[d.getMonth()];
     }
 
+    /**
+     * Helper: Formata array de subcategorias em string legível
+     * Ex: ["Troca de Torneira", "Reparos Elétricos"] => "Troca de Torneira, Reparos Elétricos"
+     * @param {Array} subcats - Array de subcategorias selecionadas pelo cliente
+     * @returns {string} - String formatada ou "—" se vazio
+     */
+    function _formatarSubcategorias(subcats) {
+        if (!subcats || !Array.isArray(subcats) || subcats.length === 0) {
+            return '—';
+        }
+        return subcats.map(function (sc) { return _escaparHtml(sc); }).join(', ');
+    }
+
     function _inicializarBarraNotifPrestAreaExclusiva(emailPrest) {
         var barraExistente = document.getElementById('sg-notif-barra-prest');
         if (!barraExistente) return; // mantém o HTML já presente
@@ -799,8 +815,14 @@ document.addEventListener('DOMContentLoaded', function () {
             if (li.querySelector('span.prest-info-label')) return;
             var infoSpan = document.createElement('span');
             infoSpan.className = 'prest-info-label';
+            var subcatTexto = li.dataset.subcategorias 
+                ? _formatarSubcategorias(JSON.parse(li.dataset.subcategorias))
+                : '—';
             infoSpan.innerHTML = '<strong>Serviço:</strong> ' + _escaparHtml(li.dataset.servico || '—') +
-                ' &nbsp;|&nbsp; <strong>Cliente:</strong> ' + _escaparHtml(li.dataset.cliente || '—');
+                ' &nbsp;|&nbsp; <strong>Cliente:</strong> ' + _escaparHtml(li.dataset.cliente || '—') +
+                (li.dataset.subcategorias && JSON.parse(li.dataset.subcategorias).length > 0
+                    ? ' &nbsp;|&nbsp; <strong>Serviços:</strong> ' + subcatTexto
+                    : '');
             // Insere antes do badge
             li.insertBefore(infoSpan, badge);
         });
