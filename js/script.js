@@ -3890,14 +3890,513 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // =========================================================
+    // NAVBAR CLIENTE — "Meu Perfil" dropdown (Sprint 3)
+    // =========================================================
+    function inicializarNavbarCliente() {
+        var isCliPage = window.location.pathname.includes('/paginasCliente/') ||
+            window.location.pathname.includes('indexCliente');
+        if (!isCliPage) return;
+
+        var usu = obterUsuarioLogado();
+        if (!usu || usu.tipo !== 'cliente') return;
+
+        // Atualiza saudação
+        var span = document.querySelector('.navbar-logada-info');
+        if (span) span.textContent = 'Olá, ' + usu.nome + '!';
+
+        // Remove botão Sair avulso do navbar (se ainda existir do HTML estático)
+        document.querySelectorAll('a.btn-danger, .navbar-nav a.btn-danger').forEach(function (a) {
+            if (a.textContent.trim() === 'Sair' ||
+                (a.href && a.href.includes('index.html') && a.classList.contains('btn-danger'))) {
+                var li = a.closest('li'); if (li) li.remove(); else a.remove();
+            }
+        });
+
+        // Cria dropdown "Meu Perfil" para TODAS as páginas do cliente
+        _criarDropdownMeuPerfilCliente(usu);
+
+        // Inicializa sidebar (adiciona Sair + logout)
+        inicializarSidebarCliente();
+    }
+
+    function _criarDropdownMeuPerfilCliente(usu) {
+        if (document.getElementById('cli-perfil-toggle')) return; // já criado
+        var span = document.querySelector('.navbar-logada-info');
+        if (!span) return;
+
+        span.style.cssText += '; position:relative; display:inline-flex; flex-direction:column; align-items:center; cursor:default;';
+
+        var toggle = document.createElement('a');
+        toggle.id = 'cli-perfil-toggle';
+        toggle.href = '#';
+        toggle.style.cssText = 'font-size:0.72rem; color:var(--azul-principal,#146ADB); text-decoration:underline; cursor:pointer; white-space:nowrap;';
+        toggle.innerHTML = '<i class="bi bi-chevron-down" id="cli-chevron" style="font-size:.65rem;"></i> Meu Perfil';
+
+        var dropdown = document.createElement('div');
+        dropdown.id = 'cli-perfil-dropdown';
+        dropdown.style.cssText = 'display:none; position:absolute; top:calc(100% + 4px); right:0; min-width:230px; background:var(--fundo-card,#fff); border:1.5px solid var(--borda,#dee2e6); border-radius:8px; box-shadow:0 4px 18px rgba(0,0,0,.13); z-index:1055; padding:6px 0;';
+
+        var base = '/paginasCliente/';
+        var links = [
+            { href: base + 'clienteAreaExclusiva.html', icon: 'bi-house-door', text: 'Dashboard' },
+            { href: base + 'clientePerfilAdm.html', icon: 'bi-person-circle', text: 'Meu Perfil' },
+            { href: base + 'clienteAgendarServicos.html', icon: 'bi-calendar-check', text: 'Agendar Serviços' },
+            { href: base + 'clienteAvaliacoesFeitas.html', icon: 'bi-star', text: 'Avaliações Realizadas' },
+            { href: base + 'clienteAvaliacoesRecebidas.html', icon: 'bi-star-half', text: 'Avaliações Recebidas' },
+            { href: base + 'clienteContatoSite.html', icon: 'bi-chat-text', text: 'Suporte/Contato' }
+        ];
+        links.forEach(function (item) {
+            var a = document.createElement('a');
+            a.href = item.href;
+            a.style.cssText = 'display:block; padding:7px 16px; color:var(--texto-principal,#212529); text-decoration:none; font-size:.88rem;';
+            a.innerHTML = '<i class="bi ' + item.icon + ' me-2" style="color:#146ADB;"></i>' + item.text;
+            a.addEventListener('mouseover', function () { a.style.background = '#f0f4ff'; });
+            a.addEventListener('mouseout', function () { a.style.background = ''; });
+            dropdown.appendChild(a);
+        });
+        var hr = document.createElement('div');
+        hr.style.cssText = 'border-top:1px solid var(--borda,#dee2e6); margin:6px 0;';
+        dropdown.appendChild(hr);
+        var sair = document.createElement('a');
+        sair.href = '/index.html';
+        sair.style.cssText = 'display:block; padding:7px 16px; color:#dc3545; text-decoration:none; font-size:.88rem; font-weight:600;';
+        sair.innerHTML = '<i class="bi bi-box-arrow-right me-2"></i>Sair';
+        sair.addEventListener('click', function () { DB.remove('usuarioLogado'); });
+        dropdown.appendChild(sair);
+
+        span.appendChild(toggle);
+        span.appendChild(dropdown);
+
+        var aberto = false;
+        toggle.addEventListener('click', function (e) {
+            e.preventDefault(); e.stopPropagation();
+            aberto = !aberto;
+            dropdown.style.display = aberto ? 'block' : 'none';
+            var ch = document.getElementById('cli-chevron');
+            if (ch) ch.className = 'bi ' + (aberto ? 'bi-chevron-up' : 'bi-chevron-down');
+        });
+        document.addEventListener('click', function (e) {
+            if (!span.contains(e.target)) {
+                aberto = false; dropdown.style.display = 'none';
+                var ch = document.getElementById('cli-chevron');
+                if (ch) ch.className = 'bi bi-chevron-down';
+            }
+        });
+    }
+
+    // =========================================================
+    // SIDEBAR CLIENTE — Sair no rodapé (Sprint 3)
+    // =========================================================
+    function inicializarSidebarCliente() {
+        var sidebar = document.querySelector('.cli-sidebar');
+        if (!sidebar) return;
+        var ul = sidebar.querySelector('ul');
+        if (!ul) return;
+        if (!sidebar.querySelector('.sidebar-sair')) {
+            var liSair = document.createElement('li');
+            liSair.className = 'sidebar-sair';
+            liSair.innerHTML = '<a href="/index.html" id="cli-sidebar-btn-sair"><i class="bi bi-box-arrow-right"></i> Sair</a>';
+            ul.appendChild(liSair);
+        }
+        var btnSair = sidebar.querySelector('#cli-sidebar-btn-sair, .sidebar-sair a');
+        if (btnSair && !btnSair.dataset.logoutBound) {
+            btnSair.dataset.logoutBound = '1';
+            btnSair.addEventListener('click', function () { DB.remove('usuarioLogado'); });
+        }
+        // Remove btn-danger Sair do navbar se ainda existir
+        document.querySelectorAll('a.btn-danger, a.btn.btn-danger').forEach(function (a) {
+            if (a.href && (a.href.includes('index.html') || a.textContent.trim() === 'Sair')) {
+                var li = a.closest('li'); if (li) li.remove(); else a.remove();
+            }
+        });
+    }
+
+    // =========================================================
+    // CLIENTE — SERVIÇOS CONFIRMADOS + CHAT (Sprint 3)
+    // Popula #cli-tabela-confirmados com agendamentos confirmados
+    // e permite ao cliente enviar mensagens ao prestador.
+    // =========================================================
+    function inicializarClienteConfirmados() {
+        var tabela = document.getElementById('cli-tabela-confirmados');
+        if (!tabela) return;
+
+        var usu = obterUsuarioLogado();
+        if (!usu) return;
+        var emailCli = usu.email;
+
+        function renderConfirmados() {
+            var cliAgs = DB.get('clienteAgendamentos_' + emailCli) || [];
+            var ativos = cliAgs.filter(function (ag) {
+                return ag.status === 'confirmado' || ag.status === 'concluido';
+            });
+
+            if (ativos.length === 0) {
+                tabela.innerHTML = '<p class="text-muted text-center py-4" style="font-size:.9rem;"><i class="bi bi-calendar-check me-2"></i>Nenhum serviço confirmado ainda.</p>';
+                var avisoEl = document.getElementById('cli-aviso-msgs-confirmados');
+                if (avisoEl) avisoEl.style.display = 'none';
+                return;
+            }
+
+            // Verifica mensagens não lidas
+            var hasUnread = false;
+            ativos.forEach(function (ag) {
+                var chat = DB.get('agendaChat_' + ag.id) || [];
+                if (chat.some(function (m) { return m.tipo === 'prest' && !m.lidaCliente; })) hasUnread = true;
+            });
+            var avisoEl = document.getElementById('cli-aviso-msgs-confirmados');
+            if (avisoEl) avisoEl.style.display = hasUnread ? '' : 'none';
+
+            var html = '<ul class="cli-pedidos-lista">';
+            ativos.forEach(function (ag) {
+                var chat = DB.get('agendaChat_' + ag.id) || [];
+                var unread = chat.filter(function (m) { return m.tipo === 'prest' && !m.lidaCliente; }).length;
+                var corStatus = ag.status === 'confirmado' ? '#198754' : '#146ADB';
+                var txtStatus = ag.status === 'confirmado' ? 'Confirmado' : 'Concluído';
+                var horIni = (ag.horario || '').split(' - ')[0] || '—';
+                html +=
+                    '<li class="cli-pedidos-item">' +
+                    '<div>' +
+                    '<strong>' + _escaparHtml(ag.servico || '—') + '</strong>' +
+                    '<br><span style="font-size:.82rem;color:#6c757d;">' + _escaparHtml(ag.nomePrestador || '—') + '</span>' +
+                    '<br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>' + _escaparHtml(ag.data || '—') + ' às ' + horIni + '</small>' +
+                    '</div>' +
+                    '<div class="cli-pedidos-acoes">' +
+                    '<span class="badge" style="background:' + corStatus + '; color:#fff; font-size:.75rem;">' + txtStatus + '</span>' +
+                    '<button type="button" class="btn btn-sm btn-chat-cliente" ' +
+                    'data-ag-id="' + _escaparHtml(ag.id) + '" ' +
+                    'data-prest-email="' + _escaparHtml(ag.emailPrestador || '') + '" ' +
+                    'data-prest-nome="' + _escaparHtml(ag.nomePrestador || '') + '" ' +
+                    'data-servico="' + _escaparHtml(ag.servico || '') + '" ' +
+                    'data-data="' + _escaparHtml(ag.data || '') + '" ' +
+                    'style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;">' +
+                    '<i class="bi bi-chat-dots me-1"></i>Chat' +
+                    (unread > 0 ? ' <span class="badge bg-danger" style="font-size:.65rem;vertical-align:middle;">' + unread + '</span>' : '') +
+                    '</button>' +
+                    '</div>' +
+                    '</li>';
+            });
+            html += '</ul>';
+            tabela.innerHTML = html;
+
+            tabela.querySelectorAll('.btn-chat-cliente').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    _abrirChatCliente(
+                        btn.dataset.agId,
+                        btn.dataset.prestEmail,
+                        btn.dataset.prestNome,
+                        btn.dataset.servico,
+                        btn.dataset.data,
+                        emailCli
+                    );
+                    // Re-render após fechar modal para atualizar contagem
+                    setTimeout(renderConfirmados, 400);
+                });
+            });
+        }
+
+        renderConfirmados();
+        // Polling a cada 10 segundos para novas mensagens
+        setInterval(renderConfirmados, 10000);
+    }
+
+    // =========================================================
+    // CHAT CLIENTE → PRESTADOR (Sprint 3)
+    // =========================================================
+    function _abrirChatCliente(agId, prestEmail, prestNome, servico, data, emailCli) {
+        var CHAT_KEY = 'agendaChat_' + agId;
+        var modalId = 'modalChatCliente_' + agId;
+        var ex = document.getElementById(modalId);
+        if (ex) { bootstrap.Modal.getOrCreateInstance(ex).show(); return; }
+
+        var modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = modalId;
+        modal.setAttribute('tabindex', '-1');
+        modal.innerHTML =
+            '<div class="modal-dialog modal-dialog-centered modal-lg">' +
+            '<div class="modal-content agenda-chat-modal">' +
+            '<div class="modal-header" style="background:var(--azul-principal,#146ADB);color:#fff;">' +
+            '<h5 class="modal-title"><i class="bi bi-chat-dots me-2"></i>Chat com ' + _escaparHtml(prestNome) + '</h5>' +
+            '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>' +
+            '</div>' +
+            '<div class="agenda-chat-info">' +
+            '<span class="agenda-chat-info-item"><i class="bi bi-tools"></i> <strong>' + _escaparHtml(servico) + '</strong></span>' +
+            '<span class="agenda-chat-info-item"><i class="bi bi-person-fill"></i> <strong>' + _escaparHtml(prestNome) + '</strong></span>' +
+            '<span class="agenda-chat-info-item"><i class="bi bi-calendar3"></i> <strong>' + _escaparHtml(data) + '</strong></span>' +
+            '</div>' +
+            '<div class="agenda-chat-historico" id="chat-cli-hist-' + agId + '" aria-live="polite"></div>' +
+            '<div class="agenda-chat-composer">' +
+            '<textarea class="form-control agenda-chat-textarea" id="chat-cli-input-' + agId + '" maxlength="500" placeholder="Digite sua mensagem para o prestador..."></textarea>' +
+            '<div class="agenda-chat-contador"><span id="chat-cli-cont-' + agId + '">0</span>/500</div>' +
+            '</div>' +
+            '<div class="agenda-chat-rodape">' +
+            '<button type="button" class="btn btn-secondary btn-sm" id="chat-cli-limpar-' + agId + '"><i class="bi bi-x-circle me-1"></i>Limpar</button>' +
+            '<button type="button" class="btn btn-sm" id="chat-cli-enviar-' + agId + '" style="background:var(--azul-principal);border-color:var(--azul-principal);color:#fff;font-weight:600;"><i class="bi bi-send me-1"></i>Enviar</button>' +
+            '</div>' +
+            '</div></div>';
+        document.body.appendChild(modal);
+
+        function carregarMsgs() {
+            var msgs = DB.get(CHAT_KEY) || [];
+            // Marca msgs do prestador como lidas pelo cliente
+            var changed = false;
+            msgs.forEach(function (m) { if (m.tipo === 'prest' && !m.lidaCliente) { m.lidaCliente = true; changed = true; } });
+            if (changed) DB.set(CHAT_KEY, msgs);
+
+            var histEl = document.getElementById('chat-cli-hist-' + agId);
+            if (!histEl) return;
+            if (msgs.length === 0) {
+                histEl.innerHTML = '<div class="agenda-chat-vazio"><i class="bi bi-chat-dots"></i>Nenhuma mensagem ainda. Seja o primeiro a escrever!</div>';
+                return;
+            }
+            histEl.innerHTML = msgs.map(function (m) {
+                var lado = m.tipo === 'cliente' ? 'prest' : 'cliente'; // cliente vê próprias msgs à direita
+                var autor = m.tipo === 'cliente' ? 'Você' : _escaparHtml(prestNome);
+                var hora = m.timestamp
+                    ? new Date(m.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                    : '';
+                return '<div class="agenda-chat-msg ' + lado + '">' +
+                    _escaparHtml(m.texto) +
+                    '<span class="agenda-chat-msg-hora">' + autor + ' · ' + hora + '</span>' +
+                    '</div>';
+            }).join('');
+            histEl.scrollTop = histEl.scrollHeight;
+        }
+
+        carregarMsgs();
+        var bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+        modal.addEventListener('hidden.bs.modal', function () { modal.remove(); });
+
+        // Contador
+        var inputEl = document.getElementById('chat-cli-input-' + agId);
+        var contEl = document.getElementById('chat-cli-cont-' + agId);
+        if (inputEl && contEl) {
+            inputEl.addEventListener('input', function () { contEl.textContent = inputEl.value.length; });
+        }
+
+        // Limpar
+        var btnLimpar = document.getElementById('chat-cli-limpar-' + agId);
+        if (btnLimpar && inputEl) {
+            btnLimpar.addEventListener('click', function () {
+                inputEl.value = '';
+                if (contEl) contEl.textContent = '0';
+            });
+        }
+
+        // Enviar
+        var btnEnviar = document.getElementById('chat-cli-enviar-' + agId);
+        if (btnEnviar && inputEl) {
+            btnEnviar.addEventListener('click', function () {
+                var texto = (inputEl.value || '').trim();
+                if (!texto) { alert('Digite uma mensagem.'); return; }
+                var msgs = DB.get(CHAT_KEY) || [];
+                msgs.push({
+                    id: 'msg-cli-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+                    tipo: 'cliente',
+                    texto: texto,
+                    timestamp: new Date().toISOString(),
+                    lidaPrest: false,
+                    lidaCliente: true
+                });
+                DB.set(CHAT_KEY, msgs);
+                inputEl.value = '';
+                if (contEl) contEl.textContent = '0';
+                // Notifica o prestador
+                if (prestEmail) {
+                    sgCriarNotificacao(prestEmail, 'nova_mensagem_cliente', {
+                        agendamentoId: agId,
+                        clienteNome: emailCli,
+                        servico: servico
+                    });
+                }
+                carregarMsgs();
+            });
+        }
+        // Polling de msgs a cada 5 s enquanto modal aberto
+        var pollingChat = setInterval(carregarMsgs, 5000);
+        modal.addEventListener('hidden.bs.modal', function () { clearInterval(pollingChat); });
+    }
+
+    // =========================================================
+    // CHAT PRESTADOR → CLIENTE (Sprint 3)
+    // Botão Chat na lista de agendamentos confirmados/próximos
+    // =========================================================
+    function _abrirChatPrestador(ag, emailPrest) {
+        var CHAT_KEY = 'agendaChat_' + ag.id;
+        var modalId = 'modalChatPrestador_' + ag.id;
+        var ex = document.getElementById(modalId);
+        if (ex) { bootstrap.Modal.getOrCreateInstance(ex).show(); return; }
+
+        var modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = modalId;
+        modal.setAttribute('tabindex', '-1');
+        modal.innerHTML =
+            '<div class="modal-dialog modal-dialog-centered modal-lg">' +
+            '<div class="modal-content agenda-chat-modal">' +
+            '<div class="modal-header" style="background:#2B2B2B;color:#fff;">' +
+            '<h5 class="modal-title"><i class="bi bi-chat-dots me-2"></i>Chat com ' + _escaparHtml(ag.cliente || 'Cliente') + '</h5>' +
+            '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>' +
+            '</div>' +
+            '<div class="agenda-chat-info">' +
+            '<span class="agenda-chat-info-item"><i class="bi bi-person-fill"></i> <strong>' + _escaparHtml(ag.cliente || '—') + '</strong></span>' +
+            '<span class="agenda-chat-info-item"><i class="bi bi-tools"></i> <strong>' + _escaparHtml(ag.servico || '—') + '</strong></span>' +
+            '<span class="agenda-chat-info-item"><i class="bi bi-calendar3"></i> <strong>' + _escaparHtml(ag.data || '—') + '</strong></span>' +
+            '</div>' +
+            '<div class="agenda-chat-historico" id="chat-prest-hist-' + ag.id + '" aria-live="polite"></div>' +
+            '<div class="agenda-chat-composer">' +
+            '<textarea class="form-control agenda-chat-textarea" id="chat-prest-input-' + ag.id + '" maxlength="500" placeholder="Digite uma mensagem para o cliente..."></textarea>' +
+            '<div class="agenda-chat-contador"><span id="chat-prest-cont-' + ag.id + '">0</span>/500</div>' +
+            '</div>' +
+            '<div class="agenda-chat-rodape">' +
+            '<button type="button" class="btn btn-secondary btn-sm" id="chat-prest-limpar-' + ag.id + '"><i class="bi bi-x-circle me-1"></i>Limpar</button>' +
+            '<button type="button" class="btn btn-sm" id="chat-prest-enviar-' + ag.id + '" style="background:var(--azul-principal);border-color:var(--azul-principal);color:#fff;font-weight:600;"><i class="bi bi-send me-1"></i>Enviar</button>' +
+            '</div>' +
+            '</div></div>';
+        document.body.appendChild(modal);
+
+        function carregarMsgsPrest() {
+            var msgs = DB.get(CHAT_KEY) || [];
+            var changed = false;
+            msgs.forEach(function (m) { if (m.tipo === 'cliente' && !m.lidaPrest) { m.lidaPrest = true; changed = true; } });
+            if (changed) DB.set(CHAT_KEY, msgs);
+            var histEl = document.getElementById('chat-prest-hist-' + ag.id);
+            if (!histEl) return;
+            if (msgs.length === 0) {
+                histEl.innerHTML = '<div class="agenda-chat-vazio"><i class="bi bi-chat-dots"></i>Nenhuma mensagem ainda.</div>';
+                return;
+            }
+            histEl.innerHTML = msgs.map(function (m) {
+                var lado = m.tipo === 'prest' ? 'prest' : 'cliente';
+                var autor = m.tipo === 'prest' ? 'Você' : _escaparHtml(ag.cliente || 'Cliente');
+                var hora = m.timestamp
+                    ? new Date(m.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                    : '';
+                return '<div class="agenda-chat-msg ' + lado + '">' +
+                    _escaparHtml(m.texto) +
+                    '<span class="agenda-chat-msg-hora">' + autor + ' · ' + hora + '</span>' +
+                    '</div>';
+            }).join('');
+            histEl.scrollTop = histEl.scrollHeight;
+        }
+
+        carregarMsgsPrest();
+        var bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+        modal.addEventListener('hidden.bs.modal', function () { modal.remove(); });
+
+        var inputEl = document.getElementById('chat-prest-input-' + ag.id);
+        var contEl = document.getElementById('chat-prest-cont-' + ag.id);
+        if (inputEl && contEl) {
+            inputEl.addEventListener('input', function () { contEl.textContent = inputEl.value.length; });
+        }
+        var btnLimpar = document.getElementById('chat-prest-limpar-' + ag.id);
+        if (btnLimpar && inputEl) {
+            btnLimpar.addEventListener('click', function () { inputEl.value = ''; if (contEl) contEl.textContent = '0'; });
+        }
+        var btnEnviar = document.getElementById('chat-prest-enviar-' + ag.id);
+        if (btnEnviar && inputEl) {
+            btnEnviar.addEventListener('click', function () {
+                var texto = (inputEl.value || '').trim();
+                if (!texto) { alert('Digite uma mensagem.'); return; }
+                var msgs = DB.get(CHAT_KEY) || [];
+                msgs.push({
+                    id: 'msg-prest-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+                    tipo: 'prest',
+                    texto: texto,
+                    timestamp: new Date().toISOString(),
+                    lidaPrest: true,
+                    lidaCliente: false
+                });
+                DB.set(CHAT_KEY, msgs);
+                inputEl.value = '';
+                if (contEl) contEl.textContent = '0';
+                if (ag.clienteEmail) {
+                    sgCriarNotificacao(ag.clienteEmail, 'nova_mensagem_prest', {
+                        agendamentoId: ag.id,
+                        prestadorNome: emailPrest,
+                        servico: ag.servico
+                    });
+                }
+                carregarMsgsPrest();
+            });
+        }
+        var pollingPrest = setInterval(carregarMsgsPrest, 5000);
+        modal.addEventListener('hidden.bs.modal', function () { clearInterval(pollingPrest); });
+    }
+
+    // =========================================================
+    // PATCH: Adiciona botão Chat ao renderizarAba do prestador
+    // (estende a função já existente sem modificar o original)
+    // =========================================================
+    (function _patchChatPrestador() {
+        // Aguarda o DOM e então observa cliques no #agenda-lista para 'chat'
+        var listaEl = document.getElementById('agenda-lista');
+        if (!listaEl) return;
+        var usu = obterUsuarioLogado();
+        if (!usu || usu.tipo !== 'prestador') return;
+        var emailPrest = usu.email;
+
+        // Observer: quando o conteúdo de agenda-lista mudar, adiciona botão Chat
+        // nos items 'confirmado' que ainda não têm o botão
+        var obs = new MutationObserver(function () {
+            listaEl.querySelectorAll('.agenda-prest-item').forEach(function (item) {
+                var agId = item.dataset.agendamentoId;
+                if (!agId) return;
+                var botoesDiv = item.querySelector('.agenda-botoes');
+                if (!botoesDiv) return;
+                if (botoesDiv.querySelector('[data-acao="chat"]')) return; // já tem
+                var statusEl = item.querySelector('.agenda-status-tag');
+                if (!statusEl) return;
+                if (!statusEl.classList.contains('confirmado')) return;
+                var unread = (DB.get('agendaChat_' + agId) || []).filter(function (m) { return m.tipo === 'cliente' && !m.lidaPrest; }).length;
+                var btnChat = document.createElement('a');
+                btnChat.href = '#';
+                btnChat.className = 'agenda-btn chat';
+                btnChat.dataset.acao = 'chat';
+                btnChat.innerHTML = '<i class="bi bi-chat-dots me-1"></i>Chat' +
+                    (unread > 0 ? ' <span class="agenda-btn-sino"><i class="bi bi-bell-fill"></i></span>' : '');
+                btnChat.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var ags = obterAgendamentosPrestador(emailPrest);
+                    var ag = ags.find(function (a) { return a.id === agId; });
+                    if (ag) _abrirChatPrestador(ag, emailPrest);
+                });
+                botoesDiv.appendChild(btnChat);
+            });
+        });
+        obs.observe(listaEl, { childList: true, subtree: false });
+    }());
+
+    // =========================================================
+    // PATCH: Notificações cliente — polling a cada 8 s
+    // =========================================================
+    function _iniciarPollingNotifCliente() {
+        var usu = obterUsuarioLogado();
+        if (!usu) return;
+        var emailCli = usu.email;
+        setInterval(function () {
+            var barra = document.getElementById('sg-notif-barra-cli');
+            if (barra) return; // já visível, não duplicar
+            var notifs = sgObterNotificacoes(emailCli).filter(function (n) { return !n.lida; });
+            if (notifs.length === 0) return;
+            // Re-executa a inicialização de notificações para mostrar a barra
+            inicializarNotificacoesDashboardCliente();
+        }, 8000);
+    }
+
+    // =========================================================
     // INICIALIZAÇÃO GERAL
     // =========================================================
     inicializarNavbarSaudacao();
     inicializarNavbarPrestador();
+    inicializarNavbarCliente();         // Sprint 3 — novo
     inicializarHome();
     inicializarCadastro();
     inicializarLogin();
     inicializarClienteAreaExclusiva();
+    inicializarClienteConfirmados();    // Sprint 3 — novo
     inicializarPrestadorAreaExclusiva();
     inicializarPrestadorServicosAgendados();
     inicializarAvaliacoesFeitas();       // cliente
@@ -3913,6 +4412,7 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarHotsitePublico();
     inicializarNotificacoesDashboardPrestador();
     inicializarNotificacoesDashboardCliente();
+    _iniciarPollingNotifCliente();      // Sprint 3 — novo
     inicializarConfigurarAgenda();
     inicializarDashboardPrestador();
     inicializarContatoPrestador();

@@ -2852,3 +2852,78 @@ header .navbar-logada-info {
    TOAST — notificação de ação
 ------------------------------------------------------- */
 .toast-container { z-index: 1090 !important; }
+
+/* =======================================================
+   ÁREA DO CLIENTE — SIDEBAR SAIR + DROPDOWN MEU PERFIL
+   Sprint 3 — Padronização com modelo do Prestador
+   ======================================================= */
+
+/* cli-sidebar: flex column para empurrar "Sair" para o rodapé */
+.cli-sidebar ul {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 130px);
+}
+.cli-sidebar .sidebar-sair {
+    margin-top: auto;
+    border-top: 1px solid rgba(0,0,0,.08);
+    padding-top: 6px;
+}
+.cli-sidebar .sidebar-sair a {
+    color: #dc3545 !important;
+    font-weight: 600;
+}
+.cli-sidebar .sidebar-sair a:hover {
+    background-color: #fee2e2 !important;
+    border-left-color: #dc3545 !important;
+    color: #b91c1c !important;
+}
+
+/* Responsividade sidebar cliente: breakpoint 991.98px igual ao prestador */
+@media (max-width: 991.98px) {
+    .cli-wrapper { flex-direction: column; }
+    .cli-sidebar {
+        width: 100%;
+        min-width: unset;
+        border-right: none;
+        border-bottom: 1px solid var(--borda);
+        padding: 12px 0;
+        display: none;
+    }
+    .cli-sidebar.cli-sidebar-show { display: block; }
+    .cli-sidebar li a { padding: 10px 16px; }
+    .cli-main { padding: 20px 16px; }
+}
+
+/* -------------------------------------------------------
+   CHAT CLIENTE — Modal de mensagens com o prestador
+   (reutiliza as classes do chat do prestador)
+------------------------------------------------------- */
+.chat-cli-msg-prest {
+    align-self: flex-start;
+    background-color: var(--branco);
+    color: #212529;
+    border: 1px solid var(--borda);
+    border-bottom-left-radius: 3px;
+}
+.chat-cli-msg-cliente {
+    align-self: flex-end;
+    background-color: var(--azul-principal);
+    color: var(--branco);
+    border-bottom-right-radius: 3px;
+}
+
+/* -------------------------------------------------------
+   CLIENTE — SERVIÇOS CONFIRMADOS (tabela de confirmados)
+------------------------------------------------------- */
+.cli-confirmado-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--borda);
+    font-size: 0.92rem;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.cli-confirmado-item:last-child { border-bottom: none; }
