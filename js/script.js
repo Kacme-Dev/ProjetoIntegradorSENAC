@@ -910,12 +910,16 @@ document.addEventListener('DOMContentLoaded', function () {
             if (btnEx) {
                 var liEx = btnEx.closest('.prest-historico-item');
                 if (!confirm('Excluir este item do histórico?')) return;
-                var avsEx = obterAvals().filter(function (a) { return a.pedidoId !== liEx.dataset.pedidoId; });
+                var idExcluir = liEx.dataset.pedidoId;
+                var avsEx = obterAvals().filter(function (a) { return a.pedidoId !== idExcluir; });
                 salvarAvals(avsEx);
+                // Sprint 3 — remove também de AVAL_FEITAS_PREST_KEY (prestadorAvaliacoesFeitas)
+                var avsFeitas = obterAvaliacoesFeitasPrestador(emailPrest).filter(function (a) { return a.id !== idExcluir; });
+                salvarAvaliacoesFeitasPrestador(emailPrest, avsFeitas);
                 // Persiste o ID como "oculto" para não reaparecer após reload
                 var OCULTO_KEY = 'historicoOculto_' + emailPrest;
                 var ocultos = DB.get(OCULTO_KEY) || [];
-                if (!ocultos.includes(liEx.dataset.pedidoId)) ocultos.push(liEx.dataset.pedidoId);
+                if (!ocultos.includes(idExcluir)) ocultos.push(idExcluir);
                 DB.set(OCULTO_KEY, ocultos);
                 liEx.remove();
                 exibirToast('Item removido do histórico.');
@@ -929,11 +933,30 @@ document.addEventListener('DOMContentLoaded', function () {
                 var coment = (document.getElementById('modal-prest-comentario') || {}).value || '';
                 if (nota === 0) { alert('Selecione uma nota.'); return; }
                 if (!coment.trim()) { alert('Escreva um comentário.'); return; }
+
+                // Recupera nome do cliente e serviço a partir do item do histórico
+                var liAv = lista.querySelector('[data-pedido-id="' + pedidoAtual + '"]');
+                var clienteNome = liAv ? (liAv.dataset.cliente || '—') : '—';
+                var servicoNome = liAv ? (liAv.dataset.servico || '—') : '—';
+                var dataHoje    = new Date().toLocaleDateString('pt-BR');
+
+                // Salva na chave local do histórico (área exclusiva)
                 var avs = obterAvals();
                 var idx = avs.findIndex(function (a) { return a.pedidoId === pedidoAtual; });
-                var nova = { pedidoId: pedidoAtual, nota: nota, comentario: coment, data: new Date().toLocaleDateString('pt-BR') };
+                var nova = {
+                    pedidoId: pedidoAtual, id: pedidoAtual,
+                    cliente: clienteNome, servico: servicoNome,
+                    nota: nota, comentario: coment, data: dataHoje
+                };
                 if (idx >= 0) avs[idx] = nova; else avs.push(nova);
                 salvarAvals(avs);
+
+                // Sprint 3 — sincroniza com AVAL_FEITAS_PREST_KEY para prestadorAvaliacoesFeitas.html
+                var avsFeitas = obterAvaliacoesFeitasPrestador(emailPrest);
+                var idxF = avsFeitas.findIndex(function (a) { return a.id === pedidoAtual; });
+                if (idxF >= 0) avsFeitas[idxF] = nova; else avsFeitas.push(nova);
+                salvarAvaliacoesFeitasPrestador(emailPrest, avsFeitas);
+
                 // Disponibiliza a avaliação na página de Avaliações Recebidas do cliente
                 _sincronizarAvaliacaoNaClienteRecebidas(pedidoAtual, nota, coment);
                 bootstrap.Modal.getInstance(modalAv).hide();
@@ -948,9 +971,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 var coment = (document.getElementById('modal-prest-editar-comentario') || {}).value || '';
                 if (nota === 0) { alert('Selecione uma nota.'); return; }
                 if (!coment.trim()) { alert('Escreva um comentário.'); return; }
+
+                // Atualiza na chave local do histórico
                 var avs = obterAvals();
                 var idx = avs.findIndex(function (a) { return a.pedidoId === pedidoAtual; });
                 if (idx >= 0) { avs[idx].nota = nota; avs[idx].comentario = coment; salvarAvals(avs); }
+
+                // Sprint 3 — sincroniza edição com AVAL_FEITAS_PREST_KEY
+                var avsFeitas = obterAvaliacoesFeitasPrestador(emailPrest);
+                var idxF = avsFeitas.findIndex(function (a) { return a.id === pedidoAtual; });
+                if (idxF >= 0) { avsFeitas[idxF].nota = nota; avsFeitas[idxF].comentario = coment; salvarAvaliacoesFeitasPrestador(emailPrest, avsFeitas); }
+
                 // Atualiza também na página de Avaliações Recebidas do cliente
                 _sincronizarAvaliacaoNaClienteRecebidas(pedidoAtual, nota, coment);
                 bootstrap.Modal.getInstance(modalEd).hide();
@@ -1110,28 +1141,90 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
-        // Filtro histórico
+        // Filtro histórico — exibe SOMENTE concluídos no período selecionado
         var btnFiltrar = document.getElementById('btn-filtrar-historico');
         var btnLimparFiltro = document.getElementById('btn-limpar-filtro');
+
+        function renderizarHistoricoFiltrado(ini, fim) {
+            listaEl.innerHTML = '';
+
+            var lista = agendamentos.filter(function (a) {
+                // Apenas agendamentos concluídos
+                if (a.status !== 'concluido') return false;
+                // Data de referência: concluidoEm (ISO → YYYY-MM-DD) ou ag.data
+                var dataRef = '';
+                if (a.concluidoEm) {
+                    dataRef = a.concluidoEm.substring(0, 10);
+                } else if (a.data) {
+                    dataRef = a.data;
+                }
+                if (ini && dataRef < ini) return false;
+                if (fim && dataRef > fim) return false;
+                return true;
+            });
+
+            lista.sort(function (a, b) { return a.data > b.data ? 1 : -1; });
+
+            // Atualiza label informativo do filtro
+            var infoEl = document.getElementById('filtro-info-periodo');
+            if (infoEl) {
+                var partes = [];
+                if (ini) partes.push('De: ' + ini.split('-').reverse().join('/'));
+                if (fim) partes.push('Até: ' + fim.split('-').reverse().join('/'));
+                infoEl.textContent = partes.length
+                    ? 'Filtro ativo — ' + partes.join(' | ') + ' — ' + lista.length + ' serviço(s) concluído(s)'
+                    : '';
+            }
+
+            if (lista.length === 0) {
+                listaEl.innerHTML = '<li class="agenda-lista-vazia"><i class="bi bi-calendar-x"></i>Nenhum serviço concluído no período selecionado.</li>';
+                return;
+            }
+
+            lista.forEach(function (ag) {
+                var li = document.createElement('li');
+                li.className = 'agenda-prest-item';
+                li.dataset.agendamentoId = ag.id;
+                var diaLabel = _formatarDiaLabel(ag.data);
+                var horario  = ag.horario || '—';
+                var botoesHTML = '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
+                li.innerHTML =
+                    '<div>' +
+                        '<div class="agenda-slot-dia">'    + diaLabel + '</div>' +
+                        '<div class="agenda-slot-tempo">'  + horario  + '</div>' +
+                    '</div>' +
+                    '<div>' +
+                        '<div class="agenda-cliente-nome">' + (ag.cliente || '—') + '</div>' +
+                        '<p class="agenda-cliente-servico">Serviço: ' + (ag.servico || '—') + '</p>' +
+                        '<p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>' + (ag.endereco || '') + '</p>' +
+                    '</div>' +
+                    '<div class="agenda-status-area">' +
+                        '<span class="agenda-status-tag concluido">Concluído</span>' +
+                        '<div class="agenda-botoes">' + botoesHTML + '</div>' +
+                    '</div>';
+                listaEl.appendChild(li);
+            });
+        }
+
         if (btnFiltrar) {
             btnFiltrar.addEventListener('click', function () {
                 var ini = (document.getElementById('filtro-data-inicio') || {}).value || '';
                 var fim = (document.getElementById('filtro-data-fim') || {}).value || '';
-                listaEl.innerHTML = '';
-                var lista = agendamentos.filter(isHistorico).filter(function (a) {
-                    if (ini && a.data < ini) return false;
-                    if (fim && a.data > fim) return false;
-                    return true;
-                });
-                lista.sort(function (a, b) { return a.data > b.data ? 1 : -1; });
-                if (lista.length === 0) { listaEl.innerHTML = '<li class="agenda-lista-vazia"><i class="bi bi-calendar-x"></i>Nenhum resultado.</li>'; return; }
-                lista.forEach(function (ag) { /* reaproveitamos a lógica de renderização */ });
-                renderizarAba('historico'); // simplificado
+                if (!ini && !fim) {
+                    alert('Selecione ao menos uma data para filtrar.');
+                    return;
+                }
+                renderizarHistoricoFiltrado(ini, fim);
             });
         }
         if (btnLimparFiltro) {
             btnLimparFiltro.addEventListener('click', function () {
-                ['filtro-data-inicio', 'filtro-data-fim'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+                ['filtro-data-inicio', 'filtro-data-fim'].forEach(function (id) {
+                    var el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+                var infoEl = document.getElementById('filtro-info-periodo');
+                if (infoEl) infoEl.textContent = '';
                 renderizarAba('historico');
             });
         }
@@ -1464,6 +1557,34 @@ document.addEventListener('DOMContentLoaded', function () {
         function obterAvs() { return obterAvaliacoesFeitasPrestador(emailPrest); }
         function salvarAvs(arr) { salvarAvaliacoesFeitasPrestador(emailPrest, arr); }
 
+        // Sprint 3 — migração de registros legados de avaliacoesFeitasPrestAdm_<email>
+        // Garante que avaliações salvas pela área exclusiva (chave antiga) também apareçam aqui.
+        (function _migrarLegado() {
+            var LEGACY_KEY = 'avaliacoesFeitasPrestAdm_' + emailPrest;
+            var legacy = DB.get(LEGACY_KEY) || [];
+            if (legacy.length === 0) return;
+            var atuais = obterAvs();
+            var idsAtuais = atuais.map(function (a) { return a.id; });
+            var alterado = false;
+            legacy.forEach(function (av) {
+                var avId = av.pedidoId || av.id;
+                if (!avId || idsAtuais.includes(avId)) return;
+                // Tenta recuperar cliente/servico a partir dos agendamentos
+                var ags = obterAgendamentosPrestador(emailPrest);
+                var ag  = ags.find(function (a) { return a.id === avId; }) || {};
+                atuais.push({
+                    id: avId, pedidoId: avId,
+                    cliente:    av.cliente    || ag.cliente    || '—',
+                    servico:    av.servico    || ag.servico    || '—',
+                    nota:       av.nota       || 0,
+                    comentario: av.comentario || '',
+                    data:       av.data       || new Date().toLocaleDateString('pt-BR')
+                });
+                alterado = true;
+            });
+            if (alterado) salvarAvs(atuais);
+        })();
+
         var modalEl = document.getElementById('modalPrestEditarFeita');
         var starsEl = document.getElementById('modal-prest-editar-feita-estrelas');
         var notaEl = document.getElementById('modal-prest-editar-feita-nota-valor');
@@ -1511,11 +1632,32 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             avs.slice().reverse().forEach(function (av) {
-                var stars = Array.from({ length: 5 }, function (_, i) { return i < av.nota ? '<i class="bi bi-star-fill" style="color:#ffc107;"></i>' : '<i class="bi bi-star" style="color:#ccc;"></i>'; }).join('');
+                var stars = Array.from({ length: 5 }, function (_, i) {
+                    return i < av.nota
+                        ? '<i class="bi bi-star-fill" style="color:#ffc107;"></i>'
+                        : '<i class="bi bi-star" style="color:#ccc;"></i>';
+                }).join('');
                 var card = document.createElement('div');
                 card.className = 'review-card-reverse review-card-prestador-feita';
                 card.dataset.avId = av.id;
-                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Cliente: ' + (av.cliente || '—') + ' (' + (av.servico || '') + ')</h5><span class="text-muted"><small>' + (av.data || '') + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + av.comentario + '"</p><div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-warning btn-prest-feita-editar" data-id="' + av.id + '"><i class="bi bi-pencil-square me-1"></i>Editar</button><button type="button" class="btn btn-danger btn-prest-feita-excluir" data-id="' + av.id + '"><i class="bi bi-trash me-1"></i>Excluir</button></div>';
+                card.innerHTML =
+                    '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                        '<h5 class="mb-0">Cliente: ' + _escaparHtml(av.cliente || '—') +
+                        ' <span class="text-muted fw-normal" style="font-size:.85rem;">(' + _escaparHtml(av.servico || '') + ')</span></h5>' +
+                        '<span class="text-muted"><small>' + _escaparHtml(av.data || '') + '</small></span>' +
+                    '</div>' +
+                    '<div class="rating">' + stars +
+                        '<h6 class="text-muted ms-2">Nota: ' + av.nota + '.0</h6>' +
+                    '</div>' +
+                    '<p class="review-text">“' + _escaparHtml(av.comentario || '') + '”</p>' +
+                    '<div class="d-flex gap-2 mt-2">' +
+                        '<button type="button" class="btn btn-warning btn-prest-feita-editar" data-id="' + av.id + '">' +
+                            '<i class="bi bi-pencil-square me-1"></i>Editar Avaliação' +
+                        '</button>' +
+                        '<button type="button" class="btn btn-danger btn-prest-feita-excluir" data-id="' + av.id + '">' +
+                            '<i class="bi bi-trash me-1"></i>Excluir Avaliação' +
+                        '</button>' +
+                    '</div>';
                 container.insertBefore(card, botaoBloco || null);
             });
         }
@@ -1523,37 +1665,71 @@ document.addEventListener('DOMContentLoaded', function () {
         container.addEventListener('click', function (e) {
             var btnEd = e.target.closest('.btn-prest-feita-editar');
             var btnEx = e.target.closest('.btn-prest-feita-excluir');
+
             if (btnEd) {
                 var id = btnEd.dataset.id;
                 var av = obterAvs().find(function (a) { return a.id === id; });
                 if (!av) return;
                 pedidoAtual = id;
-                if (infoEl) infoEl.innerHTML = '<strong>Cliente:</strong> ' + av.cliente + ' | <strong>Serviço:</strong> ' + av.servico;
+                if (infoEl) infoEl.innerHTML =
+                    '<strong>Cliente:</strong> ' + _escaparHtml(av.cliente || '—') +
+                    ' &nbsp;|&nbsp; <strong>Serviço:</strong> ' + _escaparHtml(av.servico || '—');
                 renderEstrelas(starsEl, notaEl, av.nota);
                 if (comentEl) comentEl.value = av.comentario;
                 if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
             }
+
             if (btnEx) {
                 var idEx = btnEx.dataset.id;
-                if (!confirm('Excluir esta avaliação?')) return;
+                var avEx = obterAvs().find(function (a) { return a.id === idEx; });
+                if (!confirm('Excluir a avaliação de "' + ((avEx && avEx.cliente) || 'cliente') + '"? Esta ação não pode ser desfeita.')) return;
+
+                // Remove de AVAL_FEITAS_PREST_KEY
                 salvarAvs(obterAvs().filter(function (a) { return a.id !== idEx; }));
+
+                // Sprint 3 — remove também da chave legada (area exclusiva)
+                var LEGACY_KEY = 'avaliacoesFeitasPrestAdm_' + emailPrest;
+                var legacy = (DB.get(LEGACY_KEY) || []).filter(function (a) { return (a.pedidoId || a.id) !== idEx; });
+                DB.set(LEGACY_KEY, legacy);
+
+                // Remove do lado do cliente (avaliações recebidas)
+                var KEY_CLI = 'avaliacoesRecebidasDoCliente';
+                var avsCliente = (DB.get(KEY_CLI) || []).filter(function (a) { return a.id !== ('rec-prest-' + idEx); });
+                DB.set(KEY_CLI, avsCliente);
+
                 renderizarLista();
-                alert('Excluída!');
+                exibirToast('Avaliação excluída com sucesso.');
             }
         });
 
         if (btnSalvar) {
             btnSalvar.addEventListener('click', function () {
-                var nota = parseInt((notaEl || {}).value) || 0;
+                var nota   = parseInt((notaEl   || {}).value) || 0;
                 var coment = (comentEl || {}).value || '';
-                if (nota === 0) { alert('Selecione uma nota.'); return; }
-                if (!coment.trim()) { alert('Escreva um comentário.'); return; }
+                if (nota === 0)       { alert('Selecione uma nota.');       return; }
+                if (!coment.trim())   { alert('Escreva um comentário.'); return; }
+
+                // Atualiza em AVAL_FEITAS_PREST_KEY
                 var avs = obterAvs();
                 var idx = avs.findIndex(function (a) { return a.id === pedidoAtual; });
                 if (idx >= 0) { avs[idx].nota = nota; avs[idx].comentario = coment; salvarAvs(avs); }
+
+                // Sprint 3 — atualiza também na chave legada
+                var LEGACY_KEY = 'avaliacoesFeitasPrestAdm_' + emailPrest;
+                var legacy = DB.get(LEGACY_KEY) || [];
+                var idxL = legacy.findIndex(function (a) { return (a.pedidoId || a.id) === pedidoAtual; });
+                if (idxL >= 0) { legacy[idxL].nota = nota; legacy[idxL].comentario = coment; DB.set(LEGACY_KEY, legacy); }
+
+                // Atualiza no lado do cliente
+                var KEY_CLI = 'avaliacoesRecebidasDoCliente';
+                var avsCliente = DB.get(KEY_CLI) || [];
+                var avId = 'rec-prest-' + pedidoAtual;
+                var idxC = avsCliente.findIndex(function (a) { return a.id === avId; });
+                if (idxC >= 0) { avsCliente[idxC].nota = nota; avsCliente[idxC].comentario = coment; DB.set(KEY_CLI, avsCliente); }
+
                 if (modalEl) bootstrap.Modal.getInstance(modalEl).hide();
                 renderizarLista();
-                alert('Atualizada!');
+                exibirToast('Avaliação atualizada com sucesso!');
             });
         }
 
@@ -2053,8 +2229,23 @@ document.addEventListener('DOMContentLoaded', function () {
             if (domFim) domFim.disabled = false;
         }
         if (confSalva.duracaoServico) { var el = document.getElementById('duracao-servico'); if (el) el.value = confSalva.duracaoServico; }
-        if (confSalva.antecedencia) { var el2 = document.getElementById('antecedencia'); if (el2) el2.value = confSalva.antecedencia; }
-        if (confSalva.intervalo) { var el3 = document.getElementById('intervalo'); if (el3) el3.value = confSalva.intervalo; }
+        if (confSalva.antecedencia)    { var el2 = document.getElementById('antecedencia');    if (el2) el2.value = confSalva.antecedencia; }
+        if (confSalva.intervalo)       { var el3 = document.getElementById('intervalo');        if (el3) el3.value = confSalva.intervalo; }
+
+        // Sprint 2 — ajustes no campo antecedencia e no select intervalo
+        // (a) Garante min=12 no input de antecedência
+        var antInput = document.getElementById('antecedencia');
+        if (antInput) {
+            antInput.min = '12';
+            if (parseInt(antInput.value) < 12) antInput.value = '12';
+        }
+        // (b) Adiciona opção 60 min ao select de intervalo (se ainda não existir)
+        var intvSelect = document.getElementById('intervalo');
+        if (intvSelect && !intvSelect.querySelector('option[value="60"]')) {
+            var opt60 = document.createElement('option');
+            opt60.value = '60'; opt60.textContent = '60 minutos (1 hora)';
+            intvSelect.appendChild(opt60);
+        }
 
         // Salvar
         var btnSalvar = confForm.querySelector('.conf-btn-salvar, button[type="submit"]');
@@ -2073,8 +2264,22 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
                     dados[dia] = { inicio: ini ? ini.value : '08:00', fim: fim ? fim.value : '17:00', ativo: cbk ? cbk.checked : true };
                 });
-                var dur = document.getElementById('duracao-servico'); var ant = document.getElementById('antecedencia'); var intv = document.getElementById('intervalo');
-                if (dur) dados.duracaoServico = dur.value; if (ant) dados.antecedencia = ant.value; if (intv) dados.intervalo = intv.value;
+                var dur  = document.getElementById('duracao-servico');
+                var ant  = document.getElementById('antecedencia');
+                var intv = document.getElementById('intervalo');
+
+                // Sprint 2 — validação de antecedência mínima (12 h)
+                if (ant) {
+                    var antVal = parseInt(ant.value);
+                    if (isNaN(antVal) || antVal < 12) {
+                        ant.value = '12';
+                        alert('A antecedência mínima é de 12 horas. O valor foi ajustado automaticamente.');
+                    }
+                }
+
+                if (dur)  dados.duracaoServico = dur.value;
+                if (ant)  dados.antecedencia   = ant.value;
+                if (intv) dados.intervalo       = intv.value;
                 DB.set(CONF_KEY, dados);
                 alert('Configurações de agenda salvas!');
             });
@@ -2106,14 +2311,46 @@ document.addEventListener('DOMContentLoaded', function () {
             tituloH1.insertAdjacentElement('afterend', periodoDiv);
         }
 
+        // Sprint 4 — converte dd/mm/yyyy → yyyy-mm-dd para comparação de período
+        function _dmyParaIso(str) {
+            if (!str) return '';
+            var p = str.split('/');
+            return (p.length === 3) ? p[2] + '-' + p[1].padStart(2,'0') + '-' + p[0].padStart(2,'0') : '';
+        }
+
         function calcularStats(ini, fim) {
             var ags = obterAgs();
-            if (ini) ags = ags.filter(function (a) { return a.data >= ini; });
-            if (fim) ags = ags.filter(function (a) { return a.data <= fim; });
-            var concluidos = ags.filter(function (a) { return a.status === 'concluido'; });
+
+            // Sprint 2 (revisão) — usa a data de CONCLUSÃO (concluidoEm) como referência,
+            // com fallback para ag.data, espelhando a lógica de renderizarHistoricoFiltrado.
+            // Isso garante que serviços concluídos hoje apareçam no filtro do dia atual,
+            // independentemente de quando o atendimento foi originalmente agendado.
+            var concluidos = ags.filter(function (a) {
+                if (a.status !== 'concluido') return false;
+                if (!ini && !fim) return true;               // sem filtro → inclui todos
+
+                // Determina a data de referência: concluidoEm (ISO → yyyy-mm-dd) ou ag.data
+                var dataRef = a.concluidoEm
+                    ? a.concluidoEm.substring(0, 10)
+                    : (a.data || '');
+
+                if (ini && dataRef < ini) return false;
+                if (fim && dataRef > fim) return false;
+                return true;
+            });
             var clientes = {}; concluidos.forEach(function (a) { clientes[a.cliente] = true; });
             var fat = 0; concluidos.forEach(function (a) { fat += parseFloat(a.valor) || 0; });
+            // Sprint 4 — avaliações também filtradas estritamente pelo período selecionado
             var avsRec = obterAvaliacoesRecebidasPrestador(emailPrest);
+            if (ini || fim) {
+                avsRec = avsRec.filter(function (a) {
+                    var iso = _dmyParaIso(a.data);
+                    if (!iso) return false;
+                    if (ini && iso < ini) return false;
+                    if (fim && iso > fim) return false;
+                    return true;
+                });
+            }
             var avsPos = avsRec.filter(function (a) { return (a.nota || 0) >= 4; }).length;
             var pct = avsRec.length > 0 ? Math.round((avsPos / avsRec.length) * 100) : 0;
             return { clientes: Object.keys(clientes).length, servicos: concluidos.length, faturamento: fat, pctPos: pct, concluidos: concluidos };
@@ -2198,26 +2435,104 @@ document.addEventListener('DOMContentLoaded', function () {
             btnFiltrar.addEventListener('click', function () {
                 var ini = (document.getElementById('dash-data-ini') || {}).value || '';
                 var fim = (document.getElementById('dash-data-fim') || {}).value || '';
-                if (ini && fim && ini > fim) { alert('Data inicial não pode ser maior que a final.'); return; }
+                // Sprint 4 — exige ao menos uma data para filtrar estritamente o período
+                if (!ini && !fim) {
+                    alert('Informe ao menos uma data (inicial ou final) para filtrar o período.');
+                    return;
+                }
+                if (ini && fim && ini > fim) { alert('A data inicial não pode ser maior que a data final.'); return; }
                 var info = document.getElementById('dash-periodo-info');
-                if (info) { info.style.display = (ini || fim) ? 'block' : 'none'; info.innerHTML = '<i class="bi bi-funnel-fill me-1"></i>Período: ' + (ini ? ini.split('-').reverse().join('/') : 'início') + ' até ' + (fim ? fim.split('-').reverse().join('/') : 'hoje'); }
+                if (info) {
+                    info.style.display = 'block';
+                    info.innerHTML =
+                        '<i class="bi bi-funnel-fill me-1"></i>' +
+                        'Período filtrado: ' +
+                        (ini ? ini.split('-').reverse().join('/') : 'início') +
+                        ' → ' +
+                        (fim ? fim.split('-').reverse().join('/') : 'hoje');
+                }
                 renderizar(ini || null, fim || null);
             });
         }
+        // Helper: limpa cards e tabela sem recalcular
+        function limparTela() {
+            // Zera os 4 indicadores do grid
+            var grid = relMain.querySelector('.grid');
+            if (grid) {
+                grid.querySelectorAll('.kv').forEach(function (kv) { kv.textContent = '—'; });
+            }
+            // Limpa a tabela de detalhes
+            var cardPlac = relMain.querySelector('.card .placeholder');
+            if (cardPlac) {
+                cardPlac.innerHTML =
+                    '<span style="color:var(--texto-muted,#6c757d);font-style:italic;font-size:.9rem;">' +
+                    '<i class="bi bi-funnel me-2"></i>' +
+                    'Selecione um período e clique em <strong>Filtrar</strong> para visualizar o relatório.' +
+                    '</span>';
+            }
+        }
+
         if (btnLimpar) {
             btnLimpar.addEventListener('click', function () {
-                ['dash-data-ini', 'dash-data-fim'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
-                var info = document.getElementById('dash-periodo-info'); if (info) info.style.display = 'none';
-                renderizar(null, null);
+                // Sprint 4 — limpa inputs de data
+                ['dash-data-ini', 'dash-data-fim'].forEach(function (id) {
+                    var el = document.getElementById(id); if (el) el.value = ''; 
+                });
+                // Oculta e limpa label de período
+                var info = document.getElementById('dash-periodo-info');
+                if (info) { info.style.display = 'none'; info.innerHTML = ''; }
+                // Limpa cards e tabela sem repopular com dados gerais
+                limparTela();
             });
         }
 
-        renderizar(null, null);
+        // -------------------------------------------------------
+        // Sprint 2 — ao carregar, pré-preenche ambos os campos com
+        // a data de hoje e renderiza os indicadores do dia atual.
+        // -------------------------------------------------------
+        (function preencherHoje() {
+            // Monta a data atual no formato yyyy-mm-dd (padrão input[type=date])
+            var agora   = new Date();
+            var ano     = agora.getFullYear();
+            var mes     = String(agora.getMonth() + 1).padStart(2, '0');
+            var dia     = String(agora.getDate()).padStart(2, '0');
+            var hojeISO = ano + '-' + mes + '-' + dia;             // ex.: "2026-05-11"
+            var hojeBR  = dia + '/' + mes + '/' + ano;             // ex.: "11/05/2026"
+
+            // Preenche os dois inputs de período com a data de hoje
+            var inpIni = document.getElementById('dash-data-ini');
+            var inpFim = document.getElementById('dash-data-fim');
+            if (inpIni) inpIni.value = hojeISO;
+            if (inpFim) inpFim.value = hojeISO;
+
+            // Exibe o rótulo de período informativo
+            var info = document.getElementById('dash-periodo-info');
+            if (info) {
+                info.style.display = 'block';
+                info.innerHTML =
+                    '<i class="bi bi-calendar-check me-1"></i>' +
+                    'Exibindo dados de <strong>hoje</strong> — ' + hojeBR;
+            }
+
+            // Renderiza os cards e a tabela com o filtro de hoje
+            renderizar(hojeISO, hojeISO);
+        }());
     }
 
     // =========================================================
     // CONTATO DO PRESTADOR (prestadorContato.html)
     // =========================================================
+    // =========================================================
+    // CONTATO DO PRESTADOR — Sprint 5
+    // Envio real via FormSubmit.co (sem backend).
+    // Destino fixo de testes: kleber.sdi@hotmail.com
+    // ATENÇÃO: no primeiro envio, o FormSubmit envia um e-mail
+    // de ativação para kleber.sdi@hotmail.com — confirme o link
+    // recebido para ativar o endereço.
+    // =========================================================
+    var SG_CONTATO_DESTINO = 'kleber.sdi@hotmail.com';
+    var SG_FORMSUBMIT_URL  = 'https://formsubmit.co/ajax/' + SG_CONTATO_DESTINO;
+
     function inicializarContatoPrestador() {
         var btnEnviar = document.querySelector('.contato-enviar-btn');
         if (!btnEnviar) return;
@@ -2225,29 +2540,93 @@ document.addEventListener('DOMContentLoaded', function () {
         var notif = document.getElementById('sg-notif-barra-prest');
         if (notif) notif.remove();
 
-        // Preenche nome e email do usuário logado
+        // Preenche nome e e-mail do usuário logado
         var usu = obterUsuarioLogado();
         if (usu) {
-            var nomeEl = document.getElementById('nome'); var emailEl = document.getElementById('email');
-            if (nomeEl && !nomeEl.value) nomeEl.value = usu.nome || '';
+            var nomeEl  = document.getElementById('nome');
+            var emailEl = document.getElementById('email');
+            if (nomeEl  && !nomeEl.value)  nomeEl.value  = usu.nome  || '';
             if (emailEl && !emailEl.value) emailEl.value = usu.email || '';
         }
 
         btnEnviar.addEventListener('click', function () {
-            var nome = (document.getElementById('nome') || {}).value || '';
-            var email = (document.getElementById('email') || {}).value || '';
-            var mensagem = (document.getElementById('mensagem') || {}).value || '';
-            if (!nome.trim()) { alert('Informe seu nome.'); return; }
-            if (!email.trim() || !/\S+@\S+\.\S+/.test(email)) { alert('Informe um e-mail válido.'); return; }
-            if (!mensagem.trim()) { alert('Escreva uma mensagem.'); return; }
+            var nome     = ((document.getElementById('nome')     || {}).value || '').trim();
+            var email    = ((document.getElementById('email')    || {}).value || '').trim();
+            var mensagem = ((document.getElementById('mensagem') || {}).value || '').trim();
+            var arquivoInput = document.getElementById('arquivo');
 
-            // Pronto para enviar ao banco de dados / API
+            // Validações
+            if (!nome)    { alert('Informe seu nome.');           return; }
+            if (!email || !/\S+@\S+\.\S+/.test(email)) { alert('Informe um e-mail válido.'); return; }
+            if (!mensagem) { alert('Escreva uma mensagem.');      return; }
+
+            // Verifica tamanho do arquivo (limite FormSubmit: ~20 MB)
+            if (arquivoInput && arquivoInput.files && arquivoInput.files[0]) {
+                var tamanhoMB = arquivoInput.files[0].size / (1024 * 1024);
+                if (tamanhoMB > 20) {
+                    alert('O arquivo deve ter no máximo 20 MB.');
+                    return;
+                }
+            }
+
+            // Feedback visual no botão
+            btnEnviar.disabled = true;
+            var textoOriginal = btnEnviar.innerHTML;
+            btnEnviar.innerHTML =
+                '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
+                'Enviando…';
+
+            // Monta FormData
+            var fd = new FormData();
+            fd.append('name',      nome);
+            fd.append('email',     email);
+            fd.append('message',   mensagem);
+            fd.append('_subject',  'Contato ServGo! — ' + nome);
+            fd.append('_replyto',  email);
+            fd.append('_captcha',  'false');
+            fd.append('_template', 'table');
+
+            if (arquivoInput && arquivoInput.files && arquivoInput.files[0]) {
+                fd.append('attachment', arquivoInput.files[0], arquivoInput.files[0].name);
+            }
+
+            // Salva no localStorage (log local)
             var contatos = DB.get('contatosMensagens') || [];
-            contatos.push({ de: nome, email: email, mensagem: mensagem, data: new Date().toISOString() });
+            contatos.push({
+                de: nome, email: email, mensagem: mensagem,
+                anexo: arquivoInput && arquivoInput.files && arquivoInput.files[0]
+                    ? arquivoInput.files[0].name : null,
+                data: new Date().toISOString()
+            });
             DB.set('contatosMensagens', contatos);
 
-            alert('Mensagem enviada com sucesso! Entraremos em contato em breve.');
-            ['nome', 'email', 'mensagem', 'arquivo'].forEach(function (id) { var el = document.getElementById(id); if (el) el.value = ''; });
+            // Envio via FormSubmit.co
+            fetch(SG_FORMSUBMIT_URL, { method: 'POST', body: fd })
+                .then(function (res) {
+                    // FormSubmit responde com JSON: { success: "true" } ou { success: false }
+                    return res.json().catch(function () { return { success: res.ok ? 'true' : 'false' }; });
+                })
+                .then(function (data) {
+                    btnEnviar.disabled = false;
+                    btnEnviar.innerHTML = textoOriginal;
+
+                    var ok = data.success === 'true' || data.success === true;
+                    if (ok) {
+                        exibirToast('✅ Mensagem enviada! Entraremos em contato em breve.');
+                        ['nome', 'email', 'mensagem', 'arquivo'].forEach(function (id) {
+                            var el = document.getElementById(id);
+                            if (el) el.value = '';
+                        });
+                    } else {
+                        alert('Não foi possível enviar a mensagem. ' + 'Se for o primeiro envio, verifique se o e-mail de ativação enviado para ' + SG_CONTATO_DESTINO + ' já foi confirmado. Tente novamente após a confirmação.');
+                    }
+                })
+                .catch(function (err) {
+                    btnEnviar.disabled = false;
+                    btnEnviar.innerHTML = textoOriginal;
+                    console.error('[ServGo] Erro no envio de contato:', err);
+                    alert('Erro de conexão ao enviar a mensagem. Verifique sua internet e tente novamente.');
+                });
         });
     }
 
@@ -2876,47 +3255,78 @@ document.addEventListener('DOMContentLoaded', function () {
                 resultado[dow] = { ativo: dow >= 1 && dow <= 5, inicio: '08:00', fim: '18:00' };
             }
         }
+        // ── Regras de agendamento (Sprint 2) ──────────────────────────────────
+        // antecedencia: mínimo obrigatório de 12 horas
+        var antSalva = parseInt(conf.antecedencia);
+        resultado.antecedencia   = isNaN(antSalva) ? 24 : Math.max(12, antSalva);
+        // duracaoServico: mínimo de 60 min (1 bloco = 1 h)
+        var durSalva = parseInt(conf.duracaoServico);
+        resultado.duracaoServico = isNaN(durSalva) ? 120 : Math.max(60, durSalva);
+        // intervalo: mínimo de 60 min entre o fim de um serviço e o início do próximo
+        var intSalvo = parseInt(conf.intervalo);
+        resultado.intervalo      = isNaN(intSalvo) ? 60 : Math.max(60, intSalvo);
         return resultado;
     }
 
-    // Gera lista de { data, horario, label } respeitando a config do prestador
+    // Gera lista de { data, label, slots[] } respeitando a config do prestador.
+    // Sprint 2 — usa antecedencia, duracaoServico e intervalo salvos em agendaConfig.
     function _calcularSlotsDisponiveis(emailPrest, maxDias) {
         maxDias = maxDias || 30;
-        var config  = _obterConfigAgenda(emailPrest);
-        var ags     = obterAgendamentosPrestador(emailPrest);
+        var config   = _obterConfigAgenda(emailPrest);
+        var ags      = obterAgendamentosPrestador(emailPrest);
         var ocupados = {};
         ags.forEach(function (a) {
-            // Sprint 1 — slots de orçamentos recusados pelo cliente também ficam livres
+            // Slots de orçamentos recusados / cancelados ficam livres
             if (a.status === 'cancelado' || a.status === 'orcamento_recusado') return;
             var ini = (a.horario || '').split(' - ')[0];
             if (ini && a.data) ocupados[a.data + ' ' + ini] = true;
         });
 
         var agora = new Date();
-        // Sprint 4 — cliente não pode agendar com menos de 12 horas de antecedência.
-        // Se não houver slots ≥ 12h à frente, o loop naturalmente retorna o próximo dia válido.
-        var minima = new Date(agora.getTime() + 12 * 60 * 60 * 1000);
+
+        // ── Regras configuradas pelo prestador ────────────────────────────────────────
+        // antecedencia: mínimo de horas de aviso prévio (mínimo obrigatório = 12 h)
+        var antecedenciaHoras = config.antecedencia; // já normalizado em _obterConfigAgenda
+        var minima = new Date(agora.getTime() + antecedenciaHoras * 60 * 60 * 1000);
+
+        // Passo entre slots em minutos = duração + intervalo (mín 60 min cada)
+        var duracaoMin   = config.duracaoServico; // min 60
+        var intervaloMin = config.intervalo;      // min 60
+        var passoMin     = duracaoMin + intervaloMin; // passo total mínimo = 120 min
+
         var diasDisponiveis = [];
 
         for (var d = 0; d < maxDias; d++) {
             var dia = new Date(agora);
             dia.setDate(agora.getDate() + d);
-            var dow = dia.getDay();
+            var dow     = dia.getDay();
             var confDia = config[dow];
             if (!confDia || !confDia.ativo) continue;
 
-            var hIni = parseInt((confDia.inicio || '08:00').split(':')[0]);
-            var hFim = parseInt((confDia.fim   || '18:00').split(':')[0]);
-            var dataStr = dia.toISOString().substring(0, 10);
-            var slots = [];
+            // Converte horários de início/fim do dia para minutos desde meia-noite
+            var partsIni  = (confDia.inicio || '08:00').split(':');
+            var partsFim  = (confDia.fim    || '18:00').split(':');
+            var inicioMin = parseInt(partsIni[0]) * 60 + (parseInt(partsIni[1]) || 0);
+            var fimMin    = parseInt(partsFim[0]) * 60 + (parseInt(partsFim[1]) || 0);
 
-            for (var h = hIni; h < hFim; h++) {
-                // Bloqueia qualquer slot que esteja menos de 12 h no futuro
-                var slotDt = new Date(dataStr + 'T' + String(h).padStart(2, '0') + ':00:00');
-                if (slotDt.getTime() < minima.getTime()) continue;
-                var horS = String(h).padStart(2, '0') + ':00';
-                if (!ocupados[dataStr + ' ' + horS]) slots.push(horS);
+            var dataStr = dia.toISOString().substring(0, 10);
+            var slots   = [];
+
+            var curMin = inicioMin;
+            while (curMin + duracaoMin <= fimMin) {
+                var hS   = Math.floor(curMin / 60);
+                var mS   = curMin % 60;
+                var horS = String(hS).padStart(2, '0') + ':' + String(mS).padStart(2, '0');
+
+                // Bloqueia slots dentro da janela de antecedência mínima
+                var slotDt = new Date(dataStr + 'T' + horS + ':00');
+                if (slotDt.getTime() >= minima.getTime()) {
+                    if (!ocupados[dataStr + ' ' + horS]) slots.push(horS);
+                }
+
+                curMin += passoMin;
             }
+
             if (slots.length > 0) {
                 diasDisponiveis.push({ data: dataStr, label: _formatarDiaLabel(dataStr), slots: slots });
             }
