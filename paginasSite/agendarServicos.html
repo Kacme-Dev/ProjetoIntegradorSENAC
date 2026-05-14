@@ -1,236 +1,525 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ServGo! - Agendar Serviço</title>
+    <title>ServGo! - Encontre Prestadores</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/css/estiloServGo.css">
     <style>
-        /* Responsividade padrão igual ao index.html: breakpoint lg (992px). */
-        @media (max-width: 991.98px) {
-            .cli-wrapper { flex-direction: column; }
-            .cli-sidebar {
-                width: 100%;
-                min-width: unset;
-                border-right: none;
-                border-bottom: 1px solid var(--borda);
-                padding: 12px 0;
-                display: none;
-            }
-            .cli-sidebar.cli-sidebar-show { display: block; }
+        /* ── FILTROS ── */
+        .catalogo-filtros-wrap { margin-bottom:22px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none; }
+        .catalogo-filtros-wrap::-webkit-scrollbar { display:none; }
+        .catalogo-filtros { display:flex;gap:8px;flex-wrap:nowrap;align-items:center;padding-bottom:4px; }
+        .filtro-pill { display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;border:1.5px solid var(--borda,#dee2e6);background:#fff;color:#444;font-size:.85rem;font-weight:500;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .15s,color .15s,border-color .15s,transform .1s; }
+        .filtro-pill:hover { border-color:var(--azul-principal,#146ADB);color:var(--azul-principal,#146ADB); }
+        .filtro-pill:active { transform:translateY(1px); }
+        .filtro-pill.ativo { background:var(--azul-principal,#146ADB);border-color:var(--azul-principal,#146ADB);color:#fff; }
+        .filtro-pill-todos { border-color:#e6b000;color:#7a5c00; }
+        .filtro-pill-todos.ativo { background:var(--amarelo,#FFC300);border-color:var(--amarelo,#FFC300);color:#000; }
+        /* ── SEÇÃO ── */
+        .catalogo-secao { margin-bottom:36px; }
+        .catalogo-secao.oculta { display:none; }
+        .catalogo-secao-titulo { display:flex;align-items:center;gap:10px;font-size:1rem;font-weight:700;color:#1a1a1a;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--borda,#dee2e6); }
+        .catalogo-secao-titulo .cat-icon { width:32px;height:32px;border-radius:8px;background:var(--azul-principal,#146ADB);display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem;flex-shrink:0; }
+        .catalogo-secao-titulo .badge-count { margin-left:auto;background:var(--cinza-fundo,#f2f2f2);color:var(--texto-muted,#6c757d);font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:20px; }
+        /* ── GRID ── */
+        .catalogo-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px; }
+        @media (max-width:576px) { .catalogo-grid { grid-template-columns:repeat(2,1fr);gap:10px; } }
+        /* ── CARD ── */
+        .prest-card { background:#fff;border:1.5px solid var(--borda,#dee2e6);border-radius:10px;overflow:hidden;cursor:pointer;transition:box-shadow .18s,transform .14s,border-color .18s;position:relative;display:flex;flex-direction:column; }
+        .prest-card:hover { box-shadow:0 6px 20px rgba(0,0,0,.12);transform:translateY(-3px);border-color:var(--azul-principal,#146ADB); }
+        .prest-card:active { transform:translateY(-1px); }
+        /* foto */
+        .prest-card-foto { width:100%;aspect-ratio:4/3;overflow:hidden;background:#e8edf2;position:relative;flex-shrink:0; }
+        .prest-card-foto img { width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s; }
+        .prest-card:hover .prest-card-foto img { transform:scale(1.04); }
+        .prest-card-foto-placeholder { width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#fff; }
+        .prest-card-foto-placeholder .av-ini { font-size:2.2rem;font-weight:800;letter-spacing:-1px;line-height:1; }
+        .prest-card-foto-placeholder .av-ico { font-size:1.1rem;opacity:.65; }
+        .prest-card-cat-badge { position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,.55);color:#fff;font-size:.68rem;font-weight:600;padding:3px 8px;border-radius:20px;backdrop-filter:blur(4px);display:flex;align-items:center;gap:4px; }
+        /* corpo */
+        .prest-card-corpo { padding:12px 13px 14px;flex:1;display:flex;flex-direction:column; }
+        .prest-card-nome { font-size:.92rem;font-weight:700;color:#1a1a1a;margin-bottom:4px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
+        .prest-card-rating { display:flex;align-items:center;gap:3px;font-size:.72rem;color:var(--amarelo,#FFC300);margin-bottom:6px; }
+        .prest-card-rating .txt-nota { color:#888;margin-left:2px; }
+        .prest-card-desc { font-size:.77rem;color:#666;line-height:1.45;margin-bottom:8px;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden; }
+        .prest-card-contato { font-size:.73rem;color:#999;margin-bottom:10px;display:flex;flex-direction:column;gap:2px; }
+        .prest-card-contato i { color:var(--azul-principal,#146ADB);margin-right:3px; }
+        /* botões card */
+        .prest-card-acoes { display:flex;gap:6px;margin-top:auto; }
+        .btn-card-sel { flex:1;font-size:.8rem;padding:7px 0;border-radius:6px;background:var(--azul-principal,#146ADB);border:none;color:#fff;font-weight:600;cursor:pointer;transition:background .15s; }
+        .btn-card-sel:hover { background:#0d4fa3; }
+        /* vazio / loading */
+        .catalogo-vazio { text-align:center;padding:50px 20px;color:var(--texto-muted,#6c757d);font-size:.9rem;display:none; }
+        .catalogo-vazio i { font-size:3rem;margin-bottom:12px;color:#ccc;display:block; }
+
+        /* ── BANNER GUEST ── */
+        .banner-guest {
+            background: linear-gradient(135deg,#146ADB,#0d4fa3);
+            color:#fff;
+            border-radius:12px;
+            padding:18px 24px;
+            margin-bottom:28px;
+            display:flex;
+            align-items:center;
+            gap:16px;
+            flex-wrap:wrap;
         }
+        .banner-guest-texto { flex:1;min-width:200px; }
+        .banner-guest-texto strong { font-size:1rem; }
+        .banner-guest-texto p { font-size:.85rem;margin:4px 0 0;opacity:.9; }
+        .banner-guest-acoes { display:flex;gap:10px;flex-shrink:0; }
+
+        /* ── LAYOUT PRINCIPAL ── */
+        .pub-main { max-width:1100px;margin:32px auto;padding:0 20px 60px; }
+        .pub-titulo { font-size:1.55rem;font-weight:800;color:#1a1a1a;margin-bottom:4px; }
+        .pub-subtitulo { font-size:.92rem;color:#666;margin-bottom:24px; }
     </style>
 </head>
-
 <body>
 
-    <!--INÍCIO DO CABEÇALHO DA PÁGINA-->
-        <header>
+<!-- ============================= CABEÇALHO PÚBLICO ============================= -->
+<header>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container menu">
 
-            <!--TOPO DA PÁGINA-->
+            <!-- Logo → home pública -->
+            <a class="navbar-brand" href="/index.html">
+                <span class="serv-part">Serv</span><span class="go-part">Go!</span>
+            </a>
 
-            <!--Trabalha sobre os Menus (links)-->
-
-            <nav class="navbar navbar-expand-lg">
-
-                <div class="container menu"> <!--Altera o conteúdo dos Menus (links)-->
-
-                    <!--Propriedades do Logo (Topo da Página) + Clicar no Logo volta para página Home-->
-
-                    <a class="navbar-brand" href="index.html">
-                        <span class="serv-part">Serv</span><span class="go-part">Go!</span>
-                    </a>
-
-                    <!--Botão Serviços Quando Estiver em Responsividade-->
-
-                    <div class="d-flex order-lg-3">
-                        <button class="btn btn-primary d-lg-none me-2" type="button" data-bs-toggle="offcanvas"
-                            data-bs-target="#offcanvasServices" aria-controls="offcanvasServices"
-                            style="background-color: #146ADB !important; border-color: #146ADB !important;">
-                            <i class="bi bi-list"></i> Serviços
-                        </button>
-
-                        <!--Botão Sanduíche Quando Estiver em Responsividade-->
-
-                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                            <span class="navbar-toggler-icon"></span>
-                        </button>
-                    </div>
-
-                    <!--Menus da Página Home-->
-
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav mx-auto">
-                            <li class="nav-item"><a class="nav-link nav-link-active" href="index.html">Início</a></li>
-                            <li class="nav-item"><a class="nav-link" href="paginasSite/avaliacao.html">Avaliações</a></li>
-                            <li class="nav-item"><a class="nav-link" href="paginasSite/contatoSite.html">Contato</a></li>
-                            <li class="nav-item"><a class="nav-link" href="paginasSite/faqSite.html">FAQ</a></li>
-                        </ul>                        
-
-                        <ul class="navbar-nav ms-auto align-items-lg-center">                          
-
-                            <!--Botões de Login e Cadastro da Página Home-->
-
-                            <li class="nav-item mb-2 mb-lg-0 me-2"><a class="btn btn-dark login" href="paginasSite/login.html">Login</a></li>
-                            <li class="nav-item"><a class="btn btn-warning cadastro" href="paginasSite/cadastro.html">Cadastro</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
-        </header>
-
-        <!--FIM DO CABEÇALHO DA PÁGINA-->
-
-        <!--Texto de Apresentação, abaIxo do Menu da Página Home-->
-
-        <div class="container-chamada">
-            <div class="header-chamada d-flex flex-column justify-content-center align-items-center text-center text-white">
-                <h1 class="display-4 fw-bold mb-3">A Solução Rápida para Seus Serviços.</h1>
-                <p class="lead MB-4">
-                    Encontre, contrate e avalie os melhores profissionais perto de você.</p>
-            </div>
-        </div>
-
-        <!--Define a Estrutura da Barra de Títulos do Menu Lateral durante a Resposnividade-->
-
-        <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasServices"
-            aria-labelledby="offcanvasServicesLabel">
-            <div class="offcanvas-header bg-primary text-white" style="background-color: #146ADB !important;">
-                <h5 class="offcanvas-title" id="offcanvasServicesLabel">Categorias de Serviço</h5>
-                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            <!-- Toggler responsivo -->
+            <div class="d-flex order-lg-3">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarPublico" aria-controls="navbarPublico"
+                    aria-expanded="false" aria-label="Abrir menu">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
             </div>
 
-            <!--Conteúdo apresentado no Menu Lateral durante a Resposnividade-->
-
-            <div class="offcanvas-body">
-                <ul class="navbar-nav justify-content-start flex-grow-1 pe-3">
-                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Saúde</a></li>
-                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Beleza</a></li>
-                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Manutenção Predial</a></li>
-                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">TI</a></li>
-                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Lazer</a></li>
-                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Alimentação</a></li>
-                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Design</a></li>
-                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Segurança</a></li>
-                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Logística</a></li>
-                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Consultoria</a></li>
-                    <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasSite/agendarServicos.html">Construção</a></li>
+            <div class="collapse navbar-collapse" id="navbarPublico">
+                <ul class="navbar-nav mx-auto">
+                    <li class="nav-item"><a class="nav-link" href="/index.html">Início</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/paginasSite/avaliacao.html">Avaliações</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/paginasSite/contatoSite.html">Contato</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/paginasSite/faqSite.html">FAQ</a></li>
+                </ul>
+                <ul class="navbar-nav ms-auto align-items-lg-center">
+                    <li class="nav-item mb-2 mb-lg-0 me-2">
+                        <a class="btn btn-dark login" href="/paginasSite/login.html">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-warning cadastro" href="/paginasSite/cadastro.html">Cadastro</a>
+                    </li>
                 </ul>
             </div>
+
         </div>
+    </nav>
+</header>
+<!-- ============================= FIM DO CABEÇALHO ============================= -->
 
-        <!--Barra de Links de Serviços da Página Principal-->
+<div class="pub-main">
 
-        <div class="servicos">
-            <div class="text-center mb-5 d-none d-lg-block">
-                <div class="p-2 filter-pill mx-auto d-inline-block">
-                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Saúde</a>
-                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Beleza</a>
-                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Manutenção Predial</a>
-                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">TI</a>
-                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Lazer</a>
-                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Alimentação</a>
-                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Design</a>
-                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Segurança</a>
-                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Logística</a>
-                    <a href="/paginasSite/agendarServicos.html" class="px-3 border-end">Consultoria</a>
-                    <a href="/paginasSite/agendarServicos.html" class="px-3">Construção</a>
-                </div>
-            </div>
+    <!-- Título da página -->
+    <h1 class="pub-titulo">Encontre Prestadores de Serviço</h1>
+    <p class="pub-subtitulo">Navegue pelo catálogo, conheça os profissionais e, quando pronto, faça login para agendar.</p>
+
+    <!-- Banner informativo para usuários não logados -->
+    <div class="banner-guest" id="banner-guest">
+        <div class="banner-guest-texto">
+            <strong><i class="bi bi-info-circle me-2"></i>Você está navegando como visitante</strong>
+            <p>Para agendar um serviço, basta fazer login ou criar sua conta gratuitamente.</p>
         </div>
-
-
-        <main class="cli-main agendar-main">
-            <h1>Agendar Serviço</h1>
-            <p class="agendar-subtitulo">Selecione um prestador e verifique horários disponíveis (simulado).</p>
-
-            <label class="agendar-label">Tipo de Serviço</label>
-            <select class="agendar-select">
-                <option></option>
-            </select>
-
-            <label class="agendar-label">Lista de Prestadores</label>
-            <select class="agendar-select">
-                <option></option>
-            </select>
-
-            <div class="card">
-                <div class="agendar-row" style="margin-top:16px;">
-                    <div>
-                        <label class="proximo-horario">Próximo horário disponível</label>
-                        <div class="agendar-info-bloco"></div>
-                    </div>
-                    <div>
-                        <label class="contato-prestador">Contato do Prestador</label>
-                        <div class="agendar-info-bloco"></div>
-                    </div>
-                </div>
-
-                <div class="agendar-acoes">
-                    <button class="cta">Solicitar Agendamento</button>
-                    <a class="agendar-link" href="/paginasPrestador/prestadorHotsite.html">Ver Hotsite</a>
-                </div>
-            </div>
-        </main>
+        <div class="banner-guest-acoes">
+            <a href="/paginasSite/login.html" class="btn btn-light btn-sm fw-bold">
+                <i class="bi bi-box-arrow-in-right me-1"></i>Login
+            </a>
+            <a href="/paginasSite/cadastro.html" class="btn btn-warning btn-sm fw-bold">
+                <i class="bi bi-person-plus me-1"></i>Cadastrar-se
+            </a>
+        </div>
     </div>
 
-    <!------------------------------------------ INÍCIO DO RODAPÉ ------------------------------------------------>
-    <footer>
-        <div class="container">
-            <div class="row">
-                <div class="col-md-3 mb-4">
-                    <a class="navbar-footer" href="index.html">
-                        <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
-                    </a>
-                    <p class="small text-muted">Análise, inovação e conteúdo de valor.</p>
-                    <div class="d-flex social-icons-custom">
-                        <a href="#" class="text-white me-3"><i class="bi bi-linkedin"></i></a>
-                        <a href="#" class="text-white me-3"><i class="bi bi-instagram"></i></a>
-                        <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
-                    </div>
-                </div>
+    <!-- Filtros de categoria (gerados dinamicamente) -->
+    <div class="catalogo-filtros-wrap">
+        <div class="catalogo-filtros" id="filtros-container">
+            <button class="filtro-pill filtro-pill-todos ativo" data-cat="">
+                <i class="bi bi-grid-fill"></i> Todos
+            </button>
+        </div>
+    </div>
 
-                <div class="col-md-3 mb-4">
-                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Links Rápidos</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="#" class="text-white-50 text-decoration-none">Quem Somos</a></li>
-                        <li><a href="#" class="text-white-50 text-decoration-none">Serviços</a></li>
-                        <li><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
-                        <li><a href="/paginasSite/contatoSite.html" class="text-white-50 text-decoration-none">Fale Conosco</a></li>
-                    </ul>
-                </div>
+    <!-- Feedback de carregamento -->
+    <div id="catalogo-loading" style="text-align:center;padding:40px;color:#999;font-size:.88rem;">
+        <i class="bi bi-hourglass-split me-2"></i>Carregando prestadores…
+    </div>
+    <div class="catalogo-vazio" id="catalogo-vazio">
+        <i class="bi bi-search"></i>
+        Nenhum prestador encontrado para esta categoria.
+    </div>
 
-                <div class="col-md-3 mb-4">
-                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Nossos Serviços</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
-                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
-                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
-                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
-                    </ul>
-                </div>
+    <!-- Grid de prestadores (gerado dinamicamente) -->
+    <div id="catalogo-secoes"></div>
 
-                <div class="col-md-3 mb-4">
-                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Contato</h5>
-                    <p class="small text-white-50"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</p>
-                    <p class="small text-white-50"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</p>
-                    <p class="small text-white-50"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</p>
-                    <a href="#" class="small text-decoration-none text-warning">Trabalhe Conosco</a>
+</div><!-- /.pub-main -->
+
+<!-- ============================= RODAPÉ ============================= -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-3 mb-4">
+                <a class="navbar-footer" href="/index.html">
+                    <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
+                </a>
+                <p class="small text-muted">Análise, inovação e conteúdo de valor.</p>
+                <div class="d-flex social-icons-custom">
+                    <a href="#" class="text-white me-3"><i class="bi bi-linkedin"></i></a>
+                    <a href="#" class="text-white me-3"><i class="bi bi-instagram"></i></a>
+                    <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
                 </div>
             </div>
-            <hr class="text-white-50">
-            <div class="text-center small text-white-50">
-                © 2025 ServGo! Todos os direitos reservados.
+            <div class="col-md-3 mb-4">
+                <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Links Rápidos</h5>
+                <ul class="list-unstyled">
+                    <li><a href="#" class="text-white-50 text-decoration-none">Quem Somos</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Serviços</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                    <li><a href="/paginasSite/contatoSite.html" class="text-white-50 text-decoration-none">Fale Conosco</a></li>
+                </ul>
+            </div>
+            <div class="col-md-3 mb-4">
+                <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Nossos Serviços</h5>
+                <ul class="list-unstyled">
+                    <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                    <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                </ul>
+            </div>
+            <div class="col-md-3 mb-4">
+                <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2">Contato</h5>
+                <p class="small text-white-50"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</p>
+                <p class="small text-white-50"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</p>
+                <p class="small text-white-50"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</p>
+                <a href="#" class="small text-decoration-none text-warning">Trabalhe Conosco</a>
             </div>
         </div>
-    </footer>
-    <!-------------------------------------------- FIM DO RODAPÉ ------------------------------------------------>
+        <hr class="text-white-50">
+        <div class="text-center small text-white-50">© 2026 ServGo! Todos os direitos reservados.</div>
+    </div>
+</footer>
+<!-- ============================= FIM DO RODAPÉ ============================= -->
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/script.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- script.js NÃO é carregado aqui: esta página é pública e não usa sessão de usuário -->
+
+<script>
+(function () {
+    'use strict';
+
+    // -----------------------------------------------------------------------
+    // Sprint 2 — agendarServicos.html (catálogo público, sem login)
+    // Regras:
+    //  1. Se o usuário JÁ estiver logado como cliente, redirecionar para
+    //     clienteAgendarServicos.html (mantendo o ?tipo= se houver).
+    //  2. Caso contrário, exibir o catálogo em modo somente leitura.
+    //  3. "Saiba Mais" → prestadorHotsite.html?email=EMAIL (Sprint 1).
+    //  4. NÃO exibir painel de agendamento.
+    // -----------------------------------------------------------------------
+
+    /* ── 1. Verificação de login ── */
+    (function verificarSessao() {
+        try {
+            var usu = JSON.parse(localStorage.getItem('usuarioLogado'));
+            if (usu && usu.tipo === 'cliente') {
+                // Usuário logado: redireciona para a página autenticada
+                var params = new URLSearchParams(window.location.search);
+                var tipo   = params.get('tipo') || '';
+                var url    = '/paginasCliente/clienteAgendarServicos.html';
+                if (tipo)  url += '?tipo=' + encodeURIComponent(tipo);
+                window.location.replace(url);
+            }
+        } catch (e) { /* localStorage indisponível — continua em modo guest */ }
+    }());
+
+    /* ── 2. Constantes de visual ── */
+    var GRAD = {
+        'Saúde':             ['#16a34a','#15803d'],
+        'Beleza':            ['#db2777','#9d174d'],
+        'Manutenção Predial':['#b45309','#92400e'],
+        'TI':                ['#2563eb','#1e40af'],
+        'Lazer':             ['#7c3aed','#5b21b6'],
+        'Alimentação':       ['#ea580c','#c2410c'],
+        'Design':            ['#0891b2','#0e7490'],
+        'Segurança':         ['#dc2626','#991b1b'],
+        'Logística':         ['#ca8a04','#a16207'],
+        'Consultoria':       ['#475569','#334155'],
+        'Construção':        ['#92400e','#78350f']
+    };
+    var ICO = {
+        'Saúde':             'bi-heart-pulse-fill',
+        'Beleza':            'bi-scissors',
+        'Manutenção Predial':'bi-tools',
+        'TI':                'bi-cpu-fill',
+        'Lazer':             'bi-controller',
+        'Alimentação':       'bi-basket-fill',
+        'Design':            'bi-palette-fill',
+        'Segurança':         'bi-shield-fill',
+        'Logística':         'bi-truck',
+        'Consultoria':       'bi-briefcase-fill',
+        'Construção':        'bi-building'
+    };
+
+    var catAtiva = '';
+
+    /* ── 3. Helpers ── */
+    function dbGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+    function store()  { return dbGet('hotsitePrestadorDados') || {}; }
+
+    function prestadores() {
+        var s = store();
+        return Object.keys(s)
+            .map(function (e) { return Object.assign({}, s[e], { email: e }); })
+            .filter(function (p) { return p.nome && p.categoria; });
+    }
+
+    function agrupar(lista) {
+        var g = {};
+        lista.forEach(function (p) {
+            var c = p.categoria || 'Outros';
+            (g[c] = g[c] || []).push(p);
+        });
+        return g;
+    }
+
+    function ini(nome) {
+        var p = (nome || '').trim().split(/\s+/);
+        return p.length >= 2
+            ? (p[0][0] + p[1][0]).toUpperCase()
+            : (p[0] || 'P').slice(0, 2).toUpperCase();
+    }
+
+    function grad(cat) {
+        var g = GRAD[cat] || ['#146ADB', '#0d4fa3'];
+        return 'linear-gradient(135deg,' + g[0] + ',' + g[1] + ')';
+    }
+
+    function esc(s) {
+        return String(s || '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function mediaAval(email) {
+        var st = dbGet('avaliacoesRecebidasPrestador') || {};
+        var lista = (st[email] || []).filter(function (a) { return typeof a.nota === 'number'; });
+        if (!lista.length) return { media: 0, total: 0 };
+        return {
+            media: lista.reduce(function (s, a) { return s + a.nota; }, 0) / lista.length,
+            total: lista.length
+        };
+    }
+
+    /* ── 4. Construção do card ── */
+    function mkPlh(prest) {
+        var d = document.createElement('div');
+        d.className = 'prest-card-foto-placeholder';
+        d.style.background = grad(prest.categoria);
+        d.innerHTML = '<span class="av-ini">' + ini(prest.nome) + '</span>' +
+            '<span class="av-ico"><i class="bi ' + (ICO[prest.categoria] || 'bi-person') + '"></i></span>';
+        return d;
+    }
+
+    function fotoEl(prest) {
+        var wrap = document.createElement('div');
+        wrap.className = 'prest-card-foto';
+        var foto = prest.fotoPerfil || prest.foto || '';
+        if (foto) {
+            var img = document.createElement('img');
+            img.src = foto; img.alt = prest.nome;
+            var plh = mkPlh(prest);
+            img.onerror = function () { img.style.display = 'none'; plh.style.display = 'flex'; };
+            plh.style.display = 'none';
+            wrap.appendChild(img);
+            wrap.appendChild(plh);
+        } else {
+            wrap.appendChild(mkPlh(prest));
+        }
+        var badge = document.createElement('div');
+        badge.className = 'prest-card-cat-badge';
+        badge.innerHTML = '<i class="bi ' + (ICO[prest.categoria] || 'bi-tag') + '"></i>' + esc(prest.categoria);
+        wrap.appendChild(badge);
+        return wrap;
+    }
+
+    function criarCard(prest) {
+        var card = document.createElement('div');
+        card.className = 'prest-card';
+        card.dataset.email = prest.email;
+
+        // Foto / avatar
+        card.appendChild(fotoEl(prest));
+
+        // Corpo
+        var corpo = document.createElement('div');
+        corpo.className = 'prest-card-corpo';
+
+        // Nome
+        var nome = document.createElement('div');
+        nome.className = 'prest-card-nome';
+        nome.textContent = prest.nome;
+        corpo.appendChild(nome);
+
+        // Avaliação
+        var av = mediaAval(prest.email);
+        if (av.total > 0) {
+            var rEl = document.createElement('div');
+            rEl.className = 'prest-card-rating';
+            var st = '';
+            for (var i = 1; i <= 5; i++) {
+                st += '<i class="bi ' + (i <= Math.round(av.media) ? 'bi-star-fill' : 'bi-star') + '"></i>';
+            }
+            rEl.innerHTML = st + '<span class="txt-nota">' + av.media.toFixed(1) + ' (' + av.total + ')</span>';
+            corpo.appendChild(rEl);
+        }
+
+        // Descrição resumida
+        var desc = (prest.descricao || prest.especializacao || '').trim();
+        if (desc) {
+            var dEl = document.createElement('div');
+            dEl.className = 'prest-card-desc';
+            dEl.textContent = desc;
+            corpo.appendChild(dEl);
+        }
+
+        // Contato (somente exibição)
+        var ct = document.createElement('div');
+        ct.className = 'prest-card-contato';
+        if (prest.tel) ct.innerHTML += '<span><i class="bi bi-telephone-fill"></i>' + esc(prest.tel) + '</span>';
+        ct.innerHTML += '<span><i class="bi bi-envelope-fill"></i>' + esc(prest.email) + '</span>';
+        corpo.appendChild(ct);
+
+        // Ação — Saiba Mais → HotSite (Sprint 1 / Sprint 2)
+        var ac = document.createElement('div');
+        ac.className = 'prest-card-acoes';
+        var btnS = document.createElement('button');
+        btnS.type = 'button';
+        btnS.className = 'btn-card-sel';
+        btnS.innerHTML = '<i class="bi bi-info-circle me-1"></i>Saiba Mais';
+        ac.appendChild(btnS);
+        corpo.appendChild(ac);
+        card.appendChild(corpo);
+
+        // Navegação para o HotSite (modo somente visualização para visitantes)
+        function irHotsite(e) {
+            if (e) e.stopPropagation();
+            window.location.href = '/paginasPrestador/prestadorHotsite.html?email=' + encodeURIComponent(prest.email);
+        }
+        btnS.addEventListener('click', irHotsite);
+        card.addEventListener('click', function () { irHotsite(); });
+
+        return card;
+    }
+
+    /* ── 5. Filtros ── */
+    function renderFiltros(cats) {
+        var cont = document.getElementById('filtros-container');
+        var btnTodos = cont.querySelector('.filtro-pill-todos');
+        cont.innerHTML = '';
+        cont.appendChild(btnTodos);
+        cats.slice().sort().forEach(function (cat) {
+            var btn = document.createElement('button');
+            btn.className = 'filtro-pill';
+            btn.dataset.cat = cat;
+            btn.innerHTML = '<i class="bi ' + (ICO[cat] || 'bi-tag-fill') + '"></i> ' + cat;
+            cont.appendChild(btn);
+        });
+        cont.querySelectorAll('.filtro-pill').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                catAtiva = btn.dataset.cat;
+                cont.querySelectorAll('.filtro-pill').forEach(function (b) { b.classList.remove('ativo'); });
+                btn.classList.add('ativo');
+                filtrar(catAtiva);
+            });
+        });
+    }
+
+    function filtrar(cat) {
+        var secoes = document.querySelectorAll('.catalogo-secao'), vis = 0;
+        secoes.forEach(function (s) {
+            if (!cat || s.dataset.cat === cat) { s.classList.remove('oculta'); vis++; }
+            else s.classList.add('oculta');
+        });
+        document.getElementById('catalogo-vazio').style.display = vis ? 'none' : 'block';
+    }
+
+    /* ── 6. Render do catálogo ── */
+    function renderCatalogo(lista) {
+        document.getElementById('catalogo-loading').style.display = 'none';
+        var el = document.getElementById('catalogo-secoes');
+        if (!lista.length) {
+            document.getElementById('catalogo-vazio').style.display = 'block';
+            return;
+        }
+        var grupos = agrupar(lista);
+        var cats   = Object.keys(grupos).sort();
+        renderFiltros(cats);
+        el.innerHTML = '';
+        cats.forEach(function (cat) {
+            var lista2 = grupos[cat];
+            var ico    = ICO[cat] || 'bi-tag-fill';
+            var secao  = document.createElement('div');
+            secao.className  = 'catalogo-secao';
+            secao.dataset.cat = cat;
+            var titulo = document.createElement('div');
+            titulo.className = 'catalogo-secao-titulo';
+            titulo.innerHTML =
+                '<span class="cat-icon"><i class="bi ' + ico + '"></i></span>' +
+                '<span>' + cat + '</span>' +
+                '<span class="badge-count">' + lista2.length + ' prestador' + (lista2.length !== 1 ? 'es' : '') + '</span>';
+            var grid = document.createElement('div');
+            grid.className = 'catalogo-grid';
+            lista2.forEach(function (p) { grid.appendChild(criarCard(p)); });
+            secao.appendChild(titulo);
+            secao.appendChild(grid);
+            el.appendChild(secao);
+        });
+    }
+
+    /* ── 7. Leitura de ?tipo= na URL ── */
+    function aplicarURL() {
+        var tipo = new URLSearchParams(window.location.search).get('tipo') || '';
+        if (!tipo) return;
+        catAtiva = tipo;
+        var btn = document.querySelector('.filtro-pill[data-cat="' + tipo + '"]');
+        if (btn) {
+            document.querySelectorAll('.filtro-pill').forEach(function (b) { b.classList.remove('ativo'); });
+            btn.classList.add('ativo');
+            filtrar(tipo);
+        }
+    }
+
+    /* ── 8. Inicialização ── */
+    function init() {
+        var lista = prestadores();
+        if (!lista.length) {
+            // Aguarda possível escrita assíncrona no localStorage
+            setTimeout(function () { renderCatalogo(prestadores()); aplicarURL(); }, 400);
+        } else {
+            renderCatalogo(lista);
+            aplicarURL();
+        }
+    }
+
+    document.readyState === 'loading'
+        ? document.addEventListener('DOMContentLoaded', init)
+        : init();
+
+}());
+</script>
+
 </body>
 </html>

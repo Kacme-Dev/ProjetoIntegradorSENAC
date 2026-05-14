@@ -217,6 +217,19 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // =========================================================
+    // Sprint 2 — Roteamento de categorias na Home
+    // Os links em index.html já apontam diretamente para
+    // agendarServicos.html via href. O guard de sessão dentro
+    // dessa página redireciona clientes logados para
+    // clienteAgendarServicos.html preservando o ?tipo=.
+    // Esta função é mantida apenas para compatibilidade futura.
+    // =========================================================
+    function inicializarIndexHome() {
+        // Sem interceptação de clique: os hrefs já fazem o roteamento correto.
+        // agendarServicos.html → guard redireciona logados para clienteAgendarServicos.html
+    }
+
+    // =========================================================
     // CADASTRO
     // =========================================================
     function inicializarCadastro() {
@@ -374,6 +387,17 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function redirecionarPorTipo(tipo) {
+        // Sprint 2 — se o login veio do fluxo "Agendar Serviço" sem estar logado,
+        // retorna o cliente ao card do prestador que ele havia selecionado.
+        var redirectParam = new URLSearchParams(window.location.search).get('redirect');
+        if (redirectParam === 'clienteAgendar' && tipo === 'cliente') {
+            var pendingPrest = sessionStorage.getItem('servgo_pending_prestador') || '';
+            sessionStorage.removeItem('servgo_pending_prestador');
+            var url = '../paginasCliente/clienteAgendarServicos.html';
+            if (pendingPrest) url += '?email=' + encodeURIComponent(pendingPrest);
+            window.location.href = url;
+            return;
+        }
         switch (tipo) {
             case 'admin': window.location.href = '../paginasSite/dashboardAdmin.html'; break;
             case 'prestador': window.location.href = '../paginasPrestador/indexPrestador.html'; break;
@@ -3443,7 +3467,8 @@ document.addEventListener('DOMContentLoaded', function () {
         var estaLogado = usu && (usu.tipo === 'cliente' || usu.tipo === 'admin');
 
         var params = new URLSearchParams(window.location.search);
-        var emailPrest = params.get('prestador') || '';
+        // Sprint 1 — suporta ?email= (vindo do catálogo via "Saiba Mais") e ?prestador= (legado)
+        var emailPrest = params.get('email') || params.get('prestador') || '';
 
         // Fallback: se não veio por query param, tenta o prestador logado (demo)
         if (!emailPrest) {
@@ -3546,7 +3571,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btnAgendar) {
             btnAgendar.addEventListener('click', function (e) {
                 e.preventDefault();
-                if (!estaLogado) { _modalLoginHotsite(); return; }
+                if (!estaLogado) { _modalLoginHotsite(emailPrest); return; }
                 // Monta URL com tipo e email do prestador (se disponíveis a partir dos params da página)
                 var tipoParam  = dados ? (dados.categoria || '') : '';
                 var prestParam = emailPrest || '';
@@ -3559,10 +3584,25 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function _modalLoginHotsite() {
+    function _modalLoginHotsite(emailPrest) {
+        // Sprint 2 — persiste o email do prestador para redirecionamento pós-login/cadastro
+        if (emailPrest) sessionStorage.setItem('servgo_pending_prestador', emailPrest);
+
+        var loginUrl = '/paginasSite/login.html?redirect=clienteAgendar';
         var id = 'modalLoginHotsite'; var ex = document.getElementById(id); if (ex) ex.remove();
         var modal = document.createElement('div'); modal.className = 'modal fade'; modal.id = id; modal.setAttribute('tabindex', '-1');
-        modal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header" style="background:#FFC300;color:#000;"><h5 class="modal-title"><i class="bi bi-lock me-2"></i>Acesso Restrito</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p>Para agendar, faça login primeiro.</p></div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button><a href="/paginasSite/login.html" class="btn btn-warning"><i class="bi bi-box-arrow-in-right me-1"></i>Fazer Login</a></div></div></div>';
+        modal.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content">' +
+            '<div class="modal-header" style="background:#FFC300;color:#000;">' +
+            '<h5 class="modal-title"><i class="bi bi-lock me-2"></i>Login Necessário</h5>' +
+            '<button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>' +
+            '<div class="modal-body">' +
+            '<p>Para agendar um serviço é necessário efetuar o <strong>login</strong> ou realizar o seu <strong>cadastro</strong>.</p>' +
+            '<p class="text-muted" style="font-size:.85rem;"><i class="bi bi-info-circle me-1"></i>Após o login, você será redirecionado automaticamente para continuar o agendamento.</p>' +
+            '</div>' +
+            '<div class="modal-footer">' +
+            '<button class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>' +
+            '<a href="' + loginUrl + '" class="btn btn-warning"><i class="bi bi-box-arrow-in-right me-1"></i>Fazer Login / Cadastro</a>' +
+            '</div></div></div>';
         document.body.appendChild(modal); new bootstrap.Modal(modal).show();
     }
 
@@ -4393,6 +4433,7 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarNavbarPrestador();
     inicializarNavbarCliente();         // Sprint 3 — novo
     inicializarHome();
+    inicializarIndexHome();             // Sprint 2 — roteamento de categorias (logado/guest)
     inicializarCadastro();
     inicializarLogin();
     inicializarClienteAreaExclusiva();

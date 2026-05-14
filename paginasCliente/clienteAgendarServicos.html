@@ -450,23 +450,24 @@ function criarCard(prest){
   corpo.appendChild(ct);
 
   // ações
+  // Sprint 1 — botão "Saiba Mais" direciona para o HotSite do prestador;
+  // ícone bi-box-arrow-up-right (btn-card-hot) removido conforme solicitado.
   var ac=document.createElement('div');
   ac.className='prest-card-acoes';
   var btnS=document.createElement('button');
   btnS.type='button'; btnS.className='btn-card-sel';
-  btnS.innerHTML='<i class="bi bi-calendar-check me-1"></i>Agendar';
-  var lnkH=document.createElement('a');
-  lnkH.className='btn-card-hot';
-  lnkH.href='/paginasPrestador/prestadorHotsite.html?email='+encodeURIComponent(prest.email);
-  lnkH.target='_blank'; lnkH.title='Ver Hotsite';
-  lnkH.innerHTML='<i class="bi bi-box-arrow-up-right"></i>';
-  ac.appendChild(btnS); ac.appendChild(lnkH);
+  btnS.innerHTML='<i class="bi bi-info-circle me-1"></i>Saiba Mais';
+  ac.appendChild(btnS);
   corpo.appendChild(ac);
   card.appendChild(corpo);
 
-  btnS.addEventListener('click',function(e){e.stopPropagation();selecionar(prest,card);});
-  card.addEventListener('click',function(){selecionar(prest,card);});
-  lnkH.addEventListener('click',function(e){e.stopPropagation();});
+  // Navega para o HotSite do prestador ao clicar no botão ou no card
+  function _irHotsite(e){
+    if(e) e.stopPropagation();
+    window.location.href='/paginasPrestador/prestadorHotsite.html?email='+encodeURIComponent(prest.email);
+  }
+  btnS.addEventListener('click',_irHotsite);
+  card.addEventListener('click',function(){ _irHotsite(); });
 
   return card;
 }
@@ -567,13 +568,36 @@ if(btnTrocar) btnTrocar.addEventListener('click',function(){
 });
 
 function aplicarURL(){
-  var tipo=new URLSearchParams(window.location.search).get('tipo')||'';
-  if(!tipo) return;
-  catAtiva=tipo;
-  var btn=document.querySelector('.filtro-pill[data-cat="'+tipo+'"]');
-  if(btn){
-    document.querySelectorAll('.filtro-pill').forEach(function(b){b.classList.remove('ativo');});
-    btn.classList.add('ativo'); filtrar(tipo);
+  var params=new URLSearchParams(window.location.search);
+  var tipo=params.get('tipo')||'';
+  // Sprint 1 — suporta ?email= (vindo do hotsite) e ?prestador= (compatibilidade script.js)
+  var emailParam=params.get('email')||params.get('prestador')||'';
+
+  if(tipo){
+    catAtiva=tipo;
+    var btn=document.querySelector('.filtro-pill[data-cat="'+tipo+'"]');
+    if(btn){
+      document.querySelectorAll('.filtro-pill').forEach(function(b){b.classList.remove('ativo');});
+      btn.classList.add('ativo'); filtrar(tipo);
+    }
+  }
+
+  // Sprint 1 — auto-seleciona o prestador vindo do HotSite e exibe o painel de agendamento
+  if(emailParam){
+    var cards=document.querySelectorAll('.prest-card');
+    var targetCard=null;
+    cards.forEach(function(c){if(c.dataset.email===emailParam) targetCard=c;});
+    if(targetCard){
+      var prest=prestadores().find(function(p){return p.email===emailParam;});
+      if(prest){
+        selecionar(prest,targetCard);
+        // Rola suavemente até o painel após ele ser exibido
+        setTimeout(function(){
+          var panel=document.getElementById('painel-agendamento');
+          if(panel) panel.scrollIntoView({behavior:'smooth',block:'start'});
+        },300);
+      }
+    }
   }
 }
 
