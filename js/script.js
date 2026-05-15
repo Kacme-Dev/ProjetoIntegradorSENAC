@@ -51,6 +51,218 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // =========================================================
+    // SPRINT 1 — SG_Auth: módulo centralizado de autenticação
+    // Preparado para substituição por JWT/OAuth em versão futura.
+    // =========================================================
+
+    /**
+     * SG_Auth — API pública de controle de acesso.
+     *
+     * Métodos:
+     *  - estaLogado()           → boolean
+     *  - ehTipo(tipo)           → boolean
+     *  - exigirLogin(opcoes)    → boolean (false = acesso negado, modal exibido)
+     *  - guardPagina(tipos)     → boolean (false = redirecionado para login)
+     */
+    var SG_Auth = {
+
+        /**
+         * Retorna o objeto do usuário logado ou null.
+         * Centraliza a leitura da sessão — ponto único de troca futura.
+         * @returns {Object|null}
+         */
+        obterUsuario: function () {
+            return obterUsuarioLogado();
+        },
+
+        /**
+         * Verifica se existe uma sessão de usuário ativa.
+         * @returns {boolean}
+         */
+        estaLogado: function () {
+            var usu = this.obterUsuario();
+            return !!(usu && usu.email && usu.tipo);
+        },
+
+        /**
+         * Verifica se o usuário logado pertence a um ou mais tipos.
+         * @param {string|string[]} tipo - Ex.: 'cliente' ou ['cliente','admin']
+         * @returns {boolean}
+         */
+        ehTipo: function (tipo) {
+            var usu = this.obterUsuario();
+            if (!usu) return false;
+            var tipos = Array.isArray(tipo) ? tipo : [tipo];
+            return tipos.indexOf(usu.tipo) >= 0;
+        },
+
+        /**
+         * Exige login para uma ação pontual (ex.: clique em botão).
+         * Se o usuário não estiver logado, exibe modal de aviso e retorna false.
+         * Não redireciona automaticamente — aguarda ação do usuário no modal.
+         *
+         * @param {Object} [opcoes]
+         * @param {string}   [opcoes.redirectDepoisLogin] - URL de retorno após login
+         * @param {string}   [opcoes.mensagem]            - Mensagem HTML do modal
+         * @param {Function} [opcoes.onNegado]            - Callback ao negar acesso
+         * @returns {boolean} true = autorizado | false = acesso negado
+         */
+        exigirLogin: function (opcoes) {
+            if (this.estaLogado()) return true;
+            opcoes = opcoes || {};
+            var loginUrl = '/paginasSite/login.html';
+            if (opcoes.redirectDepoisLogin) {
+                loginUrl += '?redirect=' + encodeURIComponent(opcoes.redirectDepoisLogin);
+            }
+            var mensagem = opcoes.mensagem ||
+                'Para continuar, você precisa estar <strong>logado</strong> no ServGo!';
+            _exibirModalAcessoRestrito(mensagem, loginUrl);
+            if (typeof opcoes.onNegado === 'function') opcoes.onNegado();
+            return false;
+        },
+
+        /**
+         * Guard de página — verifica sessão ao carregar uma rota protegida.
+         * Se o usuário não estiver logado (ou for de tipo não permitido),
+         * salva a URL atual no sessionStorage e redireciona para o login.
+         *
+         * @param {string|string[]} [tiposPermitidos] - Tipos de usuário aceitos na página
+         * @param {string}          [urlFallback]     - URL de redirecionamento (padrão: login.html)
+         * @returns {boolean} true = acesso permitido | false = redirecionado
+         */
+        guardPagina: function (tiposPermitidos, urlFallback) {
+            var usu = this.obterUsuario();
+            var loginBase = urlFallback || '/paginasSite/login.html';
+
+            if (!usu) {
+                // Persiste URL atual para retorno automático pós-login
+                try {
+                    sessionStorage.setItem('sg_redirect_apos_login', window.location.href);
+                } catch (e) { /* sessionStorage indisponível */ }
+                window.location.replace(loginBase + '?acesso=restrito');
+                return false;
+            }
+
+            if (tiposPermitidos) {
+                var tipos = Array.isArray(tiposPermitidos) ? tiposPermitidos : [tiposPermitidos];
+                if (tipos.indexOf(usu.tipo) < 0) {
+                    // Logado mas com tipo incorreto — redireciona para home
+                    window.location.replace('/index.html');
+                    return false;
+                }
+            }
+
+            return true; // acesso autorizado
+        }
+    };
+
+    /**
+     * Exibe modal padrão de "Acesso Restrito" com botão de login.
+     * Utilizado por SG_Auth.exigirLogin() e ações pontuais.
+     *
+     * @param {string} mensagem - HTML da mensagem exibida no corpo do modal
+     * @param {string} loginUrl - URL completa do botão "Fazer Login"
+     */
+    function _exibirModalAcessoRestrito(mensagem, loginUrl) {
+        var id = 'sg-modal-acesso-restrito';
+        var ex = document.getElementById(id);
+        if (ex) ex.remove(); // evita duplicação
+
+        var modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.id = id;
+        modal.setAttribute('tabindex', '-1');
+        modal.setAttribute('aria-labelledby', id + '-titulo');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('role', 'dialog');
+        modal.innerHTML =
+            '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-content">' +
+
+            /* Cabeçalho */
+            '<div class="modal-header" style="background:#FFC300;color:#000;">' +
+            '<h5 class="modal-title" id="' + id + '-titulo">' +
+            '<i class="bi bi-lock-fill me-2"></i>Acesso Restrito</h5>' +
+            '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>' +
+            '</div>' +
+
+            /* Corpo */
+            '<div class="modal-body">' +
+            '<p>' + mensagem + '</p>' +
+            '<p class="text-muted" style="font-size:.85rem;">' +
+            '<i class="bi bi-info-circle me-1"></i>' +
+            'Faça login ou crie sua conta gratuitamente para acessar este recurso.' +
+            '</p>' +
+            '</div>' +
+
+            /* Rodapé */
+            '<div class="modal-footer">' +
+            '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>' +
+            '<a href="' + loginUrl + '" class="btn btn-warning">' +
+            '<i class="bi bi-box-arrow-in-right me-1"></i>Fazer Login / Cadastro' +
+            '</a>' +
+            '</div>' +
+
+            '</div></div>';
+
+        document.body.appendChild(modal);
+        new bootstrap.Modal(modal).show();
+    }
+
+    // =========================================================
+    // SPRINT 1 — Guard de páginas restritas
+    // Verifica se a URL atual requer autenticação e redireciona
+    // para o login caso o usuário não esteja logado.
+    //
+    // Rotas protegidas:
+    //   /paginasCliente/*          → tipos: cliente, admin
+    //   /paginasPrestador/*        → tipos: prestador, admin
+    //   /paginasSite/dashboardAdmin.html → tipo: admin
+    //
+    // Rotas públicas (sem guard):
+    //   /index.html, /paginasSite/agendarServicos.html,
+    //   /paginasPrestador/prestadorHotsite.html,
+    //   /paginasSite/avaliacao.html, /paginasSite/contatoSite.html,
+    //   /paginasSite/faqSite.html, /paginasSite/login.html,
+    //   /paginasSite/cadastro.html
+    // =========================================================
+    function inicializarGuardPaginasRestritas() {
+        var path = window.location.pathname;
+
+        /* Páginas dentro de /paginasPrestador/ que SÃO públicas (hotsite) */
+        var EXCECOES_PRESTADOR = [
+            'prestadorHotsite.html'
+        ];
+
+        /* Regras de proteção: padrão de caminho → tipos de usuário permitidos */
+        var regras = [
+            { padrao: '/paginasCliente/',   tipos: ['cliente', 'admin'] },
+            { padrao: '/paginasPrestador/', tipos: ['prestador', 'admin'] },
+            { padrao: 'dashboardAdmin',     tipos: ['admin'] }
+        ];
+
+        /* Verifica se a rota atual corresponde a alguma regra */
+        var regraAtiva = null;
+        for (var i = 0; i < regras.length; i++) {
+            if (path.includes(regras[i].padrao)) {
+                regraAtiva = regras[i];
+                break;
+            }
+        }
+
+        if (!regraAtiva) return; // página pública — sem restrição
+
+        /* Verifica exceções (páginas públicas dentro de rotas protegidas) */
+        var isExcecao = EXCECOES_PRESTADOR.some(function (exc) {
+            return path.includes(exc);
+        });
+        if (isExcecao) return; // é uma página pública, libera acesso
+
+        /* Executa o guard — redireciona se não autenticado ou tipo incorreto */
+        SG_Auth.guardPagina(regraAtiva.tipos);
+    }
+
+    // =========================================================
     // NAVEGAÇÃO — helpers de caminho
     // =========================================================
     function obterPrefixoRaiz() {
@@ -95,13 +307,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // =========================================================
     function obterAgendamentosPrestador(emailPrest) {
         var chave = 'agendamentos_' + emailPrest;
-        var raw = DB.get(chave);
-        if (!raw && emailPrest === 'prestador@servgo.com') raw = DB.get('prestAgendamentos');
-        return raw || [];
+        return DB.get(chave) || [];
     }
     function salvarAgendamentosPrestador(emailPrest, ags) {
         DB.set('agendamentos_' + emailPrest, ags);
-        if (emailPrest === 'prestador@servgo.com') DB.set('prestAgendamentos', ags);
     }
     function _atualizarStatusClienteAgendamento(agId, emailCliente, novoStatus) {
         if (!emailCliente || !agId) return;
@@ -316,13 +525,17 @@ document.addEventListener('DOMContentLoaded', function () {
             history.replaceState(null, '', window.location.pathname);
         }
 
-        inicializarLinkEsqueciSenha();
+        // Sprint 1 — exibe aviso quando o usuário foi bloqueado pelo guard de acesso
+        if (params.get('acesso') === 'restrito' && alertaOk) {
+            alertaOk.innerHTML =
+                '<div class="alert alert-warning alert-dismissible fade show text-center" role="alert">' +
+                '<i class="bi bi-lock-fill me-2"></i>' +
+                '<strong>Acesso restrito.</strong> Faça login para continuar.' +
+                '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                '</div>';
+        }
 
-        var fixos = {
-            'prestador@servgo.com': { senha: 'senha123', tipo: 'prestador', nome: 'Prestador Demo' },
-            'cliente@servgo.com': { senha: 'senha456', tipo: 'cliente', nome: 'Cliente Demo' },
-            'admin@servgo.com': { senha: 'admin', tipo: 'admin', nome: 'Administrador' }
-        };
+        inicializarLinkEsqueciSenha();
 
         formLogin.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -330,11 +543,6 @@ document.addEventListener('DOMContentLoaded', function () {
             var senha = senhaInput.value.trim();
             if (alertaErro) alertaErro.innerHTML = '';
 
-            if (fixos[email] && fixos[email].senha === senha) {
-                salvarUsuarioLogado(email, fixos[email].nome, fixos[email].tipo);
-                redirecionarPorTipo(fixos[email].tipo);
-                return;
-            }
             var cad = obterUsuariosCadastrados();
             if (cad[email] && cad[email].senha === senha) {
                 salvarUsuarioLogado(email, cad[email].nome, cad[email].tipo);
@@ -398,6 +606,20 @@ document.addEventListener('DOMContentLoaded', function () {
             window.location.href = url;
             return;
         }
+
+        // Sprint 1 — retorna o usuário à página que ele tentou acessar antes
+        // de ser bloqueado pelo guard SG_Auth.guardPagina (acesso=restrito).
+        var sgRedirect = '';
+        try {
+            sgRedirect = sessionStorage.getItem('sg_redirect_apos_login') || '';
+            if (sgRedirect) sessionStorage.removeItem('sg_redirect_apos_login');
+        } catch (e) { sgRedirect = ''; }
+
+        if (sgRedirect) {
+            window.location.href = sgRedirect;
+            return;
+        }
+
         switch (tipo) {
             case 'admin': window.location.href = '../paginasSite/dashboardAdmin.html'; break;
             case 'prestador': window.location.href = '../paginasPrestador/indexPrestador.html'; break;
@@ -1774,15 +1996,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var notif = document.getElementById('sg-notif-barra-prest');
         if (notif) notif.remove();
 
-        // Semear dados demo se vazio
         var avs = obterAvaliacoesRecebidasPrestador(emailPrest);
-        if (avs.length === 0) {
-            avs = [
-                { id: 'rec-p1', cliente: 'Maria da Silva', servico: 'Troca de Válvula', nota: 5, comentario: 'Excelente trabalho! Muito rápido e eficiente.', data: '01/04/2026' },
-                { id: 'rec-p2', cliente: 'Pedro Souza', servico: 'Reparo na Porta', nota: 4, comentario: 'Bom serviço, recomendo.', data: '15/03/2026' }
-            ];
-            salvarAvaliacoesRecebidasPrestador(emailPrest, avs);
-        }
 
         function renderizarLista() {
             var botaoBloco = container.querySelector('.d-flex.justify-content-center');
@@ -2194,7 +2408,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!confForm || !document.getElementById('segunda-inicio')) return;
 
         var usu = obterUsuarioLogado();
-        var emailPrest = (usu && usu.tipo === 'prestador') ? usu.email : 'prestador@servgo.com';
+        if (!usu || usu.tipo !== 'prestador') return;
+        var emailPrest = usu.email;
         var CONF_KEY = 'agendaConfig_' + emailPrest;
 
         // Remove barra de notificações e botão Voltar
@@ -2320,7 +2535,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!relMain) return;
 
         var usu = obterUsuarioLogado();
-        var emailPrest = (usu && usu.tipo === 'prestador') ? usu.email : 'prestador@servgo.com';
+        if (!usu || usu.tipo !== 'prestador') return;
+        var emailPrest = usu.email;
 
         function obterAgs() { return obterAgendamentosPrestador(emailPrest); }
         function formatBRL(v) { return 'R$ ' + (v || 0).toFixed(2).replace('.', ','); }
@@ -2985,8 +3201,26 @@ document.addEventListener('DOMContentLoaded', function () {
         var linkHotsite = mainAgendar.querySelector('.agendar-link');
         if (!selectTipo || !selectPrestador) return;
 
-        // Semear prestadores demo
-        _semearPrestadoresDemo();
+        // Sprint 3 — Banner de somente-visualização para convidados (não logados)
+        if (!estaLogado) {
+            var bannerConvidado = document.createElement('div');
+            bannerConvidado.id = 'sg-banner-convidado';
+            bannerConvidado.style.cssText =
+                'display:flex;flex-wrap:wrap;gap:12px;align-items:center;' +
+                'padding:12px 16px;margin-bottom:18px;' +
+                'background:#fff8e1;border:1.5px solid #FFC300;border-radius:10px;';
+            bannerConvidado.innerHTML =
+                '<i class="bi bi-eye" style="color:#e6a800;font-size:1.2rem;flex-shrink:0;"></i>' +
+                '<span style="flex:1;font-size:.9rem;color:#7a5700;">' +
+                '<strong>Modo Visualização.</strong> Você está navegando como convidado. ' +
+                'Para solicitar orçamentos ou agendar serviços, faça login ou crie sua conta.' +
+                '</span>' +
+                '<a href="/paginasSite/login.html" class="btn btn-warning btn-sm" style="white-space:nowrap;">' +
+                '<i class="bi bi-box-arrow-in-right me-1"></i>Fazer Login</a>';
+            mainAgendar.insertBefore(bannerConvidado, mainAgendar.firstChild);
+        }
+
+        // (sem semeio de dados demo — storage começa limpo)
 
         function obterPrestadoresDoTipo(tipo) {
             var store = obterStorePrestadores();
@@ -3233,29 +3467,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (linkHotsite) {
             linkHotsite.addEventListener('click', function (e) {
                 e.preventDefault();
-                if (!estaLogado) { _modalLoginNecessario(); return; }
+                // Sprint 3 — convidados podem visualizar o hotsite; apenas booking é bloqueado lá
                 if (!selectPrestador.value) { alert('Selecione um prestador.'); return; }
                 window.location.href = '/paginasPrestador/prestadorHotsite.html?prestador=' + encodeURIComponent(selectPrestador.value);
             });
         }
 
-    }
-
-    function _semearPrestadoresDemo() {
-        var store = obterStorePrestadores();
-        if (Object.keys(store).length > 0) return;
-        var demos = [
-            { email: 'prestador@servgo.com', nome: 'Prestador Demo', categoria: 'Manutenção Predial', cidade: 'Presidente Prudente, SP', tel: '(18) 99123-4567', descricao: 'Especializado em montagem de móveis, reparos elétricos e hidráulicos.', cnpj: '', endereco: 'Rua das Flores, 100 - Centro', foto: '', formasPagamento: ['PIX', 'Cartão', 'Dinheiro'] },
-            { email: 'saude@servgo.com', nome: 'Dra. Ana Lima', categoria: 'Saúde', cidade: 'Presidente Prudente, SP', tel: '(18) 99234-5678', descricao: 'Clínica geral e nutrição.', cnpj: '', endereco: 'Av. Manoel Goulart, 200', foto: '', formasPagamento: ['PIX', 'Cartão', 'Boleto'] },
-            { email: 'beleza@servgo.com', nome: 'Studio Beleza & Cia', categoria: 'Beleza', cidade: 'Presidente Prudente, SP', tel: '(18) 98765-4321', descricao: 'Salão completo.', cnpj: '', endereco: 'Rua Coronel José Soares Marcondes, 45', foto: '', formasPagamento: ['PIX', 'Dinheiro'] }
-        ];
-        var usuarios = obterUsuariosCadastrados();
-        demos.forEach(function (d) {
-            store[d.email] = { nome: d.nome, email: d.email, cnpj: d.cnpj, categoria: d.categoria, cidade: d.cidade, descricao: d.descricao, endereco: d.endereco, tel: d.tel, foto: d.foto };
-            if (!usuarios[d.email]) usuarios[d.email] = { nome: d.nome, senha: 'Demo@123', tipo: 'prestador' };
-        });
-        DB.set(HOTSITE_KEY, store);
-        salvarUsuariosCadastrados(usuarios);
     }
 
     // =========================================================
@@ -3567,8 +3784,14 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         // Botão Agendar Serviço — redireciona para clienteAgendarServicos com dados pré-selecionados
+        // Sprint 3 — para convidados: remove data-bs-toggle/target para evitar conflito de modais
         var btnAgendar = document.querySelector('.cta-agendar');
         if (btnAgendar) {
+            if (!estaLogado) {
+                // Remove os atributos Bootstrap que abririam o modal de agenda diretamente
+                btnAgendar.removeAttribute('data-bs-toggle');
+                btnAgendar.removeAttribute('data-bs-target');
+            }
             btnAgendar.addEventListener('click', function (e) {
                 e.preventDefault();
                 if (!estaLogado) { _modalLoginHotsite(emailPrest); return; }
@@ -4427,8 +4650,700 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // =========================================================
+    // SPRINT 5 — SEMEIO DE PRESTADORES INICIAIS
+    // Popula hotsitePrestadorDados, usuariosCadastrados e
+    // avaliacoesRecebidasPrestador com dados realistas para que
+    // o catálogo em agendarServicos.html exiba cards imediatamente.
+    // Executado uma única vez (flag 'sg_seed_v1').
+    // Emails usam domínio @servgo.app — nunca removidos pelo
+    // sgLimparDadosDemo (que limpa apenas @servgo.com).
+    // =========================================================
+    function sgSemearPrestadoresIniciais() {
+        var FLAG = 'sg_seed_v1';
+        if (localStorage.getItem(FLAG) === '1') return;
+
+        var PRESTADORES = [
+
+            /* ── SAÚDE ─────────────────────────────────────── */
+            {
+                email: 'dra.marina.costa@servgo.app',
+                nome: 'Dra. Marina Costa',
+                categoria: 'Saúde',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 99801-2234',
+                endereco: 'Av. Manoel Goulart, 850 – Centro',
+                cnpj: '12.345.678/0001-90',
+                descricao: 'Médica clínica geral e medicina preventiva. Consultas, check-up e orientação nutricional integrada. Atendimento humanizado e horários flexíveis.',
+                subcategorias: ['Clínica Geral', 'Check-up', 'Medicina Preventiva'],
+                formasPagamento: ['PIX', 'Cartão', 'Boleto'],
+                avaliacoes: [
+                    { id: 'av-mc-1', cliente: 'Fernanda Rocha', servico: 'Clínica Geral', nota: 5, comentario: 'Atendimento excelente, muito atenciosa e cuidadosa. Super recomendo!', data: '10/04/2026' },
+                    { id: 'av-mc-2', cliente: 'Roberto Alves', servico: 'Check-up', nota: 5, comentario: 'Profissional incrível, explica tudo com clareza e segurança.', data: '02/04/2026' },
+                    { id: 'av-mc-3', cliente: 'Tânia Mendes', servico: 'Medicina Preventiva', nota: 4, comentario: 'Ótima consulta, me sentiu muito bem orientada.', data: '25/03/2026' }
+                ]
+            },
+            {
+                email: 'dr.lucas.nutri@servgo.app',
+                nome: 'Dr. Lucas Santos',
+                categoria: 'Saúde',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 99712-5566',
+                endereco: 'Rua Tenente Nicolau Maffei, 230 – Jardim Bongiovani',
+                cnpj: '98.765.432/0001-11',
+                descricao: 'Nutricionista clínico e esportivo. Planos alimentares personalizados para emagrecimento, hipertrofia e qualidade de vida. Atendimento presencial e online.',
+                subcategorias: ['Nutrição Clínica', 'Nutrição Esportiva', 'Emagrecimento'],
+                formasPagamento: ['PIX', 'Cartão', 'Dinheiro'],
+                avaliacoes: [
+                    { id: 'av-ls-1', cliente: 'Camila Ferreira', servico: 'Nutrição Esportiva', nota: 5, comentario: 'Mudou minha relação com a alimentação. Resultado incrível!', data: '08/04/2026' },
+                    { id: 'av-ls-2', cliente: 'Paulo Henrique', servico: 'Emagrecimento', nota: 4, comentario: 'Plano bem estruturado e acompanhamento constante.', data: '30/03/2026' }
+                ]
+            },
+
+            /* ── BELEZA ─────────────────────────────────────── */
+            {
+                email: 'studio.bella.pp@servgo.app',
+                nome: 'Studio Bella',
+                categoria: 'Beleza',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 98834-7701',
+                endereco: 'Rua Coronel José Soares Marcondes, 430 – Centro',
+                cnpj: '55.123.789/0001-44',
+                descricao: 'Salão completo de beleza. Cortes femininos e masculinos, coloração, mechas, tratamentos capilares, escova progressiva e maquiagem para eventos.',
+                subcategorias: ['Corte', 'Coloração', 'Mechas', 'Escova Progressiva', 'Maquiagem'],
+                formasPagamento: ['PIX', 'Cartão', 'Dinheiro'],
+                avaliacoes: [
+                    { id: 'av-sb-1', cliente: 'Juliana Campos', servico: 'Coloração', nota: 5, comentario: 'Adorei o resultado! Melhor salão que já fui em Prudente.', data: '12/04/2026' },
+                    { id: 'av-sb-2', cliente: 'Mariana Lopes', servico: 'Escova Progressiva', nota: 5, comentario: 'Meu cabelo ficou lindo e durou muito. Nota 10!', data: '05/04/2026' },
+                    { id: 'av-sb-3', cliente: 'Ana Paula', servico: 'Corte', nota: 4, comentario: 'Profissionais ótimas, ambiente aconchegante.', data: '28/03/2026' }
+                ]
+            },
+            {
+                email: 'nail.carla.studio@servgo.app',
+                nome: 'Carla Nail Studio',
+                categoria: 'Beleza',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 99203-8812',
+                endereco: 'Rua Siqueira Campos, 210 – Jardim América',
+                cnpj: '',
+                descricao: 'Especialista em nail art, gel, acrílico, alongamento e cuidados com as unhas. Atendimento personalizado, produtos premium e higiene impecável.',
+                subcategorias: ['Nail Art', 'Gel e Acrílico', 'Alongamento', 'Manicure', 'Pedicure'],
+                formasPagamento: ['PIX', 'Dinheiro'],
+                avaliacoes: [
+                    { id: 'av-cn-1', cliente: 'Beatriz Lima', servico: 'Nail Art', nota: 5, comentario: 'Trabalho impecável! Minhas unhas ficaram perfeitas para o casamento.', data: '09/04/2026' },
+                    { id: 'av-cn-2', cliente: 'Gisele Prado', servico: 'Gel e Acrílico', nota: 5, comentario: 'Durou semanas sem lascar. Super recomendo!', data: '01/04/2026' }
+                ]
+            },
+
+            /* ── MANUTENÇÃO PREDIAL ─────────────────────────── */
+            {
+                email: 'mario.eletrica.pp@servgo.app',
+                nome: 'Mário Elétrica',
+                categoria: 'Manutenção Predial',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 99100-4423',
+                endereco: 'Rua das Flores, 100 – Jardim Eldorado',
+                cnpj: '77.654.321/0001-88',
+                descricao: 'Eletricista residencial e comercial. Instalações, reparos, quadros de distribuição, tomadas, iluminação e laudos técnicos. Atendimento emergencial 24h.',
+                subcategorias: ['Instalações Elétricas', 'Reparos', 'Quadro de Distribuição', 'Iluminação', 'Laudo Técnico'],
+                formasPagamento: ['PIX', 'Cartão', 'Dinheiro'],
+                avaliacoes: [
+                    { id: 'av-me-1', cliente: 'Carlos Oliveira', servico: 'Instalações Elétricas', nota: 5, comentario: 'Rápido, eficiente e preço justo. Resolveu tudo em menos de 2 horas.', data: '11/04/2026' },
+                    { id: 'av-me-2', cliente: 'Sandra Vieira', servico: 'Reparos', nota: 4, comentario: 'Profissional sério e competente. Recomendo sem dúvida.', data: '03/04/2026' }
+                ]
+            },
+            {
+                email: 'jose.hidraulica.pp@servgo.app',
+                nome: 'José Hidráulica & Reformas',
+                categoria: 'Manutenção Predial',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 98760-3311',
+                endereco: 'Rua Paes de Barros, 77 – Vila Nova',
+                cnpj: '',
+                descricao: 'Encanador e reformista com 15 anos de experiência. Vazamentos, desentupimentos, instalação de torneiras, aquecedores, caixas d\'água e pequenas reformas.',
+                subcategorias: ['Vazamentos', 'Desentupimento', 'Aquecedor', 'Caixa d\'água', 'Reformas'],
+                formasPagamento: ['PIX', 'Dinheiro'],
+                avaliacoes: [
+                    { id: 'av-jh-1', cliente: 'Rogério Costa', servico: 'Vazamentos', nota: 5, comentario: 'Chegou rápido e resolveu o problema que outros não conseguiram. Excelente!', data: '07/04/2026' },
+                    { id: 'av-jh-2', cliente: 'Vera Lúcia', servico: 'Desentupimento', nota: 5, comentario: 'Serviço limpo, rápido e sem sujeira. Voltarei sempre.', data: '29/03/2026' }
+                ]
+            },
+
+            /* ── TI ─────────────────────────────────────────── */
+            {
+                email: 'rafael.suportetech@servgo.app',
+                nome: 'Rafael Tech Suporte',
+                categoria: 'TI',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 99456-1122',
+                endereco: 'Atendimento Remoto e Presencial – PP e Região',
+                cnpj: '44.987.123/0001-55',
+                descricao: 'Suporte técnico para empresas e pessoas físicas. Formatação, remoção de vírus, redes Wi-Fi, backup, configuração de sistemas e home office. Atendimento remoto imediato.',
+                subcategorias: ['Formatação', 'Redes Wi-Fi', 'Remoção de Vírus', 'Backup', 'Home Office'],
+                formasPagamento: ['PIX', 'Cartão'],
+                avaliacoes: [
+                    { id: 'av-rt-1', cliente: 'Fábio Mendonça', servico: 'Redes Wi-Fi', nota: 5, comentario: 'Resolveu o problema da minha rede em 20 minutos remotamente. Incrível!', data: '10/04/2026' },
+                    { id: 'av-rt-2', cliente: 'Luisa Trindade', servico: 'Formatação', nota: 4, comentario: 'Atendeu rápido e entregou o computador como novo.', data: '04/04/2026' }
+                ]
+            },
+            {
+                email: 'ana.dev.solutions@servgo.app',
+                nome: 'Ana Dev Solutions',
+                categoria: 'TI',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 98891-6677',
+                endereco: 'Atendimento 100% Remoto',
+                cnpj: '33.112.456/0001-22',
+                descricao: 'Desenvolvedora web e mobile freelancer. Criação de sites institucionais, lojas virtuais, landing pages, sistemas web sob medida e APIs. Entrega com qualidade e prazo.',
+                subcategorias: ['Sites Institucionais', 'E-commerce', 'Landing Page', 'Sistemas Web', 'APIs'],
+                formasPagamento: ['PIX', 'Transferência', 'Boleto'],
+                avaliacoes: [
+                    { id: 'av-ad-1', cliente: 'Ricardo Barros', servico: 'Sites Institucionais', nota: 5, comentario: 'Site entregue no prazo, lindo e totalmente responsivo. Super profissional!', data: '06/04/2026' },
+                    { id: 'av-ad-2', cliente: 'Empresa Atacado SP', servico: 'E-commerce', nota: 5, comentario: 'Desenvolveu nossa loja virtual do zero. Excelente trabalho!', data: '22/03/2026' }
+                ]
+            },
+
+            /* ── LAZER ──────────────────────────────────────── */
+            {
+                email: 'carlos.eventos.pp@servgo.app',
+                nome: 'Carlos Eventos & Animação',
+                categoria: 'Lazer',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 99321-8890',
+                endereco: 'Rua Projetada, 45 – Jardim Universitário',
+                cnpj: '66.234.891/0001-37',
+                descricao: 'Animação de festas infantis, corporativas e sociais. DJ, karaokê, iluminação, som, decoração temática e recreação infantil. Mais de 500 eventos realizados.',
+                subcategorias: ['Festa Infantil', 'Eventos Corporativos', 'DJ', 'Karaokê', 'Decoração'],
+                formasPagamento: ['PIX', 'Cartão', 'Dinheiro'],
+                avaliacoes: [
+                    { id: 'av-ce-1', cliente: 'Patrícia Souza', servico: 'Festa Infantil', nota: 5, comentario: 'A festa da minha filha foi um sucesso total! Crianças adoraram.', data: '13/04/2026' },
+                    { id: 'av-ce-2', cliente: 'Empresa ABC', servico: 'Eventos Corporativos', nota: 5, comentario: 'Profissionalismo impecável no nosso evento de confraternização.', data: '01/04/2026' }
+                ]
+            },
+
+            /* ── ALIMENTAÇÃO ────────────────────────────────── */
+            {
+                email: 'chef.patricia.gastronomia@servgo.app',
+                nome: 'Chef Patrícia Gastronomia',
+                categoria: 'Alimentação',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 99600-5544',
+                endereco: 'Atende na Residência do Cliente – Grande PP',
+                cnpj: '88.456.012/0001-60',
+                descricao: 'Chef particular para jantares especiais, festas e eventos gastronômicos. Cardápios personalizados, desde o casual ao sofisticado. Catering para empresas e casamentos.',
+                subcategorias: ['Jantar Especial', 'Catering', 'Buffet', 'Cardápio Personalizado'],
+                formasPagamento: ['PIX', 'Cartão'],
+                avaliacoes: [
+                    { id: 'av-cp-1', cliente: 'Henrique Duarte', servico: 'Jantar Especial', nota: 5, comentario: 'Preparou um jantar incrível para o aniversário da minha esposa. Perfeito!', data: '12/04/2026' },
+                    { id: 'av-cp-2', cliente: 'Empresa Delta', servico: 'Catering', nota: 5, comentario: 'Almoço executivo impecável para 40 pessoas. Super recomendo!', data: '05/04/2026' }
+                ]
+            },
+            {
+                email: 'sabor.cia.delivery@servgo.app',
+                nome: 'Sabor & Cia',
+                categoria: 'Alimentação',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 98700-2200',
+                endereco: 'Rua Quinze de Novembro, 520 – Centro',
+                cnpj: '21.098.765/0001-43',
+                descricao: 'Marmitas fitness, quentinhas e refeições saudáveis com entrega. Cardápio semanal variado, sem conservantes. Ideal para quem busca praticidade e saúde na alimentação.',
+                subcategorias: ['Marmita Fitness', 'Quentinha', 'Dieta', 'Sem Glúten', 'Vegano'],
+                formasPagamento: ['PIX', 'Cartão', 'Dinheiro'],
+                avaliacoes: [
+                    { id: 'av-sc-1', cliente: 'Aline Rezende', servico: 'Marmita Fitness', nota: 5, comentario: 'Comida deliciosa e saudável. Assino o plano semanal há 3 meses!', data: '09/04/2026' },
+                    { id: 'av-sc-2', cliente: 'Marcos Neto', servico: 'Quentinha', nota: 4, comentario: 'Boa comida caseira com entrega pontual. Vale muito!', data: '31/03/2026' }
+                ]
+            },
+
+            /* ── DESIGN ─────────────────────────────────────── */
+            {
+                email: 'bia.design.studio@servgo.app',
+                nome: 'Bia Design Studio',
+                categoria: 'Design',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 99510-7733',
+                endereco: 'Atendimento Remoto e Presencial',
+                cnpj: '50.321.678/0001-15',
+                descricao: 'Criação de identidade visual, logotipos, social media, material gráfico para impressão e digital. Design estratégico que comunica sua marca com clareza e impacto.',
+                subcategorias: ['Logo e Identidade Visual', 'Social Media', 'Material Gráfico', 'Branding'],
+                formasPagamento: ['PIX', 'Cartão'],
+                avaliacoes: [
+                    { id: 'av-bd-1', cliente: 'Loja Moda & Estilo', servico: 'Logo e Identidade Visual', nota: 5, comentario: 'Criou a identidade da minha loja e ficou perfeita! Muito talentosa.', data: '11/04/2026' },
+                    { id: 'av-bd-2', cliente: 'Restaurante Sabores', servico: 'Social Media', nota: 5, comentario: 'Nosso Instagram cresceu muito depois do trabalho dela. Incrível!', data: '03/04/2026' }
+                ]
+            },
+
+            /* ── SEGURANÇA ──────────────────────────────────── */
+            {
+                email: 'securemax.pp@servgo.app',
+                nome: 'SecureMax Segurança',
+                categoria: 'Segurança',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 99200-1144',
+                endereco: 'Av. Brasil, 1200 – Jardim Aviação',
+                cnpj: '74.891.230/0001-80',
+                descricao: 'Instalação de câmeras CFTV, alarmes, cerca elétrica e controle de acesso. Monitoramento 24h para residências e empresas. Orçamento gratuito e visita técnica sem custo.',
+                subcategorias: ['Câmeras CFTV', 'Alarmes', 'Cerca Elétrica', 'Controle de Acesso', 'Monitoramento'],
+                formasPagamento: ['PIX', 'Cartão', 'Boleto'],
+                avaliacoes: [
+                    { id: 'av-sm-1', cliente: 'Distribuidora Silva', servico: 'Câmeras CFTV', nota: 5, comentario: 'Instalação rápida e sistema de altíssima qualidade. Empresa top!', data: '10/04/2026' },
+                    { id: 'av-sm-2', cliente: 'Condomínio Residencial', servico: 'Controle de Acesso', nota: 4, comentario: 'Profissionais organizados e suporte excelente pós-instalação.', data: '02/04/2026' }
+                ]
+            },
+
+            /* ── LOGÍSTICA ──────────────────────────────────── */
+            {
+                email: 'mudafacil.pp@servgo.app',
+                nome: 'Muda Fácil Transportes',
+                categoria: 'Logística',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 99050-6622',
+                endereco: 'Rua Voluntários da Pátria, 90 – Vila Independência',
+                cnpj: '31.765.432/0001-67',
+                descricao: 'Mudanças residenciais e comerciais, transporte de mobiliário e equipamentos, frete executivo e pequenos fretes. Equipe treinada, veículos equipados e seguro de carga incluso.',
+                subcategorias: ['Mudança Residencial', 'Mudança Comercial', 'Frete Executivo', 'Pequenos Fretes'],
+                formasPagamento: ['PIX', 'Cartão', 'Dinheiro'],
+                avaliacoes: [
+                    { id: 'av-mf-1', cliente: 'Família Carvalho', servico: 'Mudança Residencial', nota: 5, comentario: 'Equipe cuidadosa, pontuais e sem nenhum arranhão. Excelente!', data: '08/04/2026' },
+                    { id: 'av-mf-2', cliente: 'Escritório JK', servico: 'Mudança Comercial', nota: 5, comentario: 'Mudamos nosso escritório em um dia só. Perfeitos!', data: '25/03/2026' }
+                ]
+            },
+
+            /* ── CONSULTORIA ────────────────────────────────── */
+            {
+                email: 'rg.consultoria.pp@servgo.app',
+                nome: 'RG Consultoria Empresarial',
+                categoria: 'Consultoria',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 99700-3355',
+                endereco: 'Rua Rui Barbosa, 300 – Centro Empresarial',
+                cnpj: '60.432.109/0001-28',
+                descricao: 'Consultoria em gestão empresarial, financeira e estratégica para pequenas e médias empresas. Planejamento, processos, redução de custos e expansão de negócios. Primeira consulta gratuita.',
+                subcategorias: ['Gestão Financeira', 'Planejamento Estratégico', 'Processos', 'RH', 'Marketing'],
+                formasPagamento: ['PIX', 'Transferência', 'Boleto'],
+                avaliacoes: [
+                    { id: 'av-rg-1', cliente: 'Mercado Bom Preço', servico: 'Gestão Financeira', nota: 5, comentario: 'Reduziram nossos custos em 30% em 3 meses. Trabalho sensacional!', data: '07/04/2026' },
+                    { id: 'av-rg-2', cliente: 'Indústria Beta', servico: 'Planejamento Estratégico', nota: 5, comentario: 'Profissionais extremamente competentes. Transformaram nossa empresa.', data: '28/03/2026' }
+                ]
+            },
+
+            /* ── CONSTRUÇÃO ─────────────────────────────────── */
+            {
+                email: 'construirbem.pp@servgo.app',
+                nome: 'ConstruirBem Reformas',
+                categoria: 'Construção',
+                cidade: 'Presidente Prudente, SP',
+                tel: '(18) 99400-8800',
+                endereco: 'Rua Major Simplício de Lima, 150 – Jardim Maracanã',
+                cnpj: '82.543.210/0001-01',
+                descricao: 'Reformas residenciais e comerciais completas. Banheiros, cozinhas, ampliações, pintura, revestimentos e acabamentos. Orçamento gratuito, prazo cumprido e 1 ano de garantia.',
+                subcategorias: ['Reforma de Banheiro', 'Reforma de Cozinha', 'Pintura', 'Revestimentos', 'Ampliações'],
+                formasPagamento: ['PIX', 'Cartão', 'Boleto'],
+                avaliacoes: [
+                    { id: 'av-cb-1', cliente: 'Luís Fernando', servico: 'Reforma de Banheiro', nota: 5, comentario: 'Banheiro ficou lindo! Trabalho caprichado, limpo e no prazo combinado.', data: '11/04/2026' },
+                    { id: 'av-cb-2', cliente: 'Clínica Saúde Viva', servico: 'Reforma Comercial', nota: 5, comentario: 'Reformaram nossa clínica sem atrapalhar o funcionamento. Perfeitos!', data: '04/04/2026' },
+                    { id: 'av-cb-3', cliente: 'Família Torres', servico: 'Pintura', nota: 4, comentario: 'Trabalho muito bem feito, preço justo e equipe educada.', data: '26/03/2026' }
+                ]
+            }
+        ];
+
+        // — Grava no storage ———————————————————————————————————
+        var hotsiteStore = DB.get(HOTSITE_KEY) || {};
+        var usuarios     = obterUsuariosCadastrados();
+        var avStore      = DB.get(AVAL_RECEBIDAS_PREST_KEY) || {};
+        var agendaStore  = {};  // configs de agenda por email
+
+        PRESTADORES.forEach(function (p) {
+            // Hotsite
+            hotsiteStore[p.email] = {
+                nome: p.nome, email: p.email, cnpj: p.cnpj || '',
+                categoria: p.categoria, cidade: p.cidade,
+                descricao: p.descricao, endereco: p.endereco, tel: p.tel,
+                foto: '', fotoPerfil: '',
+                subcategorias: p.subcategorias || [],
+                formasPagamento: p.formasPagamento || ['PIX', 'Cartão', 'Dinheiro']
+            };
+
+            // Usuário (permite login como prestador seed)
+            if (!usuarios[p.email]) {
+                usuarios[p.email] = { nome: p.nome, senha: 'Seed@2026', tipo: 'prestador' };
+            }
+
+            // Avaliações recebidas
+            if (!avStore[p.email]) {
+                avStore[p.email] = (p.avaliacoes || []).map(function (av) {
+                    return Object.assign({}, av);
+                });
+            }
+
+            // Agenda padrão: seg–sex 08:00–18:00, duração 60 min, intervalo 60 min, antecedência 12 h
+            var CONF_KEY_AG = 'agendaConfig_' + p.email;
+            if (!DB.get(CONF_KEY_AG)) {
+                DB.set(CONF_KEY_AG, {
+                    segunda:  { ativo: true,  inicio: '08:00', fim: '18:00' },
+                    terca:    { ativo: true,  inicio: '08:00', fim: '18:00' },
+                    quarta:   { ativo: true,  inicio: '08:00', fim: '18:00' },
+                    quinta:   { ativo: true,  inicio: '08:00', fim: '18:00' },
+                    sexta:    { ativo: true,  inicio: '08:00', fim: '18:00' },
+                    sabado:   { ativo: true,  inicio: '08:00', fim: '13:00' },
+                    domingo:  { ativo: false, inicio: '08:00', fim: '12:00' },
+                    duracaoServico: 60,
+                    intervalo: 60,
+                    antecedencia: 12
+                });
+            }
+        });
+
+        DB.set(HOTSITE_KEY, hotsiteStore);
+        salvarUsuariosCadastrados(usuarios);
+        DB.set(AVAL_RECEBIDAS_PREST_KEY, avStore);
+
+        localStorage.setItem(FLAG, '1');
+    }
+
+    // =========================================================
+    // LIMPEZA DE DADOS DEMO — garante storage zerado
+    // Remove quaisquer chaves gravadas por versões anteriores
+    // que continham contas ou agendamentos de demonstração.
+    // Executado uma única vez (flag 'sg_demo_limpo_v1').
+    // =========================================================
+    function sgLimparDadosDemo() {
+        var FLAG = 'sg_demo_limpo_v1';
+        if (localStorage.getItem(FLAG) === '1') return; // já foi limpo
+
+        var EMAILS_DEMO = [
+            'prestador@servgo.com',
+            'cliente@servgo.com',
+            'admin@servgo.com',
+            'saude@servgo.com',
+            'beleza@servgo.com'
+        ];
+
+        // Remove hotsite entries dos prestadores demo
+        var store = DB.get('hotsitePrestadorDados') || {};
+        var storeAlterado = false;
+        EMAILS_DEMO.forEach(function (e) {
+            if (store[e]) { delete store[e]; storeAlterado = true; }
+        });
+        if (storeAlterado) DB.set('hotsitePrestadorDados', store);
+
+        // Remove usuários demo do cadastro
+        var usuarios = obterUsuariosCadastrados();
+        var usuAlterado = false;
+        EMAILS_DEMO.forEach(function (e) {
+            if (usuarios[e]) { delete usuarios[e]; usuAlterado = true; }
+        });
+        if (usuAlterado) salvarUsuariosCadastrados(usuarios);
+
+        // Remove chaves de agendamentos, avaliações, notificações e chat dos demos
+        var prefixos = [
+            'agendamentos_',
+            'clienteAgendamentos_',
+            'avaliacoesFeitas_',
+            'avaliacoesRecebidas_',
+            'avalFeitasPrest_',
+            'avalRecebidasPrest_',
+            'sgNotificacoes_',
+            'agendaConfig_',
+            'perfilCliente_',
+            'agendaChat_'
+        ];
+        var keysParaRemover = [];
+        for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (!k) continue;
+            var ehDemo = EMAILS_DEMO.some(function (e) {
+                return prefixos.some(function (p) { return k === p + e; });
+            });
+            // Chave legada de sprint anterior
+            if (k === 'prestAgendamentos') ehDemo = true;
+            if (ehDemo) keysParaRemover.push(k);
+        }
+        keysParaRemover.forEach(function (k) { localStorage.removeItem(k); });
+
+        // Limpa sessão de usuário logado que seja demo
+        var logado = DB.get('usuarioLogado');
+        if (logado && EMAILS_DEMO.indexOf(logado.email) >= 0) {
+            DB.remove('usuarioLogado');
+        }
+
+        localStorage.setItem(FLAG, '1');
+    }
+
+    // =========================================================
+    // SPRINT 4 — CATÁLOGO PÚBLICO (agendarServicos.html)
+    // Renderiza os cards de prestadores cadastrados para qualquer
+    // página que possua #catalogo-loading mas NÃO seja o
+    // clienteAgendarServicos.html (que tem seu próprio script inline).
+    // =========================================================
+    function inicializarCatalogoPublico() {
+        var loadingEl = document.getElementById('catalogo-loading');
+        if (!loadingEl) return; // página não tem catálogo
+        // clienteAgendarServicos.html já tem script inline próprio — não duplicar
+        if (window.location.pathname.includes('clienteAgendarServicos')) return;
+
+        var usu       = obterUsuarioLogado();
+        var estaLogado = usu && (usu.tipo === 'cliente' || usu.tipo === 'admin');
+
+        // ── Helpers ──────────────────────────────────────────
+        var GRAD = {
+            'Saúde':['#0ea5e9','#0369a1'],'Beleza':['#ec4899','#be185d'],
+            'Manutenção Predial':['#f59e0b','#b45309'],'TI':['#8b5cf6','#6d28d9'],
+            'Lazer':['#7c3aed','#5b21b6'],'Alimentação':['#ea580c','#c2410c'],
+            'Design':['#0891b2','#0e7490'],'Segurança':['#dc2626','#991b1b'],
+            'Logística':['#ca8a04','#a16207'],'Consultoria':['#475569','#334155'],
+            'Construção':['#92400e','#78350f']
+        };
+        var ICO = {
+            'Saúde':'bi-heart-pulse-fill','Beleza':'bi-scissors',
+            'Manutenção Predial':'bi-tools','TI':'bi-cpu-fill',
+            'Lazer':'bi-controller','Alimentação':'bi-basket-fill',
+            'Design':'bi-palette-fill','Segurança':'bi-shield-fill',
+            'Logística':'bi-truck','Consultoria':'bi-briefcase-fill',
+            'Construção':'bi-building'
+        };
+
+        function grad(cat) {
+            var g = GRAD[cat] || ['#146ADB','#0d4fa3'];
+            return 'linear-gradient(135deg,' + g[0] + ',' + g[1] + ')';
+        }
+        function ini(nome) {
+            var p = (nome || '').trim().split(/\s+/);
+            return p.length >= 2
+                ? (p[0][0] + p[p.length - 1][0]).toUpperCase()
+                : (p[0] || 'P').slice(0, 2).toUpperCase();
+        }
+        function esc(s) {
+            return String(s || '')
+                .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+        function mediaAval(email) {
+            var store = DB.get('avaliacoesRecebidasPrestador') || {};
+            var lista = (store[email] || []).filter(function (a) { return typeof a.nota === 'number'; });
+            if (!lista.length) return { media: 0, total: 0 };
+            return { media: lista.reduce(function (s, a) { return s + a.nota; }, 0) / lista.length, total: lista.length };
+        }
+        function obterPrestadores() {
+            var s = obterStorePrestadores();
+            return Object.keys(s)
+                .map(function (e) { return Object.assign({}, s[e], { email: e }); })
+                .filter(function (p) { return p.nome && p.categoria; });
+        }
+        function agrupar(lista) {
+            var g = {};
+            lista.forEach(function (p) {
+                var c = p.categoria || 'Outros';
+                (g[c] = g[c] || []).push(p);
+            });
+            return g;
+        }
+
+        // ── Elementos do DOM ──────────────────────────────────
+        var secoesEl = document.getElementById('catalogo-secoes');
+        var vazioEl  = document.getElementById('catalogo-vazio');
+        var filtrosCont = document.getElementById('filtros-container');
+        if (!secoesEl) return;
+
+        var catAtiva = '';
+
+        // Lê categoria da URL (?tipo=Saúde)
+        var urlParams = new URLSearchParams(window.location.search);
+        var tipoUrl   = urlParams.get('tipo') || '';
+
+        // ── Foto / placeholder ────────────────────────────────
+        function mkPlh(prest) {
+            var d = document.createElement('div');
+            d.className = 'prest-card-foto-placeholder';
+            d.style.background = grad(prest.categoria);
+            d.innerHTML = '<span class="av-ini">' + ini(prest.nome) + '</span>' +
+                '<span class="av-ico"><i class="bi ' + (ICO[prest.categoria] || 'bi-person') + '"></i></span>';
+            return d;
+        }
+        function fotoEl(prest) {
+            var wrap = document.createElement('div');
+            wrap.className = 'prest-card-foto';
+            var foto = prest.fotoPerfil || prest.foto || '';
+            if (foto) {
+                var img = document.createElement('img');
+                img.src = foto; img.alt = prest.nome;
+                var plh = mkPlh(prest);
+                img.onerror = function () { img.style.display = 'none'; plh.style.display = 'flex'; };
+                plh.style.display = 'none';
+                wrap.appendChild(img);
+                wrap.appendChild(plh);
+            } else {
+                wrap.appendChild(mkPlh(prest));
+            }
+            var badge = document.createElement('div');
+            badge.className = 'prest-card-cat-badge';
+            badge.innerHTML = '<i class="bi ' + (ICO[prest.categoria] || 'bi-tag') + '"></i>' + esc(prest.categoria);
+            wrap.appendChild(badge);
+            return wrap;
+        }
+
+        // ── Criação do card ───────────────────────────────────
+        function criarCard(prest) {
+            var card = document.createElement('div');
+            card.className = 'prest-card';
+            card.dataset.email = prest.email;
+
+            card.appendChild(fotoEl(prest));
+
+            var corpo = document.createElement('div');
+            corpo.className = 'prest-card-corpo';
+
+            var nomeEl = document.createElement('div');
+            nomeEl.className = 'prest-card-nome';
+            nomeEl.textContent = prest.nome;
+            corpo.appendChild(nomeEl);
+
+            // Avaliação
+            var av = mediaAval(prest.email);
+            if (av.total > 0) {
+                var rEl = document.createElement('div');
+                rEl.className = 'prest-card-rating';
+                var st = '';
+                for (var i = 1; i <= 5; i++) {
+                    st += '<i class="bi ' + (i <= Math.round(av.media) ? 'bi-star-fill' : 'bi-star') + '"></i>';
+                }
+                rEl.innerHTML = st + '<span class="txt-nota">' + av.media.toFixed(1) + ' (' + av.total + ')</span>';
+                corpo.appendChild(rEl);
+            }
+
+            // Descrição
+            var desc = (prest.descricao || prest.especializacao || '').trim();
+            if (desc) {
+                var dEl = document.createElement('div');
+                dEl.className = 'prest-card-desc';
+                dEl.textContent = desc;
+                corpo.appendChild(dEl);
+            }
+
+            // Contato
+            var ct = document.createElement('div');
+            ct.className = 'prest-card-contato';
+            if (prest.tel) ct.innerHTML += '<span><i class="bi bi-telephone-fill"></i>' + esc(prest.tel) + '</span>';
+            ct.innerHTML += '<span><i class="bi bi-envelope-fill"></i>' + esc(prest.email) + '</span>';
+            corpo.appendChild(ct);
+
+            // Botão — sempre "Saiba Mais" → hotsite (convidados podem visualizar)
+            var ac = document.createElement('div');
+            ac.className = 'prest-card-acoes';
+            var btnS = document.createElement('button');
+            btnS.type = 'button';
+            btnS.className = 'btn-card-sel';
+            btnS.innerHTML = '<i class="bi bi-info-circle me-1"></i>Saiba Mais';
+            ac.appendChild(btnS);
+            corpo.appendChild(ac);
+            card.appendChild(corpo);
+
+            // Navega para o HotSite ao clicar no card ou no botão
+            function _irHotsite(e) {
+                if (e) e.stopPropagation();
+                window.location.href = '/paginasPrestador/prestadorHotsite.html?email=' + encodeURIComponent(prest.email);
+            }
+            btnS.addEventListener('click', _irHotsite);
+            card.addEventListener('click', function () { _irHotsite(); });
+
+            return card;
+        }
+
+        // ── Filtros ───────────────────────────────────────────
+        function renderFiltros(cats) {
+            if (!filtrosCont) return;
+            var btnTodos = filtrosCont.querySelector('.filtro-pill-todos');
+            filtrosCont.innerHTML = '';
+            if (btnTodos) filtrosCont.appendChild(btnTodos);
+            cats.slice().sort().forEach(function (cat) {
+                var btn = document.createElement('button');
+                btn.className = 'filtro-pill';
+                btn.dataset.cat = cat;
+                btn.innerHTML = '<i class="bi ' + (ICO[cat] || 'bi-tag-fill') + '"></i> ' + cat;
+                filtrosCont.appendChild(btn);
+            });
+            filtrosCont.querySelectorAll('.filtro-pill').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    catAtiva = btn.dataset.cat || '';
+                    filtrosCont.querySelectorAll('.filtro-pill').forEach(function (b) { b.classList.remove('ativo'); });
+                    btn.classList.add('ativo');
+                    filtrar(catAtiva);
+                });
+            });
+        }
+
+        function filtrar(cat) {
+            var secoes = secoesEl.querySelectorAll('.catalogo-secao');
+            var vis = 0;
+            secoes.forEach(function (s) {
+                if (!cat || s.dataset.cat === cat) { s.classList.remove('oculta'); vis++; }
+                else s.classList.add('oculta');
+            });
+            if (vazioEl) vazioEl.style.display = vis ? 'none' : 'block';
+        }
+
+        // ── Renderização principal ────────────────────────────
+        function renderCatalogo(lista) {
+            loadingEl.style.display = 'none';
+            if (!lista.length) {
+                if (vazioEl) vazioEl.style.display = 'block';
+                return;
+            }
+            var grupos = agrupar(lista);
+            var cats   = Object.keys(grupos).sort();
+            renderFiltros(cats);
+            secoesEl.innerHTML = '';
+            cats.forEach(function (cat) {
+                var lista2 = grupos[cat];
+                var ico    = ICO[cat] || 'bi-tag-fill';
+                var secao  = document.createElement('div');
+                secao.className = 'catalogo-secao';
+                secao.dataset.cat = cat;
+                var titulo = document.createElement('div');
+                titulo.className = 'catalogo-secao-titulo';
+                titulo.innerHTML =
+                    '<span class="cat-icon"><i class="bi ' + ico + '"></i></span>' +
+                    '<span>' + cat + '</span>' +
+                    '<span class="badge-count">' + lista2.length + ' prestador' + (lista2.length !== 1 ? 'es' : '') + '</span>';
+                var grid = document.createElement('div');
+                grid.className = 'catalogo-grid';
+                lista2.forEach(function (p) { grid.appendChild(criarCard(p)); });
+                secao.appendChild(titulo);
+                secao.appendChild(grid);
+                secoesEl.appendChild(secao);
+            });
+
+            // Aplica filtro de categoria da URL
+            if (tipoUrl) {
+                catAtiva = tipoUrl;
+                var btnAtivo = filtrosCont
+                    ? filtrosCont.querySelector('.filtro-pill[data-cat="' + tipoUrl + '"]')
+                    : null;
+                if (filtrosCont) {
+                    filtrosCont.querySelectorAll('.filtro-pill').forEach(function (b) { b.classList.remove('ativo'); });
+                }
+                if (btnAtivo) btnAtivo.classList.add('ativo');
+                filtrar(tipoUrl);
+            }
+        }
+
+        // ── Executa ───────────────────────────────────────────
+        var lista = obterPrestadores();
+        if (!lista.length) {
+            // Tenta novamente após 400 ms (localStorage pode ainda estar carregando)
+            setTimeout(function () {
+                renderCatalogo(obterPrestadores());
+            }, 400);
+        } else {
+            renderCatalogo(lista);
+        }
+    }
+
+    // =========================================================
     // INICIALIZAÇÃO GERAL
     // =========================================================
+    inicializarGuardPaginasRestritas();     // Sprint 1 — guard de acesso a rotas protegidas
+    sgSemearPrestadoresIniciais();          // Sprint 5 — seed de prestadores iniciais (1× por device)
+    sgLimparDadosDemo();                    // Sprint 1 — limpa dados demo de versões anteriores
     inicializarNavbarSaudacao();
     inicializarNavbarPrestador();
     inicializarNavbarCliente();         // Sprint 3 — novo
@@ -4450,6 +5365,7 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarAlterarSenhaGeral();
     inicializarSidebarResponsiva();
     inicializarAgendarServicos();
+    inicializarCatalogoPublico();           // Sprint 4 — catálogo de prestadores na página pública
     inicializarHotsitePublico();
     inicializarNotificacoesDashboardPrestador();
     inicializarNotificacoesDashboardCliente();

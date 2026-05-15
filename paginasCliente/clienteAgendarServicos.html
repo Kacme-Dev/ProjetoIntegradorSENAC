@@ -16,7 +16,7 @@
         /* ── FILTROS ── */
         .catalogo-filtros-wrap { margin-bottom:22px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none; }
         .catalogo-filtros-wrap::-webkit-scrollbar { display:none; }
-        .catalogo-filtros { display:flex;gap:8px;flex-wrap:nowrap;align-items:center;padding-bottom:4px; }
+        .catalogo-filtros { display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:4px; }
         .filtro-pill { display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;border:1.5px solid var(--borda,#dee2e6);background:#fff;color:#444;font-size:.85rem;font-weight:500;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .15s,color .15s,border-color .15s,transform .1s; }
         .filtro-pill:hover { border-color:var(--azul-principal,#146ADB);color:var(--azul-principal,#146ADB); }
         .filtro-pill:active { transform:translateY(1px); }
@@ -324,6 +324,37 @@
 (function(){
 'use strict';
 
+/* ── Sprint 2 — Verificação de sessão ──────────────────────────────────────
+   Regra: somente clientes (e admin) podem acessar esta página autenticada.
+   - Cliente / Admin logado  → permanece e carrega o catálogo.
+   - Prestador logado        → redireciona para a área do prestador.
+   - Visitante sem sessão    → redireciona para agendarServicos.html (público)
+     preservando o parâmetro ?tipo= caso exista na URL.
+──────────────────────────────────────────────────────────────────────────── */
+(function verificarSessao() {
+    try {
+        var usu    = JSON.parse(localStorage.getItem('usuarioLogado'));
+        var params = new URLSearchParams(window.location.search);
+        var tipo   = params.get('tipo') || '';
+
+        if (usu && (usu.tipo === 'cliente' || usu.tipo === 'admin')) {
+            return; // acesso autorizado — continua carregando a página
+        }
+
+        if (usu && usu.tipo === 'prestador') {
+            // Prestador logado não deve acessar área de cliente
+            window.location.replace('/paginasPrestador/indexPrestador.html');
+            return;
+        }
+
+        // Visitante sem sessão → catálogo público, preservando filtro de categoria
+        var url = '/paginasSite/agendarServicos.html';
+        if (tipo) url += '?tipo=' + encodeURIComponent(tipo);
+        window.location.replace(url);
+
+    } catch (e) { /* localStorage indisponível — continua normalmente */ }
+}());
+
 var GRAD={
   'Saúde':['#16a34a','#15803d'],'Beleza':['#db2777','#9d174d'],
   'Manutenção Predial':['#b45309','#92400e'],'TI':['#2563eb','#1e40af'],
@@ -473,10 +504,19 @@ function criarCard(prest){
 }
 
 function renderFiltros(cats){
+  // Sprint 1 — lista fixa de categorias padrão: sempre visíveis,
+  // mesmo quando não há prestadores cadastrados para aquela categoria.
+  var CATS_FIXAS=['Alimentação','Beleza','Construção','Consultoria','Design',
+                  'Lazer','Logística','Manutenção Predial','Saúde','Segurança','TI'];
+  // Mescla com categorias vindas dos prestadores (ex.: dados extras / testes)
+  var todasCats=CATS_FIXAS.slice();
+  cats.forEach(function(c){ if(todasCats.indexOf(c)<0) todasCats.push(c); });
+  todasCats.sort();
+
   var cont=document.getElementById('filtros-container');
   var btnTodos=cont.querySelector('.filtro-pill-todos');
   cont.innerHTML=''; cont.appendChild(btnTodos);
-  cats.slice().sort().forEach(function(cat){
+  todasCats.forEach(function(cat){
     var btn=document.createElement('button');
     btn.className='filtro-pill'; btn.dataset.cat=cat;
     btn.innerHTML='<i class="bi '+(ICO[cat]||'bi-tag-fill')+'"></i> '+cat;

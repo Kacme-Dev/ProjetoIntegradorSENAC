@@ -18,7 +18,7 @@
         /* ── FILTROS ── */
         .catalogo-filtros-wrap { margin-bottom:22px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none; }
         .catalogo-filtros-wrap::-webkit-scrollbar { display:none; }
-        .catalogo-filtros { display:flex;gap:8px;flex-wrap:nowrap;align-items:center;padding-bottom:4px; }
+        .catalogo-filtros { display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-bottom:4px; }
         .filtro-pill { display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;border:1.5px solid var(--borda,#dee2e6);background:#fff;color:#444;font-size:.85rem;font-weight:500;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:background .15s,color .15s,border-color .15s,transform .1s; }
         .filtro-pill:hover { border-color:var(--azul-principal,#146ADB);color:var(--azul-principal,#146ADB); }
         .filtro-pill:active { transform:translateY(1px); }
@@ -233,16 +233,154 @@
     (function verificarSessao() {
         try {
             var usu = JSON.parse(localStorage.getItem('usuarioLogado'));
+
             if (usu && usu.tipo === 'cliente') {
-                // Usuário logado: redireciona para a página autenticada
+                // Cliente logado: redireciona para a página autenticada
                 var params = new URLSearchParams(window.location.search);
                 var tipo   = params.get('tipo') || '';
                 var url    = '/paginasCliente/clienteAgendarServicos.html';
                 if (tipo)  url += '?tipo=' + encodeURIComponent(tipo);
                 window.location.replace(url);
+                return;
             }
+
+            // Sprint 1 — Prestador ou Admin logado: oculta o banner de convidado,
+            // pois eles já possuem sessão ativa (só clientes podem agendar).
+            if (usu && (usu.tipo === 'prestador' || usu.tipo === 'admin')) {
+                var banner = document.getElementById('banner-guest');
+                if (banner) banner.style.display = 'none';
+                return; // permanece na página pública em modo somente-leitura
+            }
+
+            // Sprint 2 — Visitante sem sessão (guest): permanece em agendarServicos.html
+            // e visualiza o catálogo em modo somente-leitura com o banner de login.
+            if (!usu) {
+                var bannerGuest = document.getElementById('banner-guest');
+                if (bannerGuest) bannerGuest.style.display = ''; // garante banner visível
+                // Nenhum redirecionamento — o catálogo é carregado logo abaixo
+            }
+
         } catch (e) { /* localStorage indisponível — continua em modo guest */ }
     }());
+
+
+    /* ── 2-bis. Semeadura de prestadores demo ──
+       Executa apenas se o localStorage estiver vazio (navegador recém-limpo
+       ou primeira visita antes de qualquer login de prestador).
+       Espelha _semearPrestadoresDemo() de script.js sem criar dependência. */
+    function _semeiarDemosPublico() {
+        try {
+            var HOTSITE_KEY  = 'hotsitePrestadorDados';
+            var USUARIOS_KEY = 'usuariosCadastrados';
+            function _ls(k)   { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } }
+            function _lsSave(k,v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
+
+            var storeAtual = _ls(HOTSITE_KEY) || {};
+            // Verifica também usuariosCadastrados: se já há prestadores reais registrados,
+            // não sobrescreve com demos — para fins de teste mostra dados reais.
+            var _usCad = _ls(USUARIOS_KEY) || {};
+            var _temPrestReal = Object.keys(_usCad).some(function(e) {
+                return _usCad[e] && _usCad[e].tipo === 'prestador';
+            });
+            if (Object.keys(storeAtual).length > 0 || _temPrestReal) return;
+
+            var demos = [
+                {
+                    email: 'prestador@servgo.com', nome: 'Prestador Demo',
+                    categoria: 'Manutenção Predial', cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99123-4567',
+                    descricao: 'Especializado em montagem de móveis, reparos elétricos e hidráulicos.',
+                    cnpj: '', endereco: 'Rua das Flores, 100 - Centro', foto: ''
+                },
+                {
+                    email: 'saude@servgo.com', nome: 'Dra. Ana Lima',
+                    categoria: 'Saúde', cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99234-5678',
+                    descricao: 'Clínica geral e nutrição. Consultas presenciais e online.',
+                    cnpj: '', endereco: 'Av. Manoel Goulart, 200', foto: ''
+                },
+                {
+                    email: 'beleza@servgo.com', nome: 'Studio Beleza & Cia',
+                    categoria: 'Beleza', cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 98765-4321',
+                    descricao: 'Salão completo: corte, coloração, tratamentos capilares e estética.',
+                    cnpj: '', endereco: 'Rua Coronel José Soares Marcondes, 45', foto: ''
+                },
+                {
+                    email: 'ti@servgo.com', nome: 'TechSupport Pro',
+                    categoria: 'TI', cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99876-5432',
+                    descricao: 'Suporte técnico em hardware, software, redes e segurança da informação.',
+                    cnpj: '', endereco: 'Av. Cel. José Soares Marcondes, 350', foto: ''
+                },
+                {
+                    email: 'design@servgo.com', nome: 'Criativa Design Studio',
+                    categoria: 'Design', cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99345-6789',
+                    descricao: 'Identidade visual, criação de logotipos, flyers e materiais digitais.',
+                    cnpj: '', endereco: 'Rua Sergipe, 12', foto: ''
+                },
+                {
+                    email: 'construcao@servgo.com', nome: 'Construtora Sólida',
+                    categoria: 'Construção', cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99456-7890',
+                    descricao: 'Obras residenciais e comerciais, reformas e acabamentos.',
+                    cnpj: '', endereco: 'Rua Paraná, 88', foto: ''
+                },
+                {
+                    email: 'seguranca@servgo.com', nome: 'VigMax Segurança',
+                    categoria: 'Segurança', cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99567-8901',
+                    descricao: 'Instalação de câmeras, cercas elétricas e alarmes residenciais/comerciais.',
+                    cnpj: '', endereco: 'Av. Brasil, 500', foto: ''
+                },
+                {
+                    email: 'alimentacao@servgo.com', nome: 'Chef em Casa',
+                    categoria: 'Alimentação', cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99678-9012',
+                    descricao: 'Marmitas fitness, buffet para eventos e lanches corporativos.',
+                    cnpj: '', endereco: 'Rua Goiás, 22', foto: ''
+                },
+                {
+                    email: 'consultoria@servgo.com', nome: 'BizConsult',
+                    categoria: 'Consultoria', cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99789-0123',
+                    descricao: 'Consultoria financeira, tributária e gestão empresarial para PMEs.',
+                    cnpj: '', endereco: 'Rua Mato Grosso, 77', foto: ''
+                },
+                {
+                    email: 'logistica@servgo.com', nome: 'FlexFrete Logística',
+                    categoria: 'Logística', cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99890-1234',
+                    descricao: 'Fretes locais, mudanças residenciais e entrega expressa.',
+                    cnpj: '', endereco: 'Rod. Raposo Tavares, km 559', foto: ''
+                },
+                {
+                    email: 'lazer@servgo.com', nome: 'EventFun Entretenimento',
+                    categoria: 'Lazer', cidade: 'Presidente Prudente, SP',
+                    tel: '(18) 99901-2345',
+                    descricao: 'Organização de festas, animação infantil e recreação para eventos.',
+                    cnpj: '', endereco: 'Rua Piauí, 33', foto: ''
+                }
+            ];
+
+            var usuarios = _ls(USUARIOS_KEY) || {};
+            demos.forEach(function (d) {
+                storeAtual[d.email] = {
+                    nome: d.nome, email: d.email, cnpj: d.cnpj || '',
+                    categoria: d.categoria, cidade: d.cidade,
+                    descricao: d.descricao, endereco: d.endereco,
+                    tel: d.tel, foto: d.foto || ''
+                };
+                if (!usuarios[d.email]) {
+                    usuarios[d.email] = { nome: d.nome, senha: 'Demo@123', tipo: 'prestador' };
+                }
+            });
+            _lsSave(HOTSITE_KEY,  storeAtual);
+            _lsSave(USUARIOS_KEY, usuarios);
+        } catch (e) { /* localStorage indisponível */ }
+    }
+    _semeiarDemosPublico();
 
     /* ── 2. Constantes de visual ── */
     var GRAD = {
@@ -279,10 +417,42 @@
     function store()  { return dbGet('hotsitePrestadorDados') || {}; }
 
     function prestadores() {
-        var s = store();
-        return Object.keys(s)
-            .map(function (e) { return Object.assign({}, s[e], { email: e }); })
-            .filter(function (p) { return p.nome && p.categoria; });
+        /* Sprint 2 — Para fins de teste, carrega TODOS os prestadores registrados
+           no storage, fundindo as duas fontes disponíveis:
+           1) hotsitePrestadorDados  → perfis completos preenchidos pelo prestador
+           2) usuariosCadastrados    → qualquer usuário com tipo 'prestador',
+                                       mesmo sem perfil de hotsite preenchido       */
+        var hotsite  = dbGet('hotsitePrestadorDados') || {};
+        var usuarios = dbGet('usuariosCadastrados')   || {};
+        var merged   = {};
+
+        // Fonte 1 — dados completos do hotsite (prioridade máxima)
+        Object.keys(hotsite).forEach(function (email) {
+            var p = hotsite[email];
+            if (p && p.nome) {
+                merged[email] = Object.assign({}, p, { email: email });
+            }
+        });
+
+        // Fonte 2 — prestadores registrados sem perfil de hotsite
+        Object.keys(usuarios).forEach(function (email) {
+            var u = usuarios[email];
+            if (u && u.tipo === 'prestador' && !merged[email]) {
+                merged[email] = {
+                    email:      email,
+                    nome:       u.nome       || email,
+                    categoria:  u.categoria  || 'Outros',
+                    descricao:  u.descricao  || '',
+                    tel:        u.tel        || '',
+                    cidade:     u.cidade     || '',
+                    foto:       u.foto       || u.fotoPerfil || ''
+                };
+            }
+        });
+
+        return Object.keys(merged)
+            .map(function (e) { return merged[e]; })
+            .filter(function (p) { return p.nome; });
     }
 
     function agrupar(lista) {
@@ -425,11 +595,22 @@
 
     /* ── 5. Filtros ── */
     function renderFiltros(cats) {
+        // Sprint 2 — lista fixa de categorias padrão: sempre visíveis mesmo sem
+        // prestadores cadastrados naquela categoria ainda.
+        var CATS_FIXAS = [
+            'Alimentação','Beleza','Construção','Consultoria','Design',
+            'Lazer','Logística','Manutenção Predial','Saúde','Segurança','TI'
+        ];
+        // Mescla categorias fixas com quaisquer categorias extras vindas dos prestadores
+        var todasCats = CATS_FIXAS.slice();
+        cats.forEach(function (c) { if (todasCats.indexOf(c) < 0) todasCats.push(c); });
+        todasCats.sort();
+
         var cont = document.getElementById('filtros-container');
         var btnTodos = cont.querySelector('.filtro-pill-todos');
         cont.innerHTML = '';
         cont.appendChild(btnTodos);
-        cats.slice().sort().forEach(function (cat) {
+        todasCats.forEach(function (cat) {
             var btn = document.createElement('button');
             btn.className = 'filtro-pill';
             btn.dataset.cat = cat;
