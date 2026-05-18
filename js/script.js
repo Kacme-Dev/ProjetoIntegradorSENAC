@@ -744,6 +744,10 @@ document.addEventListener('DOMContentLoaded', function () {
         span.appendChild(toggle);
         span.appendChild(dropdown);
 
+        // Sprint 6 — sininho de mensagens não lidas na navbar do prestador
+        _atualizarAvisoNavbarMsgsPrestador(usu.email);
+        setInterval(function () { _atualizarAvisoNavbarMsgsPrestador(usu.email); }, 8000);
+
         var aberto = false;
         toggle.addEventListener('click', function (e) {
             e.preventDefault(); e.stopPropagation();
@@ -1341,34 +1345,42 @@ document.addEventListener('DOMContentLoaded', function () {
                 li.innerHTML = '<div><div class="agenda-slot-dia">' + diaLabel + '</div><div class="agenda-slot-tempo">' + horario + '</div></div><div><div class="agenda-cliente-nome">' + (ag.cliente || '—') + '</div><p class="agenda-cliente-servico">Serviço: ' + (ag.servico || '—') + '</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>' + (ag.endereco || '') + '</p></div><div class="agenda-status-area"><span class="agenda-status-tag ' + statusTag + '">' + statusTexto + '</span><div class="agenda-botoes">' + botoesHTML + '</div></div>';
                 listaEl.appendChild(li);
             });
+        }
 
-            // Delegação de eventos
-            listaEl.addEventListener('click', function (e) {
-                var btn = e.target.closest('.agenda-btn');
-                if (!btn) return;
-                e.preventDefault();
-                var li = btn.closest('.agenda-prest-item');
-                var agId = li ? li.dataset.agendamentoId : null;
-                var ag = agendamentos.find(function (a) { return a.id === agId; });
-                if (!ag) return;
-                var acao = btn.dataset.acao;
-                if (acao === 'detalhes') _abrirModalDetalhes(ag, emailPrest, agendamentos, salvarAgs);
-                if (acao === 'concluir') _concluirAgendamento(ag, agendamentos, salvarAgs, emailPrest, function () { renderizarAba(abaAtiva); atualizarContadores(); });
-                if (acao === 'confirmar') _confirmarAgendamento(ag, agendamentos, salvarAgs, function () { renderizarAba(abaAtiva); atualizarContadores(); });
-                if (acao === 'cancelar') _abrirModalCancelar(ag, agendamentos, salvarAgs, function () { renderizarAba(abaAtiva); atualizarContadores(); });
-                // Sprint 3 — Refazer Proposta: volta para orcamento_pendente e abre modal de edição
-                if (acao === 'refazer') {
-                    var idxR = agendamentos.findIndex(function (a) { return a.id === ag.id; });
-                    if (idxR >= 0) {
-                        agendamentos[idxR].status = 'orcamento_pendente';
-                        salvarAgs();
-                        if (ag.clienteEmail) _atualizarStatusClienteAgendamento(ag.id, ag.clienteEmail, 'orcamento_pendente');
-                        renderizarAba(abaAtiva);
-                        atualizarContadores();
-                        _abrirModalDetalhes(agendamentos[idxR], emailPrest, agendamentos, salvarAgs);
-                    }
+        // Delegação de eventos — configurada UMA vez, fora de renderizarAba,
+        // evitando acumulação de listeners a cada troca de aba.
+        listaEl.addEventListener('click', function (e) {
+            var btn = e.target.closest('.agenda-btn');
+            if (!btn) return;
+            e.preventDefault();
+            var li = btn.closest('.agenda-prest-item');
+            var agId = li ? li.dataset.agendamentoId : null;
+            // Relê o agendamento atualizado do array (evita dados stale após salvar)
+            var ag = agendamentos.find(function (a) { return a.id === agId; });
+            if (!ag) return;
+            var acao = btn.dataset.acao;
+            if (acao === 'detalhes')  _abrirModalDetalhes(ag, emailPrest, agendamentos, salvarAgs);
+            if (acao === 'concluir')  _concluirAgendamento(ag, agendamentos, salvarAgs, emailPrest, function () { renderizarAba(abaAtiva); atualizarContadores(); });
+            if (acao === 'confirmar') _confirmarAgendamento(ag, agendamentos, salvarAgs, function () { renderizarAba(abaAtiva); atualizarContadores(); });
+            if (acao === 'cancelar')  _abrirModalCancelar(ag, agendamentos, salvarAgs, function () { renderizarAba(abaAtiva); atualizarContadores(); });
+            // Refazer Proposta: volta para orcamento_pendente e abre modal de edição
+            if (acao === 'refazer') {
+                var idxR = agendamentos.findIndex(function (a) { return a.id === ag.id; });
+                if (idxR >= 0) {
+                    agendamentos[idxR].status = 'orcamento_pendente';
+                    salvarAgs();
+                    if (ag.clienteEmail) _atualizarStatusClienteAgendamento(ag.id, ag.clienteEmail, 'orcamento_pendente');
+                    renderizarAba(abaAtiva);
+                    atualizarContadores();
+                    _abrirModalDetalhes(agendamentos[idxR], emailPrest, agendamentos, salvarAgs);
                 }
-            }, { once: false });
+            }
+        });
+
+        // Auto-switch para pendentes: se não houver param de URL e existirem
+        // agendamentos pendentes, abre diretamente a aba pendentes.
+        if (!urlParams.get('aba') && agendamentos.some(isPendente)) {
+            abaAtiva = 'pendentes';
         }
 
         // Abas
@@ -1596,7 +1608,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var lembretes = ag.lembretes || [];
         var obs = ag.observacoes || '';
         var valor = ag.valor || 0;
-        var jurosPct  = (ag.jurosPct !== undefined && ag.jurosPct !== '') ? ag.jurosPct : '';
+
         var pagamento = ag.formaPagamento || '';
         var pagPref   = ag.formaPagamentoPreferida || '';
         // Pre-seleciona: usa o valor já salvo pelo prestador; se vazio, usa a preferência do cliente
@@ -1654,7 +1666,6 @@ document.addEventListener('DOMContentLoaded', function () {
             '<div><strong>Horário</strong><span>' + (ag.horario || '—') + '</span></div>' +
             '<div style="grid-column:1/-1"><strong>Endereço</strong><span><i class="bi bi-geo-alt me-1"></i>' + (cliEndereco || '—') + '</span></div>' +
             '<div><strong>Valor (R$)</strong><span><input type="number" id="det-valor" class="form-control form-control-sm" value="' + valor + '" min="0" step="0.01" style="max-width:120px;"></span></div>' +
-            '<div><strong>Juros ao mês (%)</strong><span><input type="number" id="det-juros-pct" class="form-control form-control-sm" value="' + _escaparHtml(String(jurosPct)) + '" min="0" step="0.01" placeholder="ex: 2" style="max-width:100px;" title="Taxa de juros simples aplicada ao parcelamento"></span></div>' +
             '<div><strong>Forma de Pagamento</strong><span><select id="det-pagamento" class="form-select form-select-sm" style="max-width:150px;"><option value="">Selecione</option><option value="PIX"' + (pagSelecionado === 'PIX' ? ' selected' : '') + '>PIX</option><option value="Cartão"' + (pagSelecionado === 'Cartão' ? ' selected' : '') + '>Cartão</option><option value="Dinheiro"' + (pagSelecionado === 'Dinheiro' ? ' selected' : '') + '>Dinheiro</option></select></span></div>' +
             infoPrefHtml +
             parcelasHtml +
@@ -1681,36 +1692,41 @@ document.addEventListener('DOMContentLoaded', function () {
         // Listener: exibe bloco de parcelamento quando Cartão for selecionado
         var detPagEl = document.getElementById('det-pagamento');
         var detParcBloco = document.getElementById('det-parcelas-bloco');
+
+        // Sprint 7 — garante via JS que det-pagamento reflita a preferência do cliente
+        // (complementa o atributo `selected` no HTML, evitando variações de parser do browser)
+        if (detPagEl && pagSelecionado) {
+            detPagEl.value = pagSelecionado;
+            // Sincroniza imediatamente a visibilidade do bloco de parcelamento
+            if (detParcBloco) detParcBloco.style.display = detPagEl.value === 'Cartão' ? 'block' : 'none';
+        }
+
         if (detPagEl && detParcBloco) {
             detPagEl.addEventListener('change', function () {
                 detParcBloco.style.display = detPagEl.value === 'Cartão' ? 'block' : 'none';
             });
         }
 
-        // ---- Cálculo automático de parcela com juros simples (Sprint 2) ----
-        // Fórmula: J = V * i * n  |  M = V + J  |  P = M / n
-        // Dispara sempre que Valor, Juros % ou Qtd. Parcelas mudar.
-        function _calcularParcelaComJuros() {
+        // ---- Cálculo automático de valor de cada parcela (Sprint 1) ----
+        // Fórmula: Valor de cada parcela = Valor total / Qtd. parcelas
+        // Dispara sempre que Valor ou Qtd. Parcelas mudar.
+        function _calcularValorParcela() {
             var elValor = document.getElementById('det-valor');
-            var elJuros = document.getElementById('det-juros-pct');
             var elQtd   = document.getElementById('det-parcelas-qtd');
             var elParcV = document.getElementById('det-parcelas-valor');
-            if (!elValor || !elJuros || !elQtd || !elParcV) return;
+            if (!elValor || !elQtd || !elParcV) return;
             var V = parseFloat(elValor.value) || 0;
-            var i = parseFloat(elJuros.value) || 0;
             var n = parseInt(elQtd.value, 10) || 0;
             if (V > 0 && n > 0) {
-                var J = V * (i / 100) * n;
-                var M = V + J;
-                elParcV.value = (M / n).toFixed(2);
+                elParcV.value = (V / n).toFixed(2);
             }
         }
-        ['det-valor', 'det-juros-pct', 'det-parcelas-qtd'].forEach(function (fId) {
+        ['det-valor', 'det-parcelas-qtd'].forEach(function (fId) {
             var fEl = document.getElementById(fId);
-            if (fEl) fEl.addEventListener('input', _calcularParcelaComJuros);
+            if (fEl) fEl.addEventListener('input', _calcularValorParcela);
         });
         // Calcula imediatamente se valores já estiverem preenchidos (reabertura do modal)
-        _calcularParcelaComJuros();
+        _calcularValorParcela();
 
         // Lembretes: adicionar / remover
         corpo.querySelector('#btn-add-lembrete').addEventListener('click', function () {
@@ -1737,7 +1753,6 @@ document.addEventListener('DOMContentLoaded', function () {
             var idx = agendamentos.findIndex(function (a) { return a.id === ag.id; });
             if (idx < 0) return;
             agendamentos[idx].valor = parseFloat((document.getElementById('det-valor') || {}).value) || 0;
-            agendamentos[idx].jurosPct     = parseFloat((document.getElementById('det-juros-pct')    || {}).value) || 0;
             agendamentos[idx].formaPagamento = (document.getElementById('det-pagamento') || {}).value || '';
             agendamentos[idx].parcelas     = (document.getElementById('det-parcelas-qtd')   || {}).value || '';
             agendamentos[idx].valorParcela = (document.getElementById('det-parcelas-valor') || {}).value || '';
@@ -3393,12 +3408,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 var descricaoCliente = cliServInputV ? (cliServInputV.value || '').trim() : '';
                 if (!descricaoCliente) { alert('Preencha o campo "Informações Adicionais" antes de solicitar o orçamento.'); return; }
 
+                // Sprint 7 — captura e valida a forma de pagamento antes de criar o agendamento,
+                // garantindo que formaPagamentoPreferida seja sempre enviada ao prestador.
+                var pagamentoPref = (document.getElementById('cli-forma-pagamento') || {}).value || '';
+                if (!pagamentoPref) { alert('Selecione a Forma de Pagamento antes de solicitar o orçamento.'); return; }
+
                 // Coleta subcategorias selecionadas pelo cliente
                 var subcatsSelecionadas = Array.from(
                     mainAgendar.querySelectorAll('.prest-subcat-cb:checked')
                 ).map(function (cb) { return cb.value; });
-
-                var pagamentoPref = (document.getElementById('cli-forma-pagamento') || {}).value || '';
 
                 // Sprint 4 — usa slot escolhido pelo cliente no calendário; senão calcula o primeiro disponível
                 var novoId = 'orc-cli-' + Date.now();
@@ -3517,7 +3535,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var ags      = obterAgendamentosPrestador(emailPrest);
         var ocupados = {};
         ags.forEach(function (a) {
-            // Slots de orçamentos recusados / cancelados ficam livres
+            // Sprint 5 — Somente agendamentos efetivamente cancelados ou recusados pelo cliente
+            // libertam o slot. TODOS os demais status — incluindo orcamento_pendente,
+            // orcamento_enviado, orcamento_aceito e confirmado — mantêm o horário bloqueado,
+            // garantindo que nenhum outro cliente (ou o mesmo) veja esse slot como disponível
+            // enquanto a solicitação não for concluída ou descartada.
             if (a.status === 'cancelado' || a.status === 'orcamento_recusado') return;
             var ini = (a.horario || '').split(' - ')[0];
             if (ini && a.data) ocupados[a.data + ' ' + ini] = true;
@@ -3648,10 +3670,138 @@ document.addEventListener('DOMContentLoaded', function () {
             slotsEl.onclick = _onSlotClick;
         }
 
-        // Confirmar agendamento
+        // Confirmar agendamento — valida campos obrigatórios do painel antes de prosseguir
         if (btnConfirmar) {
             btnConfirmar.addEventListener('click', function () {
                 if (!slotSelecionado) return;
+
+                // ── Coleta e valida campos obrigatórios fora do modal ────────────────
+                var erros = [];
+
+                var elDesc = document.getElementById('cli-servico-desejado');
+                var elPag  = document.getElementById('cli-forma-pagamento');
+
+                var descricao = elDesc ? (elDesc.value || '').trim() : '';
+                var pagamento = elPag  ? (elPag.value  || '').trim() : '';
+
+                if (!descricao) erros.push({ el: elDesc, rotulo: 'Informações Adicionais' });
+                if (!pagamento) erros.push({ el: elPag,  rotulo: 'Forma de Pagamento'      });
+
+                if (erros.length > 0) {
+                    // Fecha o modal e devolve o foco para o formulário
+                    var bsModalVal = bootstrap.Modal.getInstance(modal);
+                    if (bsModalVal) bsModalVal.hide();
+
+                    // Aplica destaque de erro e remove ao corrigir
+                    erros.forEach(function (err) {
+                        if (!err.el) return;
+                        err.el.classList.add('is-invalid');
+                        // Adiciona feedback visual abaixo do campo (evita duplicação)
+                        var feedbackId = err.el.id + '-feedback-sprint4';
+                        var feedbackEx = document.getElementById(feedbackId);
+                        if (!feedbackEx) {
+                            var fb = document.createElement('div');
+                            fb.id = feedbackId;
+                            fb.className = 'invalid-feedback';
+                            fb.style.display = 'block';
+                            fb.textContent = 'Campo obrigatório: preencha "' + err.rotulo + '" para confirmar o agendamento.';
+                            err.el.parentNode.insertBefore(fb, err.el.nextSibling);
+                        }
+                        // Remove destaque ao corrigir (input ou change)
+                        ['input', 'change'].forEach(function (ev) {
+                            err.el.addEventListener(ev, function _rm() {
+                                err.el.classList.remove('is-invalid');
+                                var fb2 = document.getElementById(feedbackId);
+                                if (fb2) fb2.remove();
+                                err.el.removeEventListener(ev, _rm);
+                            });
+                        });
+                    });
+
+                    // Rola suavemente até o primeiro campo com erro e foca nele
+                    modal.addEventListener('hidden.bs.modal', function _scroll() {
+                        modal.removeEventListener('hidden.bs.modal', _scroll);
+                        var primeiro = erros[0].el;
+                        if (!primeiro) return;
+                        primeiro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        setTimeout(function () { primeiro.focus(); }, 350);
+                    });
+
+                    // Toast de aviso com cor de erro
+                    var toastEl = document.getElementById('toastNotificacao');
+                    if (toastEl) {
+                        var nomes = erros.map(function (e) { return '"' + e.rotulo + '"'; }).join(' e ');
+                        var msgEl = document.getElementById('toast-mensagem');
+                        if (msgEl) msgEl.textContent = 'Preencha ' + nomes + ' antes de confirmar o agendamento.';
+                        // Temporariamente aplica cor de erro; restaura ao ocultar
+                        toastEl.classList.remove('bg-dark', 'text-bg-success');
+                        toastEl.classList.add('text-bg-danger');
+                        toastEl.addEventListener('hidden.bs.toast', function _restore() {
+                            toastEl.removeEventListener('hidden.bs.toast', _restore);
+                            toastEl.classList.remove('text-bg-danger');
+                            toastEl.classList.add('bg-dark');
+                        });
+                        bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 4000 }).show();
+                    }
+                    return; // bloqueia o prosseguimento
+                }
+
+                // ── Sprint 5: Re-valida disponibilidade do slot no momento do clique ──
+                // Garante que, entre a abertura do modal e o clique em Confirmar,
+                // nenhum outro cliente tenha reservado o mesmo horário.
+                var slotsRelidos = _calcularSlotsDisponiveis(emailPrest, 14);
+                var slotAindaLivre = slotsRelidos.some(function (d) {
+                    return d.data === slotSelecionado.data &&
+                           d.slots.indexOf(slotSelecionado.horario) >= 0;
+                });
+
+                if (!slotAindaLivre) {
+                    // Atualiza a grade com os horários reais mais recentes
+                    var novosSlots = _calcularSlotsDisponiveis(emailPrest, 7);
+                    if (slotsEl) {
+                        slotsEl.innerHTML = novosSlots.length === 0
+                            ? '<p class="text-center text-muted py-4"><i class="bi bi-calendar-x me-2"></i>' +
+                              'Sem disponibilidade nos próximos 30 dias.</p>'
+                            : novosSlots.map(function (item) {
+                                return '<div style="margin-bottom:14px;">' +
+                                    '<div style="font-weight:700;font-size:.88rem;color:#333;margin-bottom:6px;' +
+                                    'border-bottom:1px solid #dee2e6;padding-bottom:4px;">' +
+                                    '<i class="bi bi-calendar2-check me-1" style="color:#FFC300;"></i>' +
+                                    item.label + '</div><div>' +
+                                    item.slots.map(function (s) {
+                                        return '<button type="button" class="btn btn-outline-secondary btn-sm' +
+                                            ' agenda-slot-btn me-1 mb-1"' +
+                                            ' data-data="'    + item.data  + '"' +
+                                            ' data-horario="' + s          + '"' +
+                                            ' data-label="'  + item.label + ' às ' + s + '">' +
+                                            s + '</button>';
+                                    }).join('') + '</div></div>';
+                              }).join('');
+                        slotsEl.scrollTop = 0;
+                    }
+                    // Limpa a seleção e desabilita o botão até nova escolha
+                    slotSelecionado = null;
+                    if (selecionadoEl) selecionadoEl.style.display = 'none';
+                    if (btnConfirmar) btnConfirmar.disabled = true;
+                    // Toast de conflito
+                    var toastConfl = document.getElementById('toastNotificacao');
+                    if (toastConfl) {
+                        var msgConfl = document.getElementById('toast-mensagem');
+                        if (msgConfl) msgConfl.textContent =
+                            'O horário selecionado não está mais disponível. Escolha outro horário.';
+                        toastConfl.classList.remove('bg-dark', 'text-bg-success');
+                        toastConfl.classList.add('text-bg-danger');
+                        toastConfl.addEventListener('hidden.bs.toast', function _restConfl() {
+                            toastConfl.removeEventListener('hidden.bs.toast', _restConfl);
+                            toastConfl.classList.remove('text-bg-danger');
+                            toastConfl.classList.add('bg-dark');
+                        });
+                        bootstrap.Toast.getOrCreateInstance(toastConfl, { delay: 4000 }).show();
+                    }
+                    return; // bloqueia — slot já foi tomado
+                }
+
+                // ── Tudo preenchido — confirma normalmente ───────────────────────────
                 var bsModal = bootstrap.Modal.getInstance(modal);
                 if (bsModal) bsModal.hide();
                 onConfirmar(slotSelecionado);
@@ -3944,7 +4094,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (n.tipo === 'orcamento_enviado') {
                 if (d.valor !== undefined && d.valor !== null)
-                    linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-cash-coin me-1" style="color:#6c757d;"></i><strong>Valor:</strong> R$ ' + parseFloat(d.valor || 0).toFixed(2).replace('.', ',') + '</p>';
+                    linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-cash-coin me-1" style="color:#6c757d;"></i><strong>Valor à vista:</strong> R$ ' + parseFloat(d.valor || 0).toFixed(2).replace('.', ',') + '</p>';
                 if (d.formaPagamento)
                     linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-credit-card me-1" style="color:#6c757d;"></i><strong>Pagamento:</strong> ' + _escaparHtml(d.formaPagamento) + '</p>';
                 if (d.formaPagamento === 'Cartão' && d.parcelas)
@@ -4230,6 +4380,10 @@ document.addEventListener('DOMContentLoaded', function () {
         span.appendChild(toggle);
         span.appendChild(dropdown);
 
+        // Sprint 6 — sininho de mensagens não lidas na navbar do cliente
+        _atualizarAvisoNavbarMsgsCliente(usu.email);
+        setInterval(function () { _atualizarAvisoNavbarMsgsCliente(usu.email); }, 8000);
+
         var aberto = false;
         toggle.addEventListener('click', function (e) {
             e.preventDefault(); e.stopPropagation();
@@ -4478,7 +4632,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         // Polling de msgs a cada 5 s enquanto modal aberto
         var pollingChat = setInterval(carregarMsgs, 5000);
-        modal.addEventListener('hidden.bs.modal', function () { clearInterval(pollingChat); });
+        modal.addEventListener('hidden.bs.modal', function () {
+            clearInterval(pollingChat);
+            // Sprint 6 — atualiza o sininho da navbar imediatamente após a leitura
+            _atualizarAvisoNavbarMsgsCliente(emailCli);
+        });
     }
 
     // =========================================================
@@ -4586,7 +4744,17 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
         var pollingPrest = setInterval(carregarMsgsPrest, 5000);
-        modal.addEventListener('hidden.bs.modal', function () { clearInterval(pollingPrest); });
+        modal.addEventListener('hidden.bs.modal', function () {
+            clearInterval(pollingPrest);
+            // Sprint 6 — remove o sininho do botão Chat ao marcar mensagens como lidas
+            var liEl = document.querySelector('.agenda-prest-item[data-agendamento-id="' + ag.id + '"]');
+            if (liEl) {
+                var sinoEl = liEl.querySelector('.agenda-btn-sino');
+                if (sinoEl) sinoEl.remove();
+            }
+            // Atualiza o sininho da navbar imediatamente após a leitura
+            _atualizarAvisoNavbarMsgsPrestador(emailPrest);
+        });
     }
 
     // =========================================================
@@ -4631,6 +4799,226 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         obs.observe(listaEl, { childList: true, subtree: false });
     }());
+
+    // =========================================================
+    // SPRINT 6 — AVISO DE MENSAGENS NÃO LIDAS NA NAVBAR
+    // =========================================================
+
+    /** Conta mensagens de clientes ainda não lidas pelo prestador */
+    function _contarMsgsNaoLidasPrestador(emailPrest) {
+        return obterAgendamentosPrestador(emailPrest).reduce(function (tot, ag) {
+            var chat = DB.get('agendaChat_' + ag.id) || [];
+            return tot + chat.filter(function (m) { return m.tipo === 'cliente' && !m.lidaPrest; }).length;
+        }, 0);
+    }
+
+    /** Conta mensagens de prestadores ainda não lidas pelo cliente */
+    function _contarMsgsNaoLidasCliente(emailCli) {
+        return (DB.get('clienteAgendamentos_' + emailCli) || []).reduce(function (tot, ag) {
+            var chat = DB.get('agendaChat_' + ag.id) || [];
+            return tot + chat.filter(function (m) { return m.tipo === 'prest' && !m.lidaCliente; }).length;
+        }, 0);
+    }
+
+    /** Exibe ou remove o sininho vermelho na navbar do prestador */
+    function _atualizarAvisoNavbarMsgsPrestador(emailPrest) {
+        var id = 'sg-navbar-bell-prest';
+        var hasUnread = _contarMsgsNaoLidasPrestador(emailPrest) > 0;
+        var el = document.getElementById(id);
+        if (hasUnread && !el) {
+            el = document.createElement('span');
+            el.id = id;
+            el.style.cssText =
+                'position:relative;display:inline-flex;align-items:center;gap:5px;margin-right:10px;' +
+                'background:#dc3545;color:#fff;border-radius:20px;padding:4px 12px;' +
+                'font-size:.78rem;font-weight:700;white-space:nowrap;cursor:pointer;' +
+                'box-shadow:0 2px 8px rgba(220,53,69,.35);';
+            el.innerHTML = '<i class="bi bi-bell-fill"></i> Você possui mensagens não lidas!';
+            el.title = 'Clique para ver as mensagens';
+            el.addEventListener('click', function (e) {
+                e.stopPropagation();
+                _abrirDropdownMsgsNavbar(el, 'prest', emailPrest);
+            });
+            var navSpan = document.querySelector('.navbar-logada-info');
+            if (navSpan && navSpan.parentNode) navSpan.parentNode.insertBefore(el, navSpan);
+        } else if (!hasUnread && el) {
+            var dropPrest = document.getElementById('sg-navbar-bell-drop-prest');
+            if (dropPrest) dropPrest.remove();
+            el.remove();
+        }
+    }
+
+    /** Exibe ou remove o sininho vermelho na navbar do cliente */
+    function _atualizarAvisoNavbarMsgsCliente(emailCli) {
+        var id = 'sg-navbar-bell-cli';
+        var hasUnread = _contarMsgsNaoLidasCliente(emailCli) > 0;
+        var el = document.getElementById(id);
+        if (hasUnread && !el) {
+            el = document.createElement('span');
+            el.id = id;
+            el.style.cssText =
+                'position:relative;display:inline-flex;align-items:center;gap:5px;margin-right:10px;' +
+                'background:#dc3545;color:#fff;border-radius:20px;padding:4px 12px;' +
+                'font-size:.78rem;font-weight:700;white-space:nowrap;cursor:pointer;' +
+                'box-shadow:0 2px 8px rgba(220,53,69,.35);';
+            el.innerHTML = '<i class="bi bi-bell-fill"></i> Você possui mensagens não lidas!';
+            el.title = 'Clique para ver as mensagens';
+            el.addEventListener('click', function (e) {
+                e.stopPropagation();
+                _abrirDropdownMsgsNavbar(el, 'cli', emailCli);
+            });
+            var navSpan = document.querySelector('.navbar-logada-info');
+            if (navSpan && navSpan.parentNode) navSpan.parentNode.insertBefore(el, navSpan);
+        } else if (!hasUnread && el) {
+            var dropCli = document.getElementById('sg-navbar-bell-drop-cli');
+            if (dropCli) dropCli.remove();
+            el.remove();
+        }
+    }
+
+    /**
+     * Sprint 9 — Dropdown de mensagens não lidas no sininho da navbar.
+     * Mostra cada conversa pendente com nome do remetente e contagem;
+     * ao clicar abre diretamente o modal de chat correspondente.
+     *
+     * @param {HTMLElement} bellEl  — elemento do sininho (âncora do dropdown)
+     * @param {'prest'|'cli'} tipo  — tipo de usuário
+     * @param {string} email        — e-mail do usuário logado
+     */
+    function _abrirDropdownMsgsNavbar(bellEl, tipo, email) {
+        var dropId = 'sg-navbar-bell-drop-' + tipo;
+
+        // Toggle: fecha se já aberto
+        var existente = document.getElementById(dropId);
+        if (existente) { existente.remove(); return; }
+
+        // ── Coleta conversas com mensagens não lidas ────────────────────────
+        var conversas = [];
+        if (tipo === 'prest') {
+            obterAgendamentosPrestador(email).forEach(function (ag) {
+                var chat = DB.get('agendaChat_' + ag.id) || [];
+                var naoLidas = chat.filter(function (m) { return m.tipo === 'cliente' && !m.lidaPrest; });
+                if (naoLidas.length > 0) {
+                    conversas.push({
+                        agId:      ag.id,
+                        remetente: ag.cliente   || 'Cliente',
+                        servico:   ag.servico   || '—',
+                        data:      ag.data      || '—',
+                        qtd:       naoLidas.length,
+                        ag:        ag
+                    });
+                }
+            });
+        } else {
+            (DB.get('clienteAgendamentos_' + email) || []).forEach(function (ag) {
+                var chat = DB.get('agendaChat_' + ag.id) || [];
+                var naoLidas = chat.filter(function (m) { return m.tipo === 'prest' && !m.lidaCliente; });
+                if (naoLidas.length > 0) {
+                    conversas.push({
+                        agId:          ag.id,
+                        remetente:     ag.nomePrestador  || 'Prestador',
+                        servico:       ag.servico        || '—',
+                        data:          ag.data           || '—',
+                        qtd:           naoLidas.length,
+                        emailPrestador: ag.emailPrestador || '',
+                        nomePrestador:  ag.nomePrestador  || ''
+                    });
+                }
+            });
+        }
+
+        if (conversas.length === 0) return;
+
+        var total = conversas.reduce(function (t, c) { return t + c.qtd; }, 0);
+
+        // ── Monta o dropdown ────────────────────────────────────────────────
+        var drop = document.createElement('div');
+        drop.id = dropId;
+        drop.style.cssText =
+            'position:absolute;top:calc(100% + 8px);right:0;min-width:270px;max-width:340px;' +
+            'background:#fff;border:1.5px solid #dee2e6;border-radius:10px;' +
+            'box-shadow:0 6px 24px rgba(0,0,0,.16);z-index:2100;overflow:hidden;';
+
+        // Cabeçalho
+        var header = document.createElement('div');
+        header.style.cssText =
+            'padding:10px 14px;background:#dc3545;color:#fff;font-size:.82rem;' +
+            'font-weight:700;display:flex;align-items:center;gap:7px;';
+        header.innerHTML =
+            '<i class="bi bi-bell-fill"></i> ' +
+            total + ' mensagem' + (total !== 1 ? 'ns' : '') +
+            ' não lida' + (total !== 1 ? 's' : '');
+        drop.appendChild(header);
+
+        // Itens por conversa
+        conversas.forEach(function (conv) {
+            var item = document.createElement('div');
+            item.style.cssText =
+                'padding:10px 14px;border-bottom:1px solid #f0f4ff;cursor:pointer;' +
+                'display:flex;flex-direction:column;gap:4px;transition:background .15s;';
+
+            item.innerHTML =
+                '<div style="display:flex;align-items:center;justify-content:space-between;">' +
+                    '<span style="font-weight:700;font-size:.88rem;color:#212529;' +
+                        'display:flex;align-items:center;gap:6px;">' +
+                        '<i class="bi bi-chat-dots-fill" style="color:#146ADB;"></i>' +
+                        _escaparHtml(conv.remetente) +
+                    '</span>' +
+                    '<span style="background:#dc3545;color:#fff;border-radius:12px;' +
+                        'padding:1px 8px;font-size:.72rem;font-weight:700;">' +
+                        conv.qtd +
+                    '</span>' +
+                '</div>' +
+                '<small style="color:#6c757d;font-size:.75rem;">' +
+                    '<i class="bi bi-tools me-1"></i>' + _escaparHtml(conv.servico) +
+                    ' &nbsp;·&nbsp; ' +
+                    '<i class="bi bi-calendar3 me-1"></i>' + _escaparHtml(conv.data) +
+                '</small>';
+
+            item.addEventListener('mouseover', function () { item.style.background = '#f0f4ff'; });
+            item.addEventListener('mouseout',  function () { item.style.background = ''; });
+
+            item.addEventListener('click', function (e) {
+                e.stopPropagation();
+                drop.remove();
+                if (tipo === 'prest') {
+                    _abrirChatPrestador(conv.ag, email);
+                    // Atualiza o sininho após a leitura (delayed para aguardar o modal fechar)
+                    setTimeout(function () { _atualizarAvisoNavbarMsgsPrestador(email); }, 800);
+                } else {
+                    _abrirChatCliente(
+                        conv.agId, conv.emailPrestador, conv.nomePrestador,
+                        conv.servico, conv.data, email
+                    );
+                    setTimeout(function () { _atualizarAvisoNavbarMsgsCliente(email); }, 800);
+                }
+            });
+
+            drop.appendChild(item);
+        });
+
+        // Rodapé com total
+        var rodape = document.createElement('div');
+        rodape.style.cssText =
+            'padding:7px 14px;background:#f8f9fa;font-size:.75rem;' +
+            'color:#6c757d;text-align:center;border-top:1px solid #dee2e6;';
+        rodape.textContent = conversas.length + ' conversa' + (conversas.length !== 1 ? 's' : '') +
+            ' com mensagens pendentes';
+        drop.appendChild(rodape);
+
+        bellEl.appendChild(drop);
+
+        // Fecha ao clicar fora
+        setTimeout(function () {
+            function _fecharFora(e) {
+                if (!bellEl.contains(e.target)) {
+                    drop.remove();
+                    document.removeEventListener('click', _fecharFora);
+                }
+            }
+            document.addEventListener('click', _fecharFora);
+        }, 0);
+    }
 
     // =========================================================
     // PATCH: Notificações cliente — polling a cada 8 s
