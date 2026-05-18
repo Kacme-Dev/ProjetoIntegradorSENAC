@@ -130,30 +130,23 @@
                 <div class="cli-card-cabecalho" id="cli-cabecalho-pedidos">
                     <span>Status dos Últimos Pedidos</span>
                     <!--
-                        Aviso de mensagens não lidas — só aparece se houver pelo menos um item
-                        com a classe .tem-mensagem-nao-lida na lista abaixo. A visibilidade é
-                        controlada dinamicamente pelo script.js (veja inicializarClienteAreaExclusiva).
-                    -->                    
+                        Aviso de mensagens não lidas — controlado dinamicamente pelo script.js
+                        (veja inicializarClienteConfirmados).
+                    -->
+                    <span class="msg-nao-lidas-aviso" id="cli-aviso-msgs-confirmados" style="display:none;">
+                        <i class="bi bi-bell-fill"></i> Você possui mensagens não lidas
+                    </span>
                 </div>
+
+                <!-- ============================================== -->
+                <!-- Serviços Confirmados/Concluídos — preenchido   -->
+                <!-- dinamicamente por script.js                    -->
+                <!-- ============================================== -->
+                <div id="cli-tabela-confirmados" class="p-3">
+                    <!-- preenchido dinamicamente por script.js -->
+                </div>
+
                 <ul class="cli-pedidos-lista">
-                    <li class="cli-pedidos-item tem-mensagem-nao-lida" data-pedido-id="pedido-1" data-servico="Eletricista" data-profissional="Maria Silva">
-                        <span><strong>Serviço:</strong> Eletricista &nbsp;|&nbsp; <strong>Profissional:</strong> Maria Silva</span>
-                        <span class="cli-badge em-andamento">Em Andamento</span>
-                        <div class="cli-pedidos-acoes">
-                            <!--
-                                Sininho clicável: só é exibido quando existem mensagens não lidas do prestador.
-                                Ao clicar, abre o modal de chat já marcando a conversa como lida.
-                                O title indica de qual prestador veio a mensagem.
-                            -->
-                            <button type="button" class="cli-msg-sino" title="Mensagens não lidas de Maria Silva" aria-label="Mensagens não lidas de Maria Silva">
-                                <i class="bi bi-bell-fill"></i>
-                            </button>
-                            <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
-                            <button type="button" class="btn btn-warning btn-editar">Editar</button>
-                            <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
-                            
-                        </div>
-                    </li>
                     <li class="cli-pedidos-item" data-pedido-id="pedido-2" data-servico="Diarista" data-profissional="João Souza">
                         <span><strong>Serviço:</strong> Diarista &nbsp;|&nbsp; <strong>Profissional:</strong> João Souza</span>
                         <span class="cli-badge concluido">Concluído</span>
@@ -175,21 +168,6 @@
                         </div>
                     </li>
                 </ul>
-            </div>
-
-            <!-- ============================================== -->
-            <!--  CARD: Serviços Confirmados — Chat com Prestador -->
-            <!-- ============================================== -->
-            <div class="cli-card" id="cli-card-confirmados" style="margin-top:24px;">
-                <div class="cli-card-cabecalho" id="cli-cabecalho-confirmados">
-                    <span><i class="bi bi-chat-dots me-2"></i>Serviços Confirmados — Canal de Mensagens</span>
-                    <span class="msg-nao-lidas-aviso" id="cli-aviso-msgs-confirmados" style="display:none;">
-                        <i class="bi bi-bell-fill"></i> Você possui mensagens não lidas
-                    </span>
-                </div>
-                <div id="cli-tabela-confirmados" class="p-3">
-                    <!-- preenchido dinamicamente por script.js -->
-                </div>
             </div>
         </main>
     </div>
@@ -389,6 +367,51 @@
                     <span id="toast-mensagem">Ação realizada com sucesso!</span>
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!--  MODAL: AVALIAR PRESTADOR (Serviços Concluídos) -->
+    <!-- ============================================== -->
+    <!--
+        Aberto ao clicar em "Avaliar" na lista de Serviços Confirmados/Concluídos.
+        Salva a avaliação em avaliacoesRecebidasPrestador para aparecer em
+        prestadorAvaliacoesRecebidas.html do prestador avaliado.
+    -->
+    <div class="modal fade" id="modalAvaliarPrestConfirmado" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color:#146ADB; color:#fff;">
+                    <h5 class="modal-title"><i class="bi bi-star me-2"></i>Avaliar Prestador</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modal-aval-conf-info" class="mb-3 p-2 bg-light rounded text-dark"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Nota:</label>
+                        <div class="modal-estrelas" id="modal-aval-conf-estrelas">
+                            <i class="bi bi-star" data-nota="1"></i>
+                            <i class="bi bi-star" data-nota="2"></i>
+                            <i class="bi bi-star" data-nota="3"></i>
+                            <i class="bi bi-star" data-nota="4"></i>
+                            <i class="bi bi-star" data-nota="5"></i>
+                        </div>
+                        <input type="hidden" id="modal-aval-conf-nota" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal-aval-conf-comentario" class="form-label fw-bold text-dark">Comentário:</label>
+                        <textarea class="form-control" id="modal-aval-conf-comentario" rows="4" maxlength="1000"
+                            style="resize:none; overflow-y:auto;"
+                            placeholder="Deixe seu comentário sobre o serviço prestado..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btn-salvar-aval-conf">
+                        <i class="bi bi-floppy me-1"></i>Salvar Avaliação
+                    </button>
+                </div>
             </div>
         </div>
     </div>

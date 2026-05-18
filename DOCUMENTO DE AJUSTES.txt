@@ -3,28 +3,49 @@ disponibilize os arquivos atualizados após conluir todas as Sprints
 para saber qual é a íultima Sprint será dado o comando Sprints Concluídas. Após esse comando, você poderá concluir o projeto e entregar os arquivos ajustados e atualizados na íntgra, completos para serem utilizados imediatamente
 
 SPRINT 1
-na página prestadorServicosAgendados.html
-excluar esse campo <input type="number" id="det-juros-pct" class="form-control form-control-sm" value="" min="0" step="0.01" placeholder="ex: 2" style="max-width:100px;" title="Taxa de juros simples aplicada ao parcelamento">
-desfazendo o cálculo de porcentagem
-informe o valor de cada parcela, considerando o cálculo de
-o valor informado nesse campo <input type="number" id="det-valor" class="form-control form-control-sm" value="330" min="0" step="0.01" style="max-width:120px;">
-dividido pela quantidade de parcelas informadas nesse campo <input type="number" id="det-parcelas-qtd" class="form-control form-control-sm" min="1" max="24" step="1" value="" placeholder="ex: 12" style="max-width:100px;">
-o restante da lógica, mantenha sem alterações
+incluir em<div id="cli-tabela-confirmados" class="p-3"><ul class="cli-pedidos-lista"><li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-11 às 12:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="orc-cli-1778509171661" data-prest-email="prestador@prestador.com" data-prest-nome="Prestador" data-servico="TI" data-data="2026-05-11" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li><li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-12 às 08:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="orc-cli-1778526485666" data-prest-email="prestador@prestador.com" data-prest-nome="Prestador" data-servico="TI" data-data="2026-05-12" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li><li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-19 às 08:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="orc-cli-1779120845901" data-prest-email="prestador@prestador.com" data-prest-nome="Prestador" data-servico="TI" data-data="2026-05-19" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li></ul></div>
+o botão avaliar para permitir que o cliente possa avaliar o prestador
+as avaliações realizadas deverão aprecer na págin prestadorAvaliacoesRecebidas.html
+para cadas prestador avaliado.
 
 SPRINT 2
-informar aqui <p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-cash-coin me-1" style="color:#6c757d;"></i><strong>Valor:</strong> R$ 330,00</p>
-o valor à vista
-informar aqui <p style="margin:3px 0;font-size:.85rem;padding:5px 10px;background:#fff8e1;border-left:3px solid #FFC300;border-radius:0 6px 6px 0;"><i class="bi bi-credit-card me-1" style="color:#e6a800;"></i><strong>Parcelamento:</strong> até 4 parcela(s) de R$ 82,50</p>
-o valor parcelado
+ajuste o campo de busca nas p´paginas indexCliente.html e indexPrestador.html para que tenham o mesmo tamanho do campo de busca da página 
+inde.html
+<input type="text" class="form-control" placeholder="Precisa de um eletricista ou encanador?" aria-label="Busca">
 
 SPRINT 3 
 
-sempre que aqui <a href="#" class="nav-link agenda-aba-ativa" data-aba="pendentes">
-                            Pendentes de Confirmação (<span id="contador-pendentes">2</span>)
-                        </a>
-houver informações de que há agendamentos pendentes,
-mostrar os agendamentos pendentes aqui <li class="agenda-prest-item" data-agendamento-id="orc-cli-1778459405650"><div><div class="agenda-slot-dia">Ter, 12/Mai</div><div class="agenda-slot-tempo">10:00 - 11:00</div></div><div><div class="agenda-cliente-nome">Kleber Moreno Cliente</div><p class="agenda-cliente-servico">Serviço: TI</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i></p></div><div class="agenda-status-area"><span class="agenda-status-tag pendente">Orçamento Enviado</span><div class="agenda-botoes"><a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a></div></div></li>
-e permitir as ações de enviar orçamento, rejeitar solicitação do cliente e demais comunicaões com o cliente
+trasnfira 
+<div id="cli-tabela-confirmados" class="p-3"><ul class="cli-pedidos-lista"><li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-11 às 12:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="orc-cli-1778509171661" data-prest-email="prestador@prestador.com" data-prest-nome="Prestador" data-servico="TI" data-data="2026-05-11" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li><li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-12 às 08:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="orc-cli-1778526485666" data-prest-email="prestador@prestador.com" data-prest-nome="Prestador" data-servico="TI" data-data="2026-05-12" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li><li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-19 às 08:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="orc-cli-1779120845901" data-prest-email="prestador@prestador.com" data-prest-nome="Prestador" data-servico="TI" data-data="2026-05-19" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li></ul></div>
+para aqui em 
+<div class="cli-card-cabecalho" id="cli-cabecalho-pedidos">
+                    <span>Status dos Últimos Pedidos</span>
+                    <!--
+                        Aviso de mensagens não lidas — só aparece se houver pelo menos um item
+                        com a classe .tem-mensagem-nao-lida na lista abaixo. A visibilidade é
+                        controlada dinamicamente pelo script.js (veja inicializarClienteAreaExclusiva).
+                    -->                    
+                </div>
+e exclua essa parte 
+<li class="cli-pedidos-item tem-mensagem-nao-lida" data-pedido-id="pedido-1" data-servico="Eletricista" data-profissional="Maria Silva">
+                        <span><strong>Serviço:</strong> Eletricista &nbsp;|&nbsp; <strong>Profissional:</strong> Maria Silva</span>
+                        <span class="cli-badge em-andamento">Em Andamento</span>
+                        <div class="cli-pedidos-acoes">
+                            <!--
+                                Sininho clicável: só é exibido quando existem mensagens não lidas do prestador.
+                                Ao clicar, abre o modal de chat já marcando a conversa como lida.
+                                O title indica de qual prestador veio a mensagem.
+                            -->
+                            <button type="button" class="cli-msg-sino" title="Mensagens não lidas de Maria Silva" aria-label="Mensagens não lidas de Maria Silva">
+                                <i class="bi bi-bell-fill"></i>
+                            </button>
+                            <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
+                            <button type="button" class="btn btn-warning btn-editar">Editar</button>
+                            <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
+                            
+                        </div>
+                    </li>
+
 
 SPRINT 4
 na página clienteAgendarServicos.html

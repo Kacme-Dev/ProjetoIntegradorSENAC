@@ -4441,6 +4441,14 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!usu) return;
         var emailCli = usu.email;
 
+        // Verifica se o cliente já avaliou este agendamento específico
+        function _jaAvaliouConfirmado(agId, prestEmail) {
+            var avs = obterAvaliacoesRecebidasPrestador(prestEmail);
+            return avs.some(function (a) { return a.id === 'cli-aval-conf-' + agId; });
+        }
+
+        var _avalConfAtual = null;
+
         function renderConfirmados() {
             var cliAgs = DB.get('clienteAgendamentos_' + emailCli) || [];
             var ativos = cliAgs.filter(function (ag) {
@@ -4489,6 +4497,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<i class="bi bi-chat-dots me-1"></i>Chat' +
                     (unread > 0 ? ' <span class="badge bg-danger" style="font-size:.65rem;vertical-align:middle;">' + unread + '</span>' : '') +
                     '</button>' +
+                    (ag.status === 'concluido'
+                        ? (_jaAvaliouConfirmado(ag.id, ag.emailPrestador || '')
+                            ? ' <span class="badge ms-1" style="background:#198754;color:#fff;font-size:.75rem;"><i class="bi bi-check-circle me-1"></i>Avaliado</span>'
+                            : ' <button type="button" class="btn btn-sm btn-avaliar-confirmado ms-1" ' +
+                              'data-ag-id="' + _escaparHtml(ag.id) + '" ' +
+                              'data-prest-email="' + _escaparHtml(ag.emailPrestador || '') + '" ' +
+                              'data-prest-nome="' + _escaparHtml(ag.nomePrestador || '') + '" ' +
+                              'data-servico="' + _escaparHtml(ag.servico || '') + '" ' +
+                              'style="background:#FFC300;border-color:#e6b000;color:#000;font-weight:600;">' +
+                              '<i class="bi bi-star me-1"></i>Avaliar</button>')
+                        : '') +
                     '</div>' +
                     '</li>';
             });
@@ -4508,6 +4527,93 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Re-render após fechar modal para atualizar contagem
                     setTimeout(renderConfirmados, 400);
                 });
+            });
+
+            // — Botão Avaliar: abre modal de avaliação do prestador —
+            tabela.querySelectorAll('.btn-avaliar-confirmado').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    _avalConfAtual = {
+                        agId:      btn.dataset.agId,
+                        prestEmail: btn.dataset.prestEmail,
+                        prestNome: btn.dataset.prestNome,
+                        servico:   btn.dataset.servico
+                    };
+                    var modalEl = document.getElementById('modalAvaliarPrestConfirmado');
+                    if (!modalEl) return;
+                    var infoEl = document.getElementById('modal-aval-conf-info');
+                    if (infoEl) infoEl.innerHTML =
+                        '<strong>Prestador:</strong> ' + _escaparHtml(btn.dataset.prestNome) +
+                        ' &nbsp;|&nbsp; <strong>Serviço:</strong> ' + _escaparHtml(btn.dataset.servico);
+                    // Reseta estrelas
+                    var stars = modalEl.querySelectorAll('#modal-aval-conf-estrelas i');
+                    stars.forEach(function (s) { s.className = 'bi bi-star'; s.style.color = '#ccc'; });
+                    var notaEl = document.getElementById('modal-aval-conf-nota');
+                    if (notaEl) notaEl.value = '0';
+                    var comentEl = document.getElementById('modal-aval-conf-comentario');
+                    if (comentEl) comentEl.value = '';
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                });
+            });
+        }
+
+        // — Inicializa estrelas do modal de avaliação de prestador (serviços concluídos) —
+        (function _initStarsAvalConf() {
+            var cont   = document.getElementById('modal-aval-conf-estrelas');
+            var hidden = document.getElementById('modal-aval-conf-nota');
+            if (!cont || !hidden) return;
+            var stars = cont.querySelectorAll('i');
+            stars.forEach(function (s, i) {
+                s.addEventListener('click', function () {
+                    hidden.value = i + 1;
+                    stars.forEach(function (st, j) {
+                        st.className   = j <= i ? 'bi bi-star-fill filled' : 'bi bi-star';
+                        st.style.color = j <= i ? '#ffc107' : '#ccc';
+                    });
+                });
+                s.addEventListener('mouseover', function () {
+                    stars.forEach(function (st, j) { st.style.color = j <= i ? '#ffc107' : '#ccc'; });
+                });
+                s.addEventListener('mouseout', function () {
+                    var cur = parseInt(hidden.value) || 0;
+                    stars.forEach(function (st, j) { st.style.color = j < cur ? '#ffc107' : '#ccc'; });
+                });
+            });
+        }());
+
+        // — Salvar avaliação: persiste em avaliacoesRecebidasPrestador —
+        var btnSalvarAvalConf = document.getElementById('btn-salvar-aval-conf');
+        if (btnSalvarAvalConf && !btnSalvarAvalConf.dataset.bound) {
+            btnSalvarAvalConf.dataset.bound = '1';
+            btnSalvarAvalConf.addEventListener('click', function () {
+                if (!_avalConfAtual) return;
+                var nota   = parseInt((document.getElementById('modal-aval-conf-nota')       || {}).value) || 0;
+                var coment = (document.getElementById('modal-aval-conf-comentario') || {}).value || '';
+                if (nota === 0)        { alert('Selecione uma nota antes de salvar.');     return; }
+                if (!coment.trim())    { alert('Escreva um comentário antes de salvar.'); return; }
+
+                var usLogado    = obterUsuarioLogado();
+                var clienteNome = usLogado ? (usLogado.nome || 'Cliente') : 'Cliente';
+                var avId        = 'cli-aval-conf-' + _avalConfAtual.agId;
+
+                var registro = {
+                    id:          avId,
+                    cliente:     clienteNome,
+                    servico:     _avalConfAtual.servico,
+                    nota:        nota,
+                    comentario:  coment,
+                    data:        new Date().toLocaleDateString('pt-BR')
+                };
+
+                // Salva em avaliacoesRecebidasPrestador (chave do prestador avaliado)
+                var avs = obterAvaliacoesRecebidasPrestador(_avalConfAtual.prestEmail);
+                var idx = avs.findIndex(function (a) { return a.id === avId; });
+                if (idx >= 0) avs[idx] = registro; else avs.push(registro);
+                salvarAvaliacoesRecebidasPrestador(_avalConfAtual.prestEmail, avs);
+
+                var modalEl = document.getElementById('modalAvaliarPrestConfirmado');
+                if (modalEl) { var inst = bootstrap.Modal.getInstance(modalEl); if (inst) inst.hide(); }
+                exibirToast('Avaliação enviada ao prestador com sucesso!');
+                renderConfirmados(); // atualiza o botão para "Avaliado"
             });
         }
 
