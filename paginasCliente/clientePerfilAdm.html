@@ -55,7 +55,7 @@
 
                     <!--Itens da sidebar — visíveis somente no collapse mobile (d-lg-none)-->
                     <ul class="navbar-nav mx-auto d-lg-none">
-                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasCliente/clienteAreaExclusiva.html"><i class="bi bi-house-door me-2"></i>Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasCliente/clienteAreaExclusiva.html"><i class="bi bi-house-door me-2"></i>Área Exclusiva</a></li>
                         <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasCliente/clientePerfilAdm.html"><i class="bi bi-person-circle me-2"></i>Meu Perfil</a></li>
                         <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasCliente/clienteAgendarServicos.html"><i class="bi bi-calendar-check me-2"></i>Agendar Serviços</a></li>
                         <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasCliente/clienteAvaliacoesFeitas.html"><i class="bi bi-star me-2"></i>Avaliações Realizadas</a></li>
@@ -84,7 +84,7 @@
 
         <nav class="cli-sidebar">
             <ul>
-                <li><a href="/paginasCliente/clienteAreaExclusiva.html"><i class="bi bi-house-door"></i> Dashboard</a></li>
+                <li><a href="/paginasCliente/clienteAreaExclusiva.html"><i class="bi bi-house-door"></i> Área Exclusiva</a></li>
                 <li><a class="cli-nav-ativo" href="/paginasCliente/clientePerfilAdm.html"><i class="bi bi-person-circle"></i> Meu Perfil</a></li>
                 <li><a href="/paginasCliente/clienteAgendarServicos.html"><i class="bi bi-calendar-check"></i> Agendar Serviços</a></li>
                 <li><a href="/paginasCliente/clienteAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Realizadas</a></li>
@@ -96,7 +96,7 @@
 
         <main class="cli-main">
             <div class="container">
-                <h1 class="hotsiteadm-titulo-pagina">Administração do Perfil — Cliente</h1>
+                <h1 class="hotsiteadm-titulo-pagina">Administração do Perfil — <span id="titulo-nome-cliente">Cliente</span></h1>
 
                 <div class="hotsiteadm-layout">
 
@@ -109,17 +109,17 @@
                         </div>
 
                         <div class="hotsiteadm-grupo">
-                            <label for="adm-cpf">CPF</label>
+                            <label for="adm-cpf">CPF <span style="color:red;" title="Campo obrigatório">*</span></label>
                             <input class="hotsiteadm-input" type="text" id="adm-cpf" value="" maxlength="14" placeholder="000.000.000-00">
                         </div>
 
                         <div class="hotsiteadm-grupo">
-                            <label for="adm-cidade">Cidade</label>
+                            <label for="adm-cidade">Cidade <span style="color:red;" title="Campo obrigatório">*</span></label>
                             <input class="hotsiteadm-input" type="text" id="adm-cidade" value="">
                         </div>
 
                         <div class="hotsiteadm-grupo">
-                            <label for="adm-endereco">Endereço</label>
+                            <label for="adm-endereco">Endereço <span style="color:red;" title="Campo obrigatório">*</span></label>
                             <input class="hotsiteadm-input" type="text" id="adm-endereco" value="">
                         </div>
 
@@ -129,7 +129,7 @@
                         </div>
 
                         <div class="hotsiteadm-grupo">
-                            <label for="adm-tel">Telefone</label>
+                            <label for="adm-tel">Telefone <span style="color:red;" title="Campo obrigatório">*</span></label>
                             <input class="hotsiteadm-input" type="text" id="adm-tel" value="">
                         </div>
 
@@ -139,7 +139,7 @@
                         </div>
 
                         <div class="hotsiteadm-botoes" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <a href="clienteAreaExclusiva.html" class="conf-btn-voltar" style="background-color: red; color: white; border-color: red; flex: 1; text-align: center;">Cancelar</a>
+                            <a href="/paginasCliente/clienteAreaExclusiva.html" id="btn-cancelar-perfil" class="conf-btn-salvar" style="background-color:#dc3545; color:#fff; border:none; border-radius:4px; font-weight:bold; padding:10px 15px; cursor:pointer; flex:1; text-align:center; text-decoration:none; display:inline-block;"><i class="bi bi-x-circle me-1"></i> Cancelar</a>
                             <button type="button" id="btn-limpar-perfil" style="background-color: #6c757d; color: white; border: none; border-radius: 4px; font-weight: bold; padding: 10px 15px; cursor: pointer; flex: 1;">Limpar</button>
                             <button type="button" class="conf-btn-salvar" id="btn-salvar-perfil" style="flex: 1 1 100%; margin-top: 8px;"><i class="bi bi-floppy me-1"></i> Salvar Perfil</button>
                         </div>
@@ -161,10 +161,11 @@
                             <div class="hotsite-avatar" style="margin-bottom: 12px; background-color: #ccc;">AS</div>
                             <div class="hotsite-nome"></div>
                             <div class="hotsite-meta-info">
-                                Cliente &nbsp;·&nbsp; Membro desde
+                                Cliente &nbsp;·&nbsp; Membro desde <span id="preview-membro-desde">—</span>
+                                <div id="preview-media-avaliacao" style="margin-top:5px; font-size:0.85rem;"></div>
                             </div>
                             <div class="hotsite-atende" style="margin-top: 8px;">
-                                <i class="bi bi-geo-alt-fill me-1"></i>
+                                <i class="bi bi-geo-alt-fill me-1"></i><span id="preview-cidade">—</span>
                             </div>
                             <a class="cta" href="/paginasCliente/clienteAgendarServicos.html" style="margin-top:12px; width:100%; text-align:center;">
                                 <i class="bi bi-search me-1"></i> Buscar Prestadores
@@ -177,34 +178,13 @@
                                 <div>
                                     <div class="hotsite-secao-titulo">Dados Pessoais</div>
                                     <p class="hotsite-desc">
-                                        <i class="bi bi-envelope me-1"></i>
-                                        &nbsp;&nbsp;
-                                        <i class="bi bi-telephone me-1"></i>
+                                        <i class="bi bi-envelope me-1"></i><span id="preview-email">—</span>
                                         <br>
-                                        <i class="bi bi-house me-1"></i>
+                                        <i class="bi bi-telephone me-1"></i><span id="preview-tel">—</span>
+                                        <br>
+                                        <i class="bi bi-house me-1"></i><span id="preview-endereco">—</span>
                                     </p>
                                 </div>
-                            </div>
-
-                            <div class="hotsite-secao-titulo" style="margin-top: 14px;"></div>
-                            <div class="hotsite-depoimento">
-                                <i class="bi bi-tools me-1"></i> <strong></strong> &nbsp;·&nbsp;
-                            </div>
-                            <div class="hotsite-depoimento">
-                                <i class="bi bi-lightning me-1"></i> <strong></strong> &nbsp;·&nbsp;
-                            </div>
-
-                            <div class="hotsite-secao-titulo" style="margin-top: 14px;">Avaliações Realizadas</div>
-                            <div class="hotsite-depoimento"></div>
-
-                            <div class="hotsite-secao-titulo" style="margin-top: 14px;">Agendamentos Pendentes</div>
-                            <div class="placeholder" style="margin-bottom: 16px;">
-                                Próximo agendamento: <strong></strong>
-                            </div>
-
-                            <div class="hotsite-secao-titulo">[Ações do Cliente]</div>
-                            <div class="hotsiteadm-acoes-admin">
-                                <a class="cta cta-amarelo" href="/paginasCliente/clienteHistoricoServicos.html"><i class="bi bi-clock-history me-1"></i> Ver Histórico Completo</a>
                             </div>
 
                         </div>

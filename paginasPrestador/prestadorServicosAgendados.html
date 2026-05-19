@@ -305,6 +305,59 @@
     </div>   
 
     <!-- ============================================== -->
+    <!--        MODAL: PERFIL DO CLIENTE                -->
+    <!-- ============================================== -->
+    <div class="modal fade" id="modalPerfilCliente" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color:#146ADB; color:#fff;">
+                    <h5 class="modal-title"><i class="bi bi-person-circle me-2"></i>Perfil do Cliente</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="hotsiteadm-preview" style="box-shadow:none; border:none; margin:0;">
+
+                        <!-- Coluna esquerda — avatar + meta -->
+                        <div class="hotsiteadm-preview-perfil" style="min-width:200px;">
+                            <div class="hotsite-avatar" id="perfil-cli-modal-avatar" style="margin-bottom:12px; background-color:#ccc;"></div>
+                            <div class="hotsite-nome" id="perfil-cli-modal-nome"></div>
+                            <div class="hotsite-meta-info">
+                                Cliente &nbsp;·&nbsp; Membro desde <span id="perfil-cli-modal-membro">—</span>
+                                <div id="perfil-cli-modal-estrelas" style="margin-top:5px; font-size:0.85rem;"></div>
+                            </div>
+                            <div class="hotsite-atende" style="margin-top:8px;">
+                                <i class="bi bi-geo-alt-fill me-1"></i><span id="perfil-cli-modal-cidade">—</span>
+                            </div>
+                        </div>
+
+                        <!-- Coluna direita — dados pessoais + avaliações -->
+                        <div class="hotsiteadm-preview-conteudo">
+
+                            <div class="hotsite-cabecalho-bloco">
+                                <div>
+                                    <div class="hotsite-secao-titulo">Dados Pessoais</div>
+                                    <p class="hotsite-desc" id="perfil-cli-modal-dados">
+                                        <i class="bi bi-envelope me-1"></i><span id="perfil-cli-modal-email">—</span><br>
+                                        <i class="bi bi-telephone me-1"></i><span id="perfil-cli-modal-tel">—</span><br>
+                                        <i class="bi bi-house me-1"></i><span id="perfil-cli-modal-endereco">—</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="hotsite-secao-titulo" style="margin-top:14px;">Avaliações Recebidas</div>
+                            <div id="perfil-cli-modal-avaliacoes" class="hotsite-depoimento"></div>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
     <!--        TOAST — NOTIFICAÇÃO DE SUCESSO          -->
     <!-- ============================================== -->
     <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1080;">

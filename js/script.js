@@ -500,7 +500,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var repita = document.getElementById('senha-cliente-repita').value;
                 if (senha !== repita) { alert('As senhas não coincidem.'); return; }
                 var usuarios = obterUsuariosCadastrados();
-                usuarios[email] = { nome: nome, senha: senha, tipo: 'cliente' };
+                usuarios[email] = { nome: nome, senha: senha, tipo: 'cliente', dataCadastro: new Date().toISOString() };
                 salvarUsuariosCadastrados(usuarios);
                 window.location.href = 'login.html?cadastro=sucesso';
             });
@@ -967,7 +967,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     '</span>' +
                     '<div class="prest-historico-acoes">' +
                         '<button type="button" class="btn btn-primary btn-prest-avaliar">Avaliar</button>' +
-                        '<button type="button" class="btn btn-warning btn-prest-editar">Editar</button>' +
                         '<button type="button" class="btn btn-danger btn-prest-excluir">Excluir</button>' +
                     '</div>';
 
@@ -1134,7 +1133,6 @@ document.addEventListener('DOMContentLoaded', function () {
         // Avaliar
         lista.addEventListener('click', function (e) {
             var btnAv = e.target.closest('.btn-prest-avaliar');
-            var btnEd = e.target.closest('.btn-prest-editar');
             var btnEx = e.target.closest('.btn-prest-excluir');
 
             if (btnAv) {
@@ -1145,17 +1143,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderEstrelas(starsAv, notaAv, 0);
                 document.getElementById('modal-prest-comentario').value = '';
                 if (modalAv) bootstrap.Modal.getOrCreateInstance(modalAv).show();
-            }
-            if (btnEd) {
-                var liEd = btnEd.closest('.prest-historico-item');
-                pedidoAtual = liEd.dataset.pedidoId;
-                var avAtual = obterAvals().find(function (a) { return a.pedidoId === pedidoAtual; });
-                var infoEdEl = document.getElementById('modal-prest-editar-info');
-                if (infoEdEl) infoEdEl.innerHTML = '<strong>Serviço:</strong> ' + liEd.dataset.servico + ' | <strong>Cliente:</strong> ' + liEd.dataset.cliente;
-                renderEstrelas(starsEd, notaEd, avAtual ? avAtual.nota : 0);
-                var comentEdEl = document.getElementById('modal-prest-editar-comentario');
-                if (comentEdEl) comentEdEl.value = avAtual ? avAtual.comentario : '';
-                if (modalEd) bootstrap.Modal.getOrCreateInstance(modalEd).show();
             }
             if (btnEx) {
                 var liEx = btnEx.closest('.prest-historico-item');
@@ -1238,6 +1225,120 @@ document.addEventListener('DOMContentLoaded', function () {
                 exibirToast('Avaliação atualizada!');
             });
         }
+    }
+
+    // =========================================================
+    // SPRINT 4 — MODAL PERFIL DO CLIENTE (prestadorServicosAgendados.html)
+    // Abre o modal #modalPerfilCliente com os dados do cliente pelo email.
+    // =========================================================
+    function _abrirModalPerfilCliente(emailCliente) {
+        var modalEl = document.getElementById('modalPerfilCliente');
+        if (!modalEl) return;
+
+        var usuarios   = obterUsuariosCadastrados();
+        var dadosCli   = usuarios[emailCliente] || {};
+        var perfil     = dadosCli.perfil || {};
+        var nome       = dadosCli.nome || emailCliente;
+
+        // Avatar
+        var avatarEl = document.getElementById('perfil-cli-modal-avatar');
+        if (avatarEl) {
+            if (perfil.foto) {
+                avatarEl.style.backgroundImage  = 'url(' + perfil.foto + ')';
+                avatarEl.style.backgroundSize   = 'cover';
+                avatarEl.style.backgroundRepeat = 'no-repeat';
+                avatarEl.style.backgroundPosition = 'center';
+                avatarEl.textContent = '';
+            } else {
+                avatarEl.style.backgroundImage = '';
+                avatarEl.textContent = nome.substring(0, 2).toUpperCase();
+            }
+        }
+
+        // Nome
+        var nomeEl = document.getElementById('perfil-cli-modal-nome');
+        if (nomeEl) nomeEl.textContent = nome;
+
+        // Tempo de membro
+        var membroEl = document.getElementById('perfil-cli-modal-membro');
+        if (membroEl) {
+            if (dadosCli.dataCadastro) {
+                var dtCad   = new Date(dadosCli.dataCadastro);
+                var diffMs  = new Date() - dtCad;
+                var diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                var textoTempo;
+                if (diffDias < 1)        textoTempo = 'hoje';
+                else if (diffDias === 1)  textoTempo = '1 dia';
+                else if (diffDias < 30)   textoTempo = diffDias + ' dias';
+                else if (diffDias < 60)   textoTempo = '1 mês';
+                else if (diffDias < 365)  textoTempo = Math.floor(diffDias / 30) + ' meses';
+                else if (diffDias < 730)  textoTempo = '1 ano';
+                else                      textoTempo = Math.floor(diffDias / 365) + ' anos';
+                membroEl.textContent = textoTempo;
+            } else {
+                membroEl.textContent = 'data não registrada';
+            }
+        }
+
+        // Média de avaliações recebidas pelo cliente
+        var estrelasEl = document.getElementById('perfil-cli-modal-estrelas');
+        if (estrelasEl) {
+            var todasAvs = DB.get('avaliacoesRecebidasDoCliente') || [];
+            var avsDoCliente = todasAvs.filter(function (a) { return a.emailCliente === emailCliente || !a.emailCliente; });
+            // Se não houver campo emailCliente nas avaliações antigas, exibe todas
+            var avsExibir = avsDoCliente.length > 0 ? avsDoCliente : (todasAvs.length > 0 ? todasAvs : []);
+            if (avsExibir.length > 0) {
+                var soma  = avsExibir.reduce(function (acc, a) { return acc + (Number(a.nota) || 0); }, 0);
+                var media = soma / avsExibir.length;
+                var html  = '';
+                for (var i = 1; i <= 5; i++) {
+                    if (i <= Math.floor(media))     html += '<i class="bi bi-star-fill" style="color:#ffc107;"></i>';
+                    else if (i - media < 1)          html += '<i class="bi bi-star-half" style="color:#ffc107;"></i>';
+                    else                             html += '<i class="bi bi-star" style="color:#ccc;"></i>';
+                }
+                estrelasEl.innerHTML = html + ' <span style="font-weight:600;color:#444;">' + media.toFixed(1) + '</span> <span style="color:#888;">(' + avsExibir.length + ' aval.)</span>';
+            } else {
+                estrelasEl.innerHTML = '<span style="color:#aaa;font-size:0.8rem;">Sem avaliações recebidas</span>';
+            }
+        }
+
+        // Cidade
+        var cidadeEl = document.getElementById('perfil-cli-modal-cidade');
+        if (cidadeEl) cidadeEl.textContent = perfil.cidade || '—';
+
+        // Dados pessoais
+        var emailEl   = document.getElementById('perfil-cli-modal-email');
+        var telEl     = document.getElementById('perfil-cli-modal-tel');
+        var endEl     = document.getElementById('perfil-cli-modal-endereco');
+        if (emailEl)  emailEl.textContent  = emailCliente || '—';
+        if (telEl)    telEl.textContent    = perfil.tel      || '—';
+        if (endEl)    endEl.textContent    = perfil.endereco || '—';
+
+        // Avaliações recebidas (lista)
+        var avaliEl = document.getElementById('perfil-cli-modal-avaliacoes');
+        if (avaliEl) {
+            var todasAvsLista = DB.get('avaliacoesRecebidasDoCliente') || [];
+            if (todasAvsLista.length > 0) {
+                avaliEl.innerHTML = todasAvsLista.slice().reverse().map(function (av) {
+                    var sts = Array.from({ length: 5 }, function (_, i) {
+                        return '<i class="bi ' + (i < av.nota ? 'bi-star-fill' : 'bi-star') + '" style="color:' + (i < av.nota ? '#ffc107' : '#ccc') + ';font-size:.75rem;"></i>';
+                    }).join('');
+                    return '<div style="border-bottom:1px solid var(--borda,#dee2e6);padding:6px 0;">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                        '<span style="font-size:.82rem;font-weight:600;">' + _escaparHtml(av.prestador || '—') + ' · ' + _escaparHtml(av.servico || '—') + '</span>' +
+                        '<span style="font-size:.75rem;color:#888;">' + (av.data || '') + '</span></div>' +
+                        '<div>' + sts + '</div>' +
+                        '<p style="margin:2px 0 0;font-size:.82rem;color:#555;">' + _escaparHtml(av.comentario || '') + '</p>' +
+                        '</div>';
+                }).join('');
+            } else {
+                avaliEl.innerHTML = '<span style="color:#aaa;font-size:0.85rem;">Nenhuma avaliação registrada.</span>';
+            }
+        }
+
+        // Abre o modal
+        var modalInst = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalInst.show();
     }
 
     // =========================================================
@@ -1656,7 +1757,9 @@ document.addEventListener('DOMContentLoaded', function () {
             '</div>';
 
         corpo.innerHTML =
-            '<div class="agenda-detalhe-secao"><h6><i class="bi bi-person-circle me-1"></i>Dados do Cliente</h6>' +
+            '<div class="agenda-detalhe-secao"><h6 style="display:flex;align-items:center;gap:10px;"><span><i class="bi bi-person-circle me-1"></i>Dados do Cliente</span>' +
+            (ag.clienteEmail ? '<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" id="btn-ver-perfil-cliente" style="font-size:0.78rem;"><i class="bi bi-person-lines-fill me-1"></i>Ver Perfil</button>' : '') +
+            '</h6>' +
             '<div class="agenda-detalhe-grid"><div><strong>Nome</strong><span>' + (ag.cliente || '—') + '</span></div><div><strong>Telefone</strong><span>' + (cliTelefone || '—') + '</span></div></div></div>' +
             '<div class="agenda-detalhe-secao"><h6><i class="bi bi-calendar-event me-1"></i>Serviço Agendado</h6>' +
             '<div class="agenda-detalhe-grid">' +
@@ -1692,6 +1795,14 @@ document.addEventListener('DOMContentLoaded', function () {
         // Listener: exibe bloco de parcelamento quando Cartão for selecionado
         var detPagEl = document.getElementById('det-pagamento');
         var detParcBloco = document.getElementById('det-parcelas-bloco');
+
+        // Sprint 4 — listener do botão "Ver Perfil" do cliente
+        var btnVerPerfilCli = document.getElementById('btn-ver-perfil-cliente');
+        if (btnVerPerfilCli && ag.clienteEmail) {
+            btnVerPerfilCli.addEventListener('click', function () {
+                _abrirModalPerfilCliente(ag.clienteEmail);
+            });
+        }
 
         // Sprint 7 — garante via JS que det-pagamento reflita a preferência do cliente
         // (complementa o atributo `selected` no HTML, evitando variações de parser do browser)
@@ -3152,6 +3263,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         inputNome.value = dadosUsu.nome || (usu ? usu.nome : '');
         if (inputEmail) { inputEmail.value = emailLogado; inputEmail.setAttribute('readonly', 'true'); }
+
+        // Sprint 2 — exibe o nome do cliente logado no título da página
+        var tituloNome = document.getElementById('titulo-nome-cliente');
+        if (tituloNome) tituloNome.textContent = (dadosUsu.nome || (usu ? usu.nome : '') || 'Cliente');
+
         if (dadosUsu.perfil) {
             if (inputCpf) inputCpf.value = dadosUsu.perfil.cpf || '';
             if (inputCidade) inputCidade.value = dadosUsu.perfil.cidade || '';
@@ -3161,10 +3277,81 @@ document.addEventListener('DOMContentLoaded', function () {
             else if (avatarDiv) avatarDiv.textContent = inputNome.value.substring(0, 2).toUpperCase();
         } else { if (avatarDiv) avatarDiv.textContent = inputNome.value.substring(0, 2).toUpperCase(); }
 
+        // Sprint 3 — popula elementos do preview lateral
+
+        // Tempo de membro
+        var elMembroDesde = document.getElementById('preview-membro-desde');
+        if (elMembroDesde) {
+            if (dadosUsu.dataCadastro) {
+                var dtCad = new Date(dadosUsu.dataCadastro);
+                var agora = new Date();
+                var diffMs = agora - dtCad;
+                var diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                var textoTempo;
+                if (diffDias < 1)       textoTempo = 'hoje';
+                else if (diffDias === 1) textoTempo = '1 dia';
+                else if (diffDias < 30)  textoTempo = diffDias + ' dias';
+                else if (diffDias < 60)  textoTempo = '1 mês';
+                else if (diffDias < 365) textoTempo = Math.floor(diffDias / 30) + ' meses';
+                else if (diffDias < 730) textoTempo = '1 ano';
+                else                     textoTempo = Math.floor(diffDias / 365) + ' anos';
+                elMembroDesde.textContent = textoTempo;
+            } else {
+                elMembroDesde.textContent = 'data não registrada';
+            }
+        }
+
+        // Média de avaliações recebidas pelos prestadores
+        var elMediaAv = document.getElementById('preview-media-avaliacao');
+        if (elMediaAv) {
+            var avsRec = DB.get('avaliacoesRecebidasDoCliente') || [];
+            if (avsRec.length > 0) {
+                var soma = avsRec.reduce(function (acc, a) { return acc + (Number(a.nota) || 0); }, 0);
+                var media = soma / avsRec.length;
+                var estrelas = '';
+                for (var i = 1; i <= 5; i++) {
+                    if (i <= Math.floor(media))      estrelas += '<i class="bi bi-star-fill" style="color:#ffc107;"></i>';
+                    else if (i - media < 1)          estrelas += '<i class="bi bi-star-half" style="color:#ffc107;"></i>';
+                    else                             estrelas += '<i class="bi bi-star" style="color:#ccc;"></i>';
+                }
+                elMediaAv.innerHTML = estrelas + ' <span style="font-weight:600; color:#444;">' + media.toFixed(1) + '</span> <span style="color:#888;">(' + avsRec.length + ' aval.)</span>';
+            } else {
+                elMediaAv.innerHTML = '<span style="color:#aaa; font-size:0.8rem;">Sem avaliações recebidas</span>';
+            }
+        }
+
+        // Cidade
+        var elCidade = document.getElementById('preview-cidade');
+        if (elCidade) elCidade.textContent = (dadosUsu.perfil && dadosUsu.perfil.cidade) ? dadosUsu.perfil.cidade : '—';
+
+        // Dados pessoais
+        var elEmail    = document.getElementById('preview-email');
+        var elTel      = document.getElementById('preview-tel');
+        var elEndereco = document.getElementById('preview-endereco');
+        if (elEmail)    elEmail.textContent    = emailLogado || '—';
+        if (elTel)      elTel.textContent      = (dadosUsu.perfil && dadosUsu.perfil.tel)      ? dadosUsu.perfil.tel      : '—';
+        if (elEndereco) elEndereco.textContent = (dadosUsu.perfil && dadosUsu.perfil.endereco) ? dadosUsu.perfil.endereco : '—';
+
         if (inputFoto) { inputFoto.addEventListener('change', function (e) { var f = e.target.files[0]; if (!f) return; var r = new FileReader(); r.onload = function (ev) { if (avatarDiv) { avatarDiv.style.backgroundImage = 'url(' + ev.target.result + ')'; avatarDiv.style.backgroundSize = 'cover'; avatarDiv.textContent = ''; avatarDiv.dataset.base64 = ev.target.result; } }; r.readAsDataURL(f); }); }
 
         if (btnSalvar) {
             btnSalvar.addEventListener('click', function () {
+                // Sprint 2 — validação de campos obrigatórios
+                var camposObrigatorios = [
+                    { el: inputCpf,      nome: 'CPF' },
+                    { el: inputCidade,   nome: 'Cidade' },
+                    { el: inputEndereco, nome: 'Endereço' },
+                    { el: inputTel,      nome: 'Telefone' }
+                ];
+                var faltando = camposObrigatorios.filter(function (c) { return !c.el || !c.el.value.trim(); }).map(function (c) { return c.nome; });
+                if (faltando.length > 0) {
+                    alert('Os seguintes campos são obrigatórios e precisam ser preenchidos:\n• ' + faltando.join('\n• '));
+                    if (faltando.length > 0 && inputCpf && !inputCpf.value.trim()) inputCpf.focus();
+                    else if (faltando.indexOf('Cidade') >= 0 && inputCidade) inputCidade.focus();
+                    else if (faltando.indexOf('Endereço') >= 0 && inputEndereco) inputEndereco.focus();
+                    else if (faltando.indexOf('Telefone') >= 0 && inputTel) inputTel.focus();
+                    return;
+                }
                 dadosUsu.nome = inputNome.value;
                 if (usu) { usu.nome = inputNome.value; DB.set('usuarioLogado', usu); }
                 dadosUsu.perfil = { cpf: inputCpf ? inputCpf.value : '', cidade: inputCidade ? inputCidade.value : '', endereco: inputEndereco ? inputEndereco.value : '', tel: inputTel ? inputTel.value : '', foto: (avatarDiv && avatarDiv.dataset.base64) || '' };
@@ -4351,7 +4538,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var base = '/paginasCliente/';
         var links = [
-            { href: base + 'clienteAreaExclusiva.html', icon: 'bi-house-door', text: 'Dashboard' },
+            { href: base + 'clienteAreaExclusiva.html', icon: 'bi-house-door', text: 'Área Exclusiva' },
             { href: base + 'clientePerfilAdm.html', icon: 'bi-person-circle', text: 'Meu Perfil' },
             { href: base + 'clienteAgendarServicos.html', icon: 'bi-calendar-check', text: 'Agendar Serviços' },
             { href: base + 'clienteAvaliacoesFeitas.html', icon: 'bi-star', text: 'Avaliações Realizadas' },

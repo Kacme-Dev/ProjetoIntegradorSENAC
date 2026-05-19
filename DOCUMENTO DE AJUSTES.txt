@@ -3,150 +3,87 @@ disponibilize os arquivos atualizados após conluir todas as Sprints
 para saber qual é a íultima Sprint será dado o comando Sprints Concluídas. Após esse comando, você poderá concluir o projeto e entregar os arquivos ajustados e atualizados na íntgra, completos para serem utilizados imediatamente
 
 SPRINT 1
-incluir em<div id="cli-tabela-confirmados" class="p-3"><ul class="cli-pedidos-lista"><li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-11 às 12:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="orc-cli-1778509171661" data-prest-email="prestador@prestador.com" data-prest-nome="Prestador" data-servico="TI" data-data="2026-05-11" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li><li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-12 às 08:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="orc-cli-1778526485666" data-prest-email="prestador@prestador.com" data-prest-nome="Prestador" data-servico="TI" data-data="2026-05-12" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li><li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-19 às 08:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="orc-cli-1779120845901" data-prest-email="prestador@prestador.com" data-prest-nome="Prestador" data-servico="TI" data-data="2026-05-19" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li></ul></div>
-o botão avaliar para permitir que o cliente possa avaliar o prestador
-as avaliações realizadas deverão aprecer na págin prestadorAvaliacoesRecebidas.html
-para cadas prestador avaliado.
+altere em <a href="/paginasCliente/clienteAreaExclusiva.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-house-door me-2" style="color:#146ADB;"></i>Dashboard</a>
+de "Dashaboard" para "Área Exclusiva"
 
 SPRINT 2
-ajuste o campo de busca nas p´paginas indexCliente.html e indexPrestador.html para que tenham o mesmo tamanho do campo de busca da página 
-inde.html
-<input type="text" class="form-control" placeholder="Precisa de um eletricista ou encanador?" aria-label="Busca">
+ajuste para que aqui em <h1 class="hotsiteadm-titulo-pagina">Administração do Perfil — Cliente</h1>
+onde está escrito "Cliente", sempre seja mostrado o nome do cliente logado no sistema
+
+torne obrigatório o preenchimento dos seguintes campos
+<input class="hotsiteadm-input" type="text" id="adm-cpf" value="" maxlength="14" placeholder="000.000.000-00">
+<input class="hotsiteadm-input" type="text" id="adm-cidade" value="">
+<input class="hotsiteadm-input" type="text" id="adm-endereco" value="">
+<input class="hotsiteadm-input" type="text" id="adm-tel" value="">
+
+o usuário não poderá salvar as alterações sem que estes campos estejam preenchidos
+caso o usuário tenta salvar, mas sem o preenchimento desses campos, informa a ele que são obrigatórios
+inclua um * (asterisco) nos campos obrigatórios sinalizando que são obrigatórios
+
+ajuste o botão <a href="clienteAreaExclusiva.html" class="conf-btn-voltar" style="background-color: red; color: white; border-color: red; flex: 1; text-align: center;">Cancelar</a>
+para que fique no mesmo padrão do botão <a href="/paginasPrestador/prestadorAreaExclusiva.html" id="btn-cancelar-hotsite" class="conf-btn-salvar" style="background-color:#dc3545; color:#fff; border:none; border-radius:4px; font-weight:bold; padding:10px 15px; cursor:pointer; flex:1; text-align:center; text-decoration:none; display:inline-block;"><i class="bi bi-x-circle me-1"></i> Cancelar</a>
+na página prestadorHotsiteAdm.html
 
 SPRINT 3 
+ajsute na página clientePerfilAdm.html
+em <div class="hotsite-meta-info">
+                                Cliente &nbsp;·&nbsp; Membro desde
+                            </div>
+informe o tempo que o cliente é membro cadastrado no site
+inclua aqui a média das avaliações do cliente, recebidas pelos prestadores de serviço que ele contratou
+informe a média em número e também a popntuação média com as estrelas
+em <i class="bi bi-geo-alt-fill me-1"></i>
+mostrar a cidade onde mora o cliente
+mostrar aqui <div class="hotsite-cabecalho-bloco">
+                                <div>
+                                    <div class="hotsite-secao-titulo">Dados Pessoais</div>
+                                    <p class="hotsite-desc">
+                                        <i class="bi bi-envelope me-1"></i>
+                                        &nbsp;&nbsp;
+                                        <i class="bi bi-telephone me-1"></i>
+                                        <br>
+                                        <i class="bi bi-house me-1"></i>
+                                    </p>
+                                </div>
+                            </div>
+os dados pessoais do cliente
+telefone
+e-mail 
+endereço
 
-trasnfira 
-<div id="cli-tabela-confirmados" class="p-3"><ul class="cli-pedidos-lista"><li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-11 às 12:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="orc-cli-1778509171661" data-prest-email="prestador@prestador.com" data-prest-nome="Prestador" data-servico="TI" data-data="2026-05-11" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li><li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-12 às 08:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="orc-cli-1778526485666" data-prest-email="prestador@prestador.com" data-prest-nome="Prestador" data-servico="TI" data-data="2026-05-12" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li><li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-19 às 08:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="orc-cli-1779120845901" data-prest-email="prestador@prestador.com" data-prest-nome="Prestador" data-servico="TI" data-data="2026-05-19" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li></ul></div>
-para aqui em 
-<div class="cli-card-cabecalho" id="cli-cabecalho-pedidos">
-                    <span>Status dos Últimos Pedidos</span>
-                    <!--
-                        Aviso de mensagens não lidas — só aparece se houver pelo menos um item
-                        com a classe .tem-mensagem-nao-lida na lista abaixo. A visibilidade é
-                        controlada dinamicamente pelo script.js (veja inicializarClienteAreaExclusiva).
-                    -->                    
-                </div>
-e exclua essa parte 
-<li class="cli-pedidos-item tem-mensagem-nao-lida" data-pedido-id="pedido-1" data-servico="Eletricista" data-profissional="Maria Silva">
-                        <span><strong>Serviço:</strong> Eletricista &nbsp;|&nbsp; <strong>Profissional:</strong> Maria Silva</span>
-                        <span class="cli-badge em-andamento">Em Andamento</span>
-                        <div class="cli-pedidos-acoes">
-                            <!--
-                                Sininho clicável: só é exibido quando existem mensagens não lidas do prestador.
-                                Ao clicar, abre o modal de chat já marcando a conversa como lida.
-                                O title indica de qual prestador veio a mensagem.
-                            -->
-                            <button type="button" class="cli-msg-sino" title="Mensagens não lidas de Maria Silva" aria-label="Mensagens não lidas de Maria Silva">
-                                <i class="bi bi-bell-fill"></i>
-                            </button>
-                            <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
-                            <button type="button" class="btn btn-warning btn-editar">Editar</button>
-                            <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
-                            
-                        </div>
-                    </li>
+excluir
+<div class="hotsite-depoimento"></div>
+excluir
+<div class="placeholder" style="margin-bottom: 16px;">
+                                Próximo agendamento: <strong></strong>
+                            </div>
+excluir
+<a class="cta cta-amarelo" href="/paginasCliente/clienteHistoricoServicos.html"><i class="bi bi-clock-history me-1"></i> Ver Histórico Completo</a>
+
 
 
 SPRINT 4
-na página clienteAgendarServicos.html
-se clicado em <button type="button" class="btn btn-warning fw-bold" id="btn-confirmar-agendamento" style="background:#FFC300;border-color:#e6b000;color:#000;">
-                    <i class="bi bi-calendar-check me-1"></i> Confirmar Agendamento
-                </button>
-e não estiverrem sido preenchidas todas as informações em <div id="painel-agendamento" style="display: block;">
-            <div class="painel-titulo">
-                <i class="bi bi-calendar-check-fill"></i> Detalhes do Agendamento
-            </div>
-            <div class="painel-mini">
-                <div class="painel-mini-foto" id="painel-mini-foto" style="background: linear-gradient(135deg, rgb(37, 99, 235), rgb(30, 64, 175)); border-radius: 8px;">KM</div>
-                <div class="painel-mini-info">
-                    <div class="painel-mini-nome" id="painel-mini-nome">Kleber Moreno Prestador</div>
-                    <div class="painel-mini-cat" id="painel-mini-cat">TI</div>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-trocar-prestador" style="font-size:.75rem;">
-                    <i class="bi bi-arrow-left-right"></i> Trocar
-                </button>
-            </div>
-
-            <div id="prest-descricao-bloco" style="display:none;margin-bottom:14px;">
-                <label class="agendar-label" style="margin-bottom:6px;">
-                    <i class="bi bi-info-circle me-1" style="color:#FFC300;"></i>Serviços oferecidos por este Prestador
-                </label>
-                <div id="prest-descricao-texto" style="background:#fffbe6;border-left:4px solid #FFC300;border-radius:0 8px 8px 0;padding:12px 16px;font-size:.88rem;white-space:pre-wrap;color:#4a3800;max-height:180px;overflow-y:auto;line-height:1.6;"></div>
-            </div>
-
-            <div id="prest-subcategorias-bloco" style="margin-bottom: 14px;">
-                <label class="agendar-label" style="margin-bottom:6px;">
-                    <i class="bi bi-list-check me-1" style="color:#FFC300;"></i>Selecione os Serviços Desejados
-                    <small class="text-muted fw-normal ms-1">(múltipla seleção)</small>
-                </label>
-                <div id="prest-subcategorias-lista" style="background:#fffbe6;border-left:4px solid #FFC300;border-radius:0 8px 8px 0;padding:12px 16px;font-size:.9rem;color:#4a3800;display:flex;flex-wrap:wrap;gap:8px;"><label for="subcat-cb-0" style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: rgb(255, 255, 255); border: 1.5px solid rgb(255, 195, 0); border-radius: 20px; padding: 4px 14px; font-size: 0.87rem; font-weight: 500; transition: background 0.15s, color 0.15s; user-select: none;"><input type="checkbox" id="subcat-cb-0" value="hardware" class="prest-subcat-cb" style="accent-color: rgb(255, 195, 0);">hardware</label><label for="subcat-cb-1" style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: rgb(255, 255, 255); border: 1.5px solid rgb(255, 195, 0); border-radius: 20px; padding: 4px 14px; font-size: 0.87rem; font-weight: 500; transition: background 0.15s, color 0.15s; user-select: none;"><input type="checkbox" id="subcat-cb-1" value="software" class="prest-subcat-cb" style="accent-color: rgb(255, 195, 0);">software</label><label for="subcat-cb-2" style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; background: rgb(255, 255, 255); border: 1.5px solid rgb(255, 195, 0); border-radius: 20px; padding: 4px 14px; font-size: 0.87rem; font-weight: 500; transition: background 0.15s, color 0.15s; user-select: none;"><input type="checkbox" id="subcat-cb-2" value="limpeza" class="prest-subcat-cb" style="accent-color: rgb(255, 195, 0);">limpeza</label></div>
-            </div>
-
-            <div id="cli-servico-desejado-bloco" style="margin-bottom: 14px;">
-                <label class="agendar-label" for="cli-servico-desejado">
-                    Informações Adicionais <span style="color:#dc3545;">*</span>
-                </label>
-                <textarea id="cli-servico-desejado" class="form-control" rows="4" maxlength="1000" placeholder="Descreva com detalhes o serviço que você precisa..." style="resize:vertical;font-size:.9rem;"></textarea>
-                <div class="d-flex justify-content-end mt-1">
-                    <small class="text-muted"><span id="cli-servico-contador">0</span> / 1000 caracteres</small>
-                </div>
-            </div>
-
-            <div class="card" style="border:none;background:transparent;padding:0;">
-                <div class="agendar-row" style="margin-top:12px;">
-                    <div>
-                        <label class="proximo-horario">Próximo horário disponível</label>
-                        <div class="agendar-info-bloco"><strong>Ter, 19/Mai às 10:00</strong></div>
-                        <button type="button" id="btn-ver-disponibilidade" class="btn btn-sm btn-outline-warning mt-2" style="font-size: 0.82rem;">
-                            <i class="bi bi-calendar3 me-1"></i>Escolher Data e Horário
-                        </button>
-                    </div>
-                    <div>
-                        <label class="contato-prestador">Contato do Prestador</label>
-                        <div class="agendar-info-bloco"><i class="bi bi-telephone me-1"></i>18997966284<br><i class="bi bi-envelope me-1"></i>kleber@prestador.com</div>
-                    </div>
-                </div>
-                <div id="bloco-pagamento-cli" style="padding: 12px 0px 0px;">
-                    <label class="form-label fw-bold" style="font-size:.88rem;margin-bottom:6px;">
-                        <i class="bi bi-credit-card me-1" style="color:#FFC300;"></i>Forma de Pagamento Preferida
-                    </label>
-                    <select id="cli-forma-pagamento" class="form-select form-select-sm" style="max-width:240px;"><option value="">-- Selecione --</option><option value="PIX">PIX</option><option value="Cartão">Cartão</option><option value="Dinheiro">Dinheiro</option></select>
-                    <div id="aviso-boleto" style="display:none;margin-top:8px;padding:8px 12px;background:#fff3cd;border-left:4px solid #ffc107;border-radius:0 6px 6px 0;font-size:.85rem;color:#856404;">
-                        <i class="bi bi-exclamation-triangle me-1"></i>
-                        <strong>Atenção:</strong> Poderá incorrer taxa de parcelamento para pagamento por boleto.
-                    </div>
-                </div>
-                <div class="agendar-acoes">
-                    <button class="cta" id="btn-solicitar-orcamento">
-                        <i class="bi bi-file-earmark-text me-1"></i> Solicitar Orçamento
-                    </button>
-                    <a class="agendar-link" id="link-hotsite" href="/paginasPrestador/prestadorHotsite.html?email=kleber%40prestador.com">Ver Hotsite</a>
-                </div>
-            </div>
-        </div>
-retornar o cliente para que sejam preenchidas todas as informações
-não permitir o agendamento até que todas as informações sejam preenchidas
+implemente em <h6><i class="bi bi-person-circle me-1"></i>Dados do Cliente</h6>
+à frente de "dados do cliente" um btão "Ver Perfil"
+quando o botão ver perfil for clicado, abra o modal de perfil do cliente mostradno o perfil do cliente
+abrindo clientePerfil.html
 
 SPRINT 5
-se uma solicitação de agendamento foi encainhada ao prestador
-bloquear o horário e data solcitado não mostrando para o próximo cliente ouo até mesmo para o mesmo cliente até que essa solicitação seja confirmada
-garante essa ação para evitar conflitos de agenda-aba-ativa
+na página prestadorAreaExclusiva.html
+retirar o botão editar de <li class="prest-historico-item" data-pedido-id="prest-pedido-1" data-cliente="Maria da Silva" data-servico="Troca de Válvula">
+                        <span class="prest-info-label"><strong>Serviço:</strong> Troca de Válvula &nbsp;|&nbsp; <strong>Cliente:</strong> Maria da Silva</span><span class="prest-badge concluido">Concluído</span>
+                        <div class="prest-historico-acoes">
+                            <button type="button" class="btn btn-primary btn-prest-avaliar">Avaliar</button>
+                            <button type="button" class="btn btn-warning btn-prest-editar">Editar</button>
+                            <button type="button" class="btn btn-danger btn-prest-excluir">Excluir</button>
+                        </div>
+                    </li>
+manter o mesmo padrão da página clienteAreaExclusiva.html
+em <li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Kleber Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-05 às 08:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#198754; color:#fff; font-size:.75rem;">Confirmado</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="ag-cli-1777858108435" data-prest-email="kleber@prestador.com" data-prest-nome="Kleber Prestador" data-servico="TI" data-data="2026-05-05" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li>
+
 
 SPRINT 6
 
-Quando cliente e prestador clicarem no botão apra visualizar mensagens recebidas
-<a href="#" class="agenda-btn chat" data-acao="chat"><i class="bi bi-chat-dots me-1"></i>Chat <span class="agenda-btn-sino"><i class="bi bi-bell-fill"></i></span></a>
-automaticamente marcar como visualizada e retirar o aviso de mensagem recebidas
-
-implementar na página indexCliente.html e indexPrestador.html um aviso de recebomento de mensagem no menu, ao lado de 
-<span class="navbar-logada-info ms-auto" style="position: relative; display: inline-flex; flex-direction: column; align-items: center; cursor: default;">Olá, Kleber Moreno Prestador!<a id="prest-perfil-toggle" href="#" style="font-size: 0.72rem; color: var(--azul-principal,#146ADB); text-decoration: underline; cursor: pointer; white-space: nowrap;"><i class="bi bi-chevron-down" id="prest-chevron" style="font-size:.65rem;"></i> Meu Perfil</a><div id="prest-perfil-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%); min-width: 230px; background: var(--fundo-card,#fff); border: 1.5px solid var(--borda,#dee2e6); border-radius: 8px; box-shadow: rgba(0, 0, 0, 0.13) 0px 4px 18px; z-index: 1055; padding: 6px 0px;"><a href="/paginasPrestador/prestadorAreaExclusiva.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-house-door me-2" style="color:#146ADB;"></i>Área Exclusiva</a><a href="/paginasPrestador/prestadorServicosAgendados.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-calendar-check me-2" style="color:#146ADB;"></i>Meus Agendamentos</a><a href="/paginasPrestador/prestadorConfigurarAgenda.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-calendar3 me-2" style="color:#146ADB;"></i>Gerenciar Agenda</a><a href="/paginasPrestador/prestadorHotsiteAdm.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-globe me-2" style="color:#146ADB;"></i>Meu Hot Site</a><a href="/paginasPrestador/prestadorAvaliacoesFeitas.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-star me-2" style="color:#146ADB;"></i>Avaliações Feitas</a><a href="/paginasPrestador/prestadorAvaliacoesRecebidas.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-star-half me-2" style="color:#146ADB;"></i>Avaliações Recebidas</a><a href="/paginasPrestador/dashboardPrestador.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-grid-1x2 me-2" style="color:#146ADB;"></i>Dashboard</a><a href="/paginasPrestador/prestadorContato.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-chat-text me-2" style="color:#146ADB;"></i>Suporte/Contato</a><div style="border-top: 1px solid var(--borda,#dee2e6); margin: 6px 0px;"></div><a href="/index.html" style="display: block; padding: 7px 16px; color: rgb(220, 53, 69); text-decoration: none; font-size: 0.88rem; font-weight: 600;"><i class="bi bi-box-arrow-right me-2"></i>Sair</a></div></span>
-e ao lado de <span class="navbar-logada-info ms-auto" style="position: relative; display: inline-flex; flex-direction: column; align-items: center; cursor: default;">Olá, Kleber Moreno Cliente!<a id="cli-perfil-toggle" href="#" style="font-size: 0.72rem; color: var(--azul-principal,#146ADB); text-decoration: underline; cursor: pointer; white-space: nowrap;"><i class="bi bi-chevron-down" id="cli-chevron" style="font-size:.65rem;"></i> Meu Perfil</a><div id="cli-perfil-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); right: 0px; min-width: 230px; background: var(--fundo-card,#fff); border: 1.5px solid var(--borda,#dee2e6); border-radius: 8px; box-shadow: rgba(0, 0, 0, 0.13) 0px 4px 18px; z-index: 1055; padding: 6px 0px;"><a href="/paginasCliente/clienteAreaExclusiva.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-house-door me-2" style="color:#146ADB;"></i>Dashboard</a><a href="/paginasCliente/clientePerfilAdm.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-person-circle me-2" style="color:#146ADB;"></i>Meu Perfil</a><a href="/paginasCliente/clienteAgendarServicos.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-calendar-check me-2" style="color:#146ADB;"></i>Agendar Serviços</a><a href="/paginasCliente/clienteAvaliacoesFeitas.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-star me-2" style="color:#146ADB;"></i>Avaliações Realizadas</a><a href="/paginasCliente/clienteAvaliacoesRecebidas.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-star-half me-2" style="color:#146ADB;"></i>Avaliações Recebidas</a><a href="/paginasCliente/clienteContatoSite.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-chat-text me-2" style="color:#146ADB;"></i>Suporte/Contato</a><div style="border-top: 1px solid var(--borda,#dee2e6); margin: 6px 0px;"></div><a href="/index.html" style="display: block; padding: 7px 16px; color: rgb(220, 53, 69); text-decoration: none; font-size: 0.88rem; font-weight: 600;"><i class="bi bi-box-arrow-right me-2"></i>Sair</a></div></span>
-informar que há mensagens recebidas com um ícone de "Sininho" na cor vermela e frase "Você possui mensagens nãp lidas!"
 
 SPRINT 7
-
-quando o cliente selecionar em <select id="cli-forma-pagamento" class="form-select form-select-sm" style="max-width:240px;"><option value="">-- Selecione --</option><option value="PIX">PIX</option><option value="Cartão">Cartão</option><option value="Dinheiro">Dinheiro</option></select>
-para solicitar um orçamento ou agendar um serviço
-automaticamente já deixar fixada essa forma de pagamento em 
-<select id="det-pagamento" class="form-select form-select-sm" style="max-width:150px;"><option value="">Selecione</option><option value="PIX">PIX</option><option value="Cartão" selected="">Cartão</option><option value="Dinheiro">Dinheiro</option></select>
 
