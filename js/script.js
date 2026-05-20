@@ -6,8 +6,23 @@
  * Ao integrar com um backend real, substitua os métodos por fetch().
  */
 
-document.addEventListener('DOMContentLoaded', function () {
+// =========================================================
+// LIMPEZA ÚNICA DE DADOS — reinicia o Storage para novos testes
+// Executa UMA única vez: apaga todo o localStorage, grava a flag
+// sg_reset_v1 e recarrega a página limpa.
+// Na próxima carga a flag já existe e o bloco é pulado.
+// Para forçar uma nova limpeza: troque 'sg_reset_v1' por 'sg_reset_v2'
+// =========================================================
+(function () {
+    var RESET_KEY = 'sg_reset_v1';
+    if (!localStorage.getItem(RESET_KEY)) {
+        localStorage.clear();
+        localStorage.setItem(RESET_KEY, '1');
+        window.location.reload();
+    }
+}());
 
+document.addEventListener('DOMContentLoaded', function () {
     // =========================================================
     // CAMADA DE DADOS — preparada para migração a Banco de Dados
     // =========================================================
@@ -3044,14 +3059,154 @@ document.addEventListener('DOMContentLoaded', function () {
             return modal;
         }
 
-        var stats = calcularEstatisticas();
-        atualizarStatCards(stats);
+        // Sprint 3 — stats direto do localStorage (independente do HTML estático legado)
+        var _usu3 = obterUsuarioLogado();
+        var _emailCli3 = _usu3 ? _usu3.email : '';
+        var _todosAgs = DB.get('clienteAgendamentos_' + _emailCli3) || [];
 
-        // Links nos stat cards
+        // Helper — escapa string para inserção segura no innerHTML
+        function _esc3(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        // Classificações de status
+        var _statusAbertos = ['orcamento_pendente','orcamento_enviado','orcamento_aceito','confirmado'];
+        var _agsAbertos    = _todosAgs.filter(function(ag){ return _statusAbertos.indexOf(ag.status) >= 0; });
+        var _agsConcluidos = _todosAgs.filter(function(ag){ return ag.status === 'concluido'; });
+
+        // Sprint 3 — "Pendentes de Pagamento": confirmados ou concluídos com valor definido
+        var _agsPendPag = _todosAgs.filter(function(ag){
+            return (ag.status === 'confirmado' || ag.status === 'concluido') && Number(ag.valor) > 0;
+        });
+        var _totalPendPag = _agsPendPag.reduce(function(acc, ag){ return acc + (Number(ag.valor) || 0); }, 0);
+
+        // Sprint 3 — "Próximo serviço": o próximo confirmado no futuro (ou o mais recente em aberto)
+        var _agora = new Date();
+        var _proximos = _agsAbertos
+            .filter(function(ag){ return ag.status === 'confirmado'; })
+            .filter(function(ag){
+                var dt = new Date((ag.data || '') + 'T' + (ag.horario || '08:00').split(' - ')[0]);
+                return dt >= _agora;
+            })
+            .sort(function(a, b){
+                return new Date(a.data + 'T' + (a.horario||'').split(' - ')[0]) -
+                       new Date(b.data + 'T' + (b.horario||'').split(' - ')[0]);
+            });
+        var _proximo = _proximos.length ? _proximos[0]
+            : (_agsAbertos.length ? _agsAbertos[_agsAbertos.length - 1] : null);
+
+        // Atualiza os valores dos stat cards
         var cards = document.querySelectorAll('.cli-stat-card');
-        if (cards[0]) { var info0 = cards[0].querySelector('.cli-stat-info'); if (info0) { info0.innerHTML = '<i class="bi bi-hourglass"></i> <a href="#" id="link-aguardando" style="color:inherit;text-decoration:underline;">Aguardando Confirmação</a>'; var linkAg = document.getElementById('link-aguardando'); if (linkAg) linkAg.addEventListener('click', function (e) { e.preventDefault(); _abrirModalAguardandoConf(criarModal); }); } }
-        if (cards[1]) { var info1 = cards[1].querySelector('.cli-stat-info'); if (info1) { info1.innerHTML = '<i class="bi bi-currency-dollar"></i> <a href="#" id="link-pagamentos" style="color:inherit;text-decoration:underline;">Ver detalhes</a>'; var linkPag = document.getElementById('link-pagamentos'); if (linkPag) linkPag.addEventListener('click', function (e) { e.preventDefault(); var modal = criarModal('modalPagamentos', '<i class="bi bi-currency-dollar me-2"></i>Pagamentos', '#FFC300', '<p>Total pago: <strong>R$ ' + stats.totalPago.toFixed(2).replace('.', ',') + '</strong></p>'); new bootstrap.Modal(modal).show(); }); } }
-        if (cards[2]) { var info2 = cards[2].querySelector('.cli-stat-info'); if (info2) { info2.innerHTML = '<i class="bi bi-patch-check"></i> <a href="#" id="link-historico" style="color:inherit;text-decoration:underline;">Ver Histórico</a>'; var linkHist = document.getElementById('link-historico'); if (linkHist) linkHist.addEventListener('click', function (e) { e.preventDefault(); var conteudo = stats.pedidosConcluidos.length === 0 ? '<p class="text-muted">Nenhum concluído.</p>' : '<table class="table"><thead><tr><th>#</th><th>Serviço</th><th>Prestador</th><th>Valor</th></tr></thead><tbody>' + stats.pedidosConcluidos.map(function (p, i) { return '<tr><td>' + (i + 1) + '</td><td>' + p.servico + '</td><td>' + p.profissional + '</td><td>R$' + p.valor.toFixed(2).replace('.', ',') + '</td></tr>'; }).join('') + '</tbody></table>'; var modal = criarModal('modalHistorico', '<i class="bi bi-patch-check me-2"></i>Histórico', '#FFC300', conteudo); new bootstrap.Modal(modal).show(); }); } }
+
+        if (cards[0]) {
+            var v0 = cards[0].querySelector('.cli-stat-valor');
+            if (v0) v0.textContent = _agsAbertos.length;
+
+            // Sprint 3 — Card 1: sem link clicável; exibe inline o próximo serviço agendado
+            var info0 = cards[0].querySelector('.cli-stat-info');
+            if (info0) {
+                if (_proximo) {
+                    // Busca telefone do prestador no store de prestadores
+                    var _storePrest3 = obterStorePrestadores();
+                    var _dadosPrest3 = _storePrest3[_proximo.emailPrestador] || {};
+                    var _telPrest3   = _dadosPrest3.tel || '—';
+                    var _horIni3     = (_proximo.horario || '').split(' - ')[0] || '—';
+                    var _dataFmt3    = _proximo.data
+                        ? _proximo.data.split('-').reverse().join('/')
+                        : '—';
+                    var _valorFmt3   = Number(_proximo.valor) > 0
+                        ? 'R$ ' + Number(_proximo.valor).toFixed(2).replace('.', ',')
+                        : 'A definir';
+                    var _pagFmt3     = _proximo.formaPagamento || _proximo.formaPagamentoPreferida || 'A definir';
+
+                    info0.style.cssText = 'display:block; padding:10px 12px; background:rgba(20,106,219,.06); border-radius:8px; font-size:.82rem; line-height:1.8;';
+                    info0.innerHTML =
+                        '<div style="font-weight:700;color:#146ADB;margin-bottom:4px;"><i class="bi bi-calendar-check me-1"></i>Próximo Serviço Agendado</div>' +
+                        '<div><i class="bi bi-person-fill me-1" style="color:#555;"></i><strong>Prestador:</strong> ' + _esc3(_proximo.nomePrestador || '—') + '</div>' +
+                        '<div><i class="bi bi-telephone-fill me-1" style="color:#555;"></i><strong>Telefone:</strong> ' + _esc3(_telPrest3) + '</div>' +
+                        '<div><i class="bi bi-tools me-1" style="color:#555;"></i><strong>Serviço:</strong> ' + _esc3(_proximo.servico || '—') + '</div>' +
+                        '<div><i class="bi bi-clock me-1" style="color:#555;"></i><strong>Data/Hora:</strong> ' + _esc3(_dataFmt3) + ' às ' + _esc3(_horIni3) + '</div>' +
+                        '<div><i class="bi bi-cash-coin me-1" style="color:#555;"></i><strong>Valor:</strong> ' + _esc3(_valorFmt3) + '</div>' +
+                        '<div><i class="bi bi-credit-card me-1" style="color:#555;"></i><strong>Pagamento:</strong> ' + _esc3(_pagFmt3) + '</div>';
+                } else {
+                    info0.innerHTML = '<i class="bi bi-hourglass me-1"></i><span style="color:inherit;">Nenhum serviço agendado no momento.</span>';
+                }
+            }
+        }
+
+        if (cards[1]) {
+            var v1 = cards[1].querySelector('.cli-stat-valor');
+            if (v1) v1.textContent = 'R$ ' + _totalPendPag.toFixed(2).replace('.', ',');
+
+            // Sprint 3 — Card 2: sem link clicável; exibe qtd e total inline
+            var info1 = cards[1].querySelector('.cli-stat-info');
+            if (info1) {
+                if (_agsPendPag.length > 0) {
+                    info1.innerHTML =
+                        '<i class="bi bi-currency-dollar me-1"></i>' +
+                        '<span><strong>' + _agsPendPag.length + ' serviço' + (_agsPendPag.length !== 1 ? 's' : '') + '</strong> com pagamento pendente &mdash; total: <strong>R$ ' + _totalPendPag.toFixed(2).replace('.', ',') + '</strong></span>';
+                } else {
+                    info1.innerHTML = '<i class="bi bi-check-circle me-1" style="color:#198754;"></i><span style="color:inherit;">Nenhum pagamento pendente.</span>';
+                }
+            }
+        }
+
+        if (cards[2]) {
+            var v2 = cards[2].querySelector('.cli-stat-valor');
+            if (v2) v2.textContent = _agsConcluidos.length;
+
+            // Sprint 3 — Card 3: mantém link-historico clicável; modal com histórico completo
+            var info2 = cards[2].querySelector('.cli-stat-info');
+            if (info2) {
+                info2.innerHTML = '<i class="bi bi-patch-check"></i> <a href="#" id="link-historico" style="color:inherit;text-decoration:underline;">Ver Histórico</a>';
+                var linkHist = document.getElementById('link-historico');
+                if (linkHist) {
+                    linkHist.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        var conteudo;
+                        if (_agsConcluidos.length === 0) {
+                            conteudo = '<p class="text-muted text-center py-3"><i class="bi bi-info-circle me-2"></i>Nenhum serviço concluído ainda.</p>';
+                        } else {
+                            var totalHist = _agsConcluidos.reduce(function(acc, ag){ return acc + (Number(ag.valor) || 0); }, 0);
+                            conteudo =
+                                '<div class="table-responsive">' +
+                                '<table class="table table-striped table-bordered align-middle" style="font-size:.88rem;">' +
+                                '<thead class="table-dark"><tr>' +
+                                '<th>#</th><th>Serviço</th><th>Prestador</th><th>Data Conclusão</th><th>Valor</th><th>Pagamento</th>' +
+                                '</tr></thead><tbody>' +
+                                _agsConcluidos.map(function (ag, i) {
+                                    var dtConc = ag.concluidoEm
+                                        ? (function(){ var d = new Date(ag.concluidoEm); return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear(); })()
+                                        : (ag.data ? ag.data.split('-').reverse().join('/') : '—');
+                                    var vlr = Number(ag.valor) > 0
+                                        ? 'R$ ' + Number(ag.valor).toFixed(2).replace('.', ',')
+                                        : '—';
+                                    var pag = ag.formaPagamento || '—';
+                                    return '<tr>' +
+                                        '<td>' + (i + 1) + '</td>' +
+                                        '<td>' + _esc3(ag.servico || '—') + '</td>' +
+                                        '<td>' + _esc3(ag.nomePrestador || '—') + '</td>' +
+                                        '<td>' + _esc3(dtConc) + '</td>' +
+                                        '<td><strong>' + _esc3(vlr) + '</strong></td>' +
+                                        '<td>' + _esc3(pag) + '</td>' +
+                                        '</tr>';
+                                }).join('') +
+                                '</tbody>' +
+                                '<tfoot><tr class="table-secondary">' +
+                                '<td colspan="4" class="text-end fw-bold">Total gasto:</td>' +
+                                '<td colspan="2" class="fw-bold">R$ ' + totalHist.toFixed(2).replace('.', ',') + '</td>' +
+                                '</tr></tfoot>' +
+                                '</table></div>';
+                        }
+                        var modal = criarModal(
+                            'modalHistorico',
+                            '<i class="bi bi-patch-check me-2"></i>Histórico de Serviços Concluídos',
+                            '#FFC300',
+                            conteudo
+                        );
+                        new bootstrap.Modal(modal).show();
+                    });
+                }
+            }
+        }
 
         // Avaliações
         function initEstrelas(cont, hidden) {
@@ -3163,47 +3318,162 @@ document.addEventListener('DOMContentLoaded', function () {
         var btnSalvar = document.getElementById('btn-salvar-edicao-feita');
         var pedidoAtual = null;
 
+        // Sprint 2 — sanitização simples para inserção no innerHTML
+        function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        // Sprint 2 — helper toast (reutiliza a infra de toastNotificacao já na página)
+        function _toastAvalFeitas(msg, cor) {
+            var toastEl = document.getElementById('toastNotificacao');
+            var toastMsg = document.getElementById('toast-mensagem');
+            if (!toastEl || !toastMsg) { alert(msg); return; }
+            toastMsg.textContent = msg;
+            toastEl.className = 'toast align-items-center text-white border-0 ' + (cor || 'bg-dark');
+            bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 2800 }).show();
+        }
+
         function initEstrelas(c, h) { if (!c || !h) return; var stars = c.querySelectorAll('i'); stars.forEach(function (s, i) { s.addEventListener('click', function () { h.value = i + 1; stars.forEach(function (st, j) { st.className = j <= i ? 'bi bi-star-fill filled' : 'bi bi-star'; st.style.color = j <= i ? '#ffc107' : '#ccc'; }); }); s.addEventListener('mouseover', function () { stars.forEach(function (st, j) { st.style.color = j <= i ? '#ffc107' : '#ccc'; }); }); s.addEventListener('mouseout', function () { var cur = parseInt(h.value) || 0; stars.forEach(function (st, j) { st.style.color = j < cur ? '#ffc107' : '#ccc'; }); }); }); }
         function renderE(c, h, n) { if (!c || !h) return; var stars = c.querySelectorAll('i'); stars.forEach(function (s, i) { s.className = i < n ? 'bi bi-star-fill filled' : 'bi bi-star'; s.style.color = i < n ? '#ffc107' : '#ccc'; }); h.value = n; }
         initEstrelas(starsEl, notaEl);
+
+        // Sprint 2 — exibe confirmação inline no card antes de excluir
+        function _mostrarConfirmacaoExclusao(card, pedidoId) {
+            // Evita duplicar a confirmação
+            if (card.querySelector('.sg-confirm-excluir')) return;
+            var acoes = card.querySelector('.sg-acoes-card');
+            if (acoes) acoes.style.display = 'none';
+            var confirmDiv = document.createElement('div');
+            confirmDiv.className = 'sg-confirm-excluir d-flex align-items-center gap-2 mt-2';
+            confirmDiv.style.cssText = 'background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 12px;';
+            confirmDiv.innerHTML =
+                '<i class="bi bi-exclamation-triangle-fill" style="color:#e6a800;font-size:1.1rem;"></i>' +
+                '<span style="flex:1;font-size:.9rem;color:#7a5700;">Deseja realmente excluir esta avaliação?</span>' +
+                '<button type="button" class="btn btn-danger btn-sm sg-confirm-sim" data-pedido-id="' + pedidoId + '">' +
+                '<i class="bi bi-trash me-1"></i>Excluir</button>' +
+                '<button type="button" class="btn btn-secondary btn-sm sg-confirm-nao">' +
+                '<i class="bi bi-x me-1"></i>Cancelar</button>';
+            card.appendChild(confirmDiv);
+        }
 
         function renderizarLista() {
             container.querySelectorAll('.review-card-reverse[data-pedido-id]').forEach(function (c) { c.remove(); });
             container.querySelectorAll('#hdr-av-feitas, #msg-av-feitas').forEach(function (c) { c.remove(); });
             var avs = obterAvs();
             var botao = container.querySelector('.d-flex.justify-content-center');
-            var hdr = document.createElement('div'); hdr.id = 'hdr-av-feitas'; hdr.style.cssText = 'font-size:1rem;font-weight:700;color:#146ADB;padding-bottom:8px;border-bottom:2px solid #146ADB;margin-bottom:12px;'; hdr.innerHTML = '<i class="bi bi-star-fill me-2" style="color:#ffc107;"></i>Minhas Avaliações Realizadas';
+
+            // Sprint 2 — cabeçalho com contador de avaliações
+            var hdr = document.createElement('div');
+            hdr.id = 'hdr-av-feitas';
+            hdr.style.cssText = 'font-size:1rem;font-weight:700;color:#146ADB;padding-bottom:8px;border-bottom:2px solid #146ADB;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;';
+            hdr.innerHTML =
+                '<span><i class="bi bi-star-fill me-2" style="color:#ffc107;"></i>Minhas Avaliações Realizadas</span>' +
+                (avs.length > 0 ? '<span style="font-size:.82rem;font-weight:600;color:#555;background:#f0f0f0;border-radius:20px;padding:2px 10px;">' + avs.length + ' avaliação' + (avs.length !== 1 ? 'ões' : '') + '</span>' : '');
             container.insertBefore(hdr, botao || null);
-            if (avs.length === 0) { var msg = document.createElement('div'); msg.id = 'msg-av-feitas'; msg.className = 'text-center text-muted py-4'; msg.innerHTML = '<i class="bi bi-info-circle me-2"></i>Nenhuma avaliação ainda.'; container.insertBefore(msg, botao || null); return; }
+
+            if (avs.length === 0) {
+                var msg = document.createElement('div');
+                msg.id = 'msg-av-feitas';
+                msg.className = 'text-center text-muted py-4';
+                msg.innerHTML = '<i class="bi bi-info-circle me-2"></i>Nenhuma avaliação realizada ainda.';
+                container.insertBefore(msg, botao || null);
+                return;
+            }
+
+            // Sprint 2 — renderiza cards de avaliações feitas pelo cliente
             avs.slice().reverse().forEach(function (av) {
-                var stars = Array.from({ length: 5 }, function (_, i) { return i < av.nota ? '<i class="bi bi-star-fill" style="color:#ffc107;"></i>' : '<i class="bi bi-star" style="color:#ccc;"></i>'; }).join('');
-                var card = document.createElement('div'); card.className = 'review-card-reverse'; card.dataset.pedidoId = av.pedidoId;
-                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Prestador: ' + (av.profissional || av.profissional || '—') + ' (' + (av.servico || '') + ')</h5><span class="text-muted"><small>' + av.data + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + av.comentario + '"</p><div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-warning btn-editar-feita" data-pedido-id="' + av.pedidoId + '"><i class="bi bi-pencil-square me-1"></i>Editar</button><button type="button" class="btn btn-danger btn-excluir-feita" data-pedido-id="' + av.pedidoId + '"><i class="bi bi-trash me-1"></i>Excluir</button></div>';
+                var stars = Array.from({ length: 5 }, function (_, i) {
+                    return i < av.nota
+                        ? '<i class="bi bi-star-fill" style="color:#ffc107;"></i>'
+                        : '<i class="bi bi-star" style="color:#ccc;"></i>';
+                }).join('');
+
+                var card = document.createElement('div');
+                card.className = 'review-card-reverse';
+                card.dataset.pedidoId = av.pedidoId;
+
+                card.innerHTML =
+                    '<div class="d-flex justify-content-between align-items-center mb-2">' +
+                        '<h5 class="mb-0">Prestador: ' + esc(av.profissional || '—') + ' (' + esc(av.servico || '') + ')</h5>' +
+                        '<span class="text-muted"><small>' + esc(av.data || '') + '</small></span>' +
+                    '</div>' +
+                    '<div class="rating">' + stars +
+                        '<h6 class="text-muted ms-2">Avaliação: ' + Number(av.nota).toFixed(1) + '</h6>' +
+                    '</div>' +
+                    '<p class="review-text">"' + esc(av.comentario || '') + '"</p>' +
+                    // Sprint 2 — botões de ação com classe sg-acoes-card para controle da confirmação
+                    '<div class="d-flex gap-2 mt-2 sg-acoes-card">' +
+                        '<button type="button" class="btn btn-warning btn-editar-feita" data-pedido-id="' + av.pedidoId + '">' +
+                            '<i class="bi bi-pencil-square me-1"></i>Editar</button>' +
+                        '<button type="button" class="btn btn-danger btn-excluir-feita" data-pedido-id="' + av.pedidoId + '">' +
+                            '<i class="bi bi-trash me-1"></i>Excluir</button>' +
+                    '</div>';
+
                 container.insertBefore(card, botao || null);
             });
         }
 
+        // Sprint 2 — delegação de eventos: editar, iniciar exclusão, confirmar, cancelar
         container.addEventListener('click', function (e) {
-            var btnEd = e.target.closest('.btn-editar-feita'); var btnEx = e.target.closest('.btn-excluir-feita');
+            var btnEd  = e.target.closest('.btn-editar-feita');
+            var btnEx  = e.target.closest('.btn-excluir-feita');
+            var btnSim = e.target.closest('.sg-confirm-sim');
+            var btnNao = e.target.closest('.sg-confirm-nao');
+
+            // Editar — abre modal existente
             if (btnEd) {
-                var pid = btnEd.dataset.pedidoId; var av = obterAvs().find(function (a) { return a.pedidoId === pid; }); if (!av) return;
-                pedidoAtual = pid; if (infoEl) infoEl.innerHTML = '<strong>Serviço:</strong> ' + av.servico + ' | <strong>Prestador:</strong> ' + av.profissional;
-                renderE(starsEl, notaEl, av.nota); if (comentEl) comentEl.value = av.comentario;
+                var pid = btnEd.dataset.pedidoId;
+                var av = obterAvs().find(function (a) { return a.pedidoId === pid; });
+                if (!av) return;
+                pedidoAtual = pid;
+                if (infoEl) infoEl.innerHTML = '<strong>Serviço:</strong> ' + esc(av.servico) + ' &nbsp;|&nbsp; <strong>Prestador:</strong> ' + esc(av.profissional);
+                renderE(starsEl, notaEl, av.nota);
+                if (comentEl) comentEl.value = av.comentario;
                 if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
             }
-            if (btnEx) { var pidEx = btnEx.dataset.pedidoId; if (!confirm('Excluir?')) return; salvarAvs(obterAvs().filter(function (a) { return a.pedidoId !== pidEx; })); renderizarLista(); alert('Excluída!'); }
+
+            // Sprint 2 — Excluir: exibe confirmação inline no card
+            if (btnEx) {
+                var card = btnEx.closest('.review-card-reverse');
+                if (card) _mostrarConfirmacaoExclusao(card, btnEx.dataset.pedidoId);
+            }
+
+            // Sprint 2 — Confirmou exclusão
+            if (btnSim) {
+                var pidEx = btnSim.dataset.pedidoId;
+                salvarAvs(obterAvs().filter(function (a) { return a.pedidoId !== pidEx; }));
+                renderizarLista();
+                _toastAvalFeitas('Avaliação excluída com sucesso.', 'bg-danger');
+            }
+
+            // Sprint 2 — Cancelou exclusão: restaura botões normais
+            if (btnNao) {
+                var confirmDiv = btnNao.closest('.sg-confirm-excluir');
+                if (confirmDiv) {
+                    var cardPai = confirmDiv.closest('.review-card-reverse');
+                    confirmDiv.remove();
+                    if (cardPai) {
+                        var acoes = cardPai.querySelector('.sg-acoes-card');
+                        if (acoes) acoes.style.display = '';
+                    }
+                }
+            }
         });
 
+        // Sprint 2 — Salvar edição com toast em vez de alert
         if (btnSalvar) {
             btnSalvar.addEventListener('click', function () {
-                var nota = parseInt((notaEl || {}).value) || 0; var coment = (comentEl || {}).value || '';
-                if (nota === 0) { alert('Selecione uma nota.'); return; } if (!coment.trim()) { alert('Escreva um comentário.'); return; }
-                var avs = obterAvs(); var idx = avs.findIndex(function (a) { return a.pedidoId === pedidoAtual; });
+                var nota = parseInt((notaEl || {}).value) || 0;
+                var coment = (comentEl || {}).value || '';
+                if (nota === 0) { _toastAvalFeitas('Selecione uma nota para salvar.', 'bg-warning'); return; }
+                if (!coment.trim()) { _toastAvalFeitas('Escreva um comentário para salvar.', 'bg-warning'); return; }
+                var avs = obterAvs();
+                var idx = avs.findIndex(function (a) { return a.pedidoId === pedidoAtual; });
                 if (idx >= 0) { avs[idx].nota = nota; avs[idx].comentario = coment; salvarAvs(avs); }
                 if (modalEl) { var inst = bootstrap.Modal.getInstance(modalEl); if (inst) inst.hide(); }
-                renderizarLista(); alert('Atualizada!');
+                renderizarLista();
+                _toastAvalFeitas('Avaliação atualizada com sucesso!', 'bg-success');
             });
         }
+
         renderizarLista();
     }
 
@@ -3268,14 +3538,28 @@ document.addEventListener('DOMContentLoaded', function () {
         var tituloNome = document.getElementById('titulo-nome-cliente');
         if (tituloNome) tituloNome.textContent = (dadosUsu.nome || (usu ? usu.nome : '') || 'Cliente');
 
+        // Sprint 1 — popula o nome no preview lateral ao carregar a página
+        var _nomeElCarga = document.querySelector('.hotsite-nome');
+        if (_nomeElCarga) _nomeElCarga.textContent = inputNome.value.trim() || '—';
+
         if (dadosUsu.perfil) {
             if (inputCpf) inputCpf.value = dadosUsu.perfil.cpf || '';
             if (inputCidade) inputCidade.value = dadosUsu.perfil.cidade || '';
             if (inputEndereco) inputEndereco.value = dadosUsu.perfil.endereco || '';
             if (inputTel) inputTel.value = dadosUsu.perfil.tel || '';
-            if (dadosUsu.perfil.foto && avatarDiv) { avatarDiv.style.backgroundImage = 'url(' + dadosUsu.perfil.foto + ')'; avatarDiv.style.backgroundSize = 'cover'; avatarDiv.textContent = ''; avatarDiv.dataset.base64 = dadosUsu.perfil.foto; }
-            else if (avatarDiv) avatarDiv.textContent = inputNome.value.substring(0, 2).toUpperCase();
-        } else { if (avatarDiv) avatarDiv.textContent = inputNome.value.substring(0, 2).toUpperCase(); }
+            // Sprint 1 — restaura foto salva no hotsite-avatar
+            if (dadosUsu.perfil.foto && avatarDiv) {
+                avatarDiv.style.backgroundImage = 'url(' + dadosUsu.perfil.foto + ')';
+                avatarDiv.style.backgroundSize = 'cover';
+                avatarDiv.style.backgroundPosition = 'center';
+                avatarDiv.textContent = '';
+                avatarDiv.dataset.base64 = dadosUsu.perfil.foto;
+            } else if (avatarDiv) {
+                avatarDiv.textContent = inputNome.value.substring(0, 2).toUpperCase();
+            }
+        } else {
+            if (avatarDiv) avatarDiv.textContent = inputNome.value.substring(0, 2).toUpperCase();
+        }
 
         // Sprint 3 — popula elementos do preview lateral
 
@@ -3332,7 +3616,73 @@ document.addEventListener('DOMContentLoaded', function () {
         if (elTel)      elTel.textContent      = (dadosUsu.perfil && dadosUsu.perfil.tel)      ? dadosUsu.perfil.tel      : '—';
         if (elEndereco) elEndereco.textContent = (dadosUsu.perfil && dadosUsu.perfil.endereco) ? dadosUsu.perfil.endereco : '—';
 
-        if (inputFoto) { inputFoto.addEventListener('change', function (e) { var f = e.target.files[0]; if (!f) return; var r = new FileReader(); r.onload = function (ev) { if (avatarDiv) { avatarDiv.style.backgroundImage = 'url(' + ev.target.result + ')'; avatarDiv.style.backgroundSize = 'cover'; avatarDiv.textContent = ''; avatarDiv.dataset.base64 = ev.target.result; } }; r.readAsDataURL(f); }); }
+        // Sprint 1 — helper: mostra toast de notificação (usa a infra já existente na página)
+        function _toastPerfilCliente(msg, cor) {
+            var toastEl = document.getElementById('toastNotificacao');
+            var toastMsg = document.getElementById('toast-mensagem');
+            if (!toastEl || !toastMsg) { alert(msg); return; }
+            toastMsg.textContent = msg;
+            toastEl.className = 'toast align-items-center text-white border-0 ' + (cor || 'bg-dark');
+            var t = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3000 });
+            t.show();
+        }
+
+        // Sprint 1 — popula o nome no preview lateral (.hotsite-nome)
+        function _atualizarPreviewNome() {
+            var nomeEl = document.querySelector('.hotsite-nome');
+            if (nomeEl) nomeEl.textContent = inputNome ? (inputNome.value.trim() || '—') : '—';
+        }
+
+        // Sprint 1 — popula hotsite-nome na carga inicial
+        _atualizarPreviewNome();
+
+        // Sprint 1 — atualiza preview em tempo real enquanto o usuário digita
+        if (inputNome) {
+            inputNome.addEventListener('input', function () {
+                _atualizarPreviewNome();
+                // Atualiza também as iniciais do avatar se não houver foto
+                if (avatarDiv && !avatarDiv.dataset.base64) {
+                    avatarDiv.textContent = inputNome.value.substring(0, 2).toUpperCase();
+                }
+            });
+        }
+        if (inputCidade) {
+            inputCidade.addEventListener('input', function () {
+                var elCidPreview = document.getElementById('preview-cidade');
+                if (elCidPreview) elCidPreview.textContent = inputCidade.value.trim() || '—';
+            });
+        }
+        if (inputTel) {
+            inputTel.addEventListener('input', function () {
+                var elTelPreview = document.getElementById('preview-tel');
+                if (elTelPreview) elTelPreview.textContent = inputTel.value.trim() || '—';
+            });
+        }
+        if (inputEndereco) {
+            inputEndereco.addEventListener('input', function () {
+                var elEndPreview = document.getElementById('preview-endereco');
+                if (elEndPreview) elEndPreview.textContent = inputEndereco.value.trim() || '—';
+            });
+        }
+
+        // Sprint 1 — foto selecionada: exibe imediatamente no hotsite-avatar e guarda base64
+        if (inputFoto) {
+            inputFoto.addEventListener('change', function (e) {
+                var f = e.target.files[0];
+                if (!f) return;
+                var r = new FileReader();
+                r.onload = function (ev) {
+                    if (avatarDiv) {
+                        avatarDiv.style.backgroundImage = 'url(' + ev.target.result + ')';
+                        avatarDiv.style.backgroundSize = 'cover';
+                        avatarDiv.style.backgroundPosition = 'center';
+                        avatarDiv.textContent = '';
+                        avatarDiv.dataset.base64 = ev.target.result;
+                    }
+                };
+                r.readAsDataURL(f);
+            });
+        }
 
         if (btnSalvar) {
             btnSalvar.addEventListener('click', function () {
@@ -3345,19 +3695,29 @@ document.addEventListener('DOMContentLoaded', function () {
                 ];
                 var faltando = camposObrigatorios.filter(function (c) { return !c.el || !c.el.value.trim(); }).map(function (c) { return c.nome; });
                 if (faltando.length > 0) {
-                    alert('Os seguintes campos são obrigatórios e precisam ser preenchidos:\n• ' + faltando.join('\n• '));
-                    if (faltando.length > 0 && inputCpf && !inputCpf.value.trim()) inputCpf.focus();
+                    _toastPerfilCliente('Campos obrigatórios em falta: ' + faltando.join(', '), 'bg-danger');
+                    if (inputCpf && !inputCpf.value.trim()) inputCpf.focus();
                     else if (faltando.indexOf('Cidade') >= 0 && inputCidade) inputCidade.focus();
                     else if (faltando.indexOf('Endereço') >= 0 && inputEndereco) inputEndereco.focus();
                     else if (faltando.indexOf('Telefone') >= 0 && inputTel) inputTel.focus();
                     return;
                 }
-                dadosUsu.nome = inputNome.value;
-                if (usu) { usu.nome = inputNome.value; DB.set('usuarioLogado', usu); }
-                dadosUsu.perfil = { cpf: inputCpf ? inputCpf.value : '', cidade: inputCidade ? inputCidade.value : '', endereco: inputEndereco ? inputEndereco.value : '', tel: inputTel ? inputTel.value : '', foto: (avatarDiv && avatarDiv.dataset.base64) || '' };
+                // Sprint 1 — persiste todos os dados do perfil no localStorage
+                dadosUsu.nome = inputNome.value.trim();
+                if (usu) { usu.nome = dadosUsu.nome; DB.set('usuarioLogado', usu); }
+                dadosUsu.perfil = {
+                    cpf:      inputCpf      ? inputCpf.value.trim()      : '',
+                    cidade:   inputCidade   ? inputCidade.value.trim()   : '',
+                    endereco: inputEndereco ? inputEndereco.value.trim() : '',
+                    tel:      inputTel      ? inputTel.value.trim()      : '',
+                    // Sprint 1 — salva foto base64 do hotsite-avatar para persistência
+                    foto:     (avatarDiv && avatarDiv.dataset.base64) ? avatarDiv.dataset.base64 : ''
+                };
                 usuarios[emailLogado] = dadosUsu;
                 salvarUsuariosCadastrados(usuarios);
-                alert('Perfil salvo!'); window.location.reload();
+                // Sprint 1 — usa toast em vez de alert, depois recarrega para fixar os dados
+                _toastPerfilCliente('Perfil salvo com sucesso!', 'bg-success');
+                setTimeout(function () { window.location.reload(); }, 1400);
             });
         }
         if (btnLimpar) {
