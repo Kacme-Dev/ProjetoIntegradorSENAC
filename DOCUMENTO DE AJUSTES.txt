@@ -3,70 +3,84 @@ disponibilize os arquivos atualizados após conluir todas as Sprints
 para saber qual é a íultima Sprint será dado o comando Sprints Concluídas. Após esse comando, você poderá concluir o projeto e entregar os arquivos ajustados e atualizados na íntgra, completos para serem utilizados imediatamente
 
 SPRINT 1
-na página clientePerfilAdm.html
-ajuste a lógica para que quand for clicado em <button type="button" class="conf-btn-salvar" id="btn-salvar-perfil" style="flex: 1 1 100%; margin-top: 8px;"><i class="bi bi-floppy me-1"></i> Salvar Perfil</button>
-todos os dados preenchidos fiquem salvos e fixos na página de perfil do cliente
-implemente também a lógica apra que a fotov(imagem) do cliente fique salva em <div class="hotsite-avatar" style="margin-bottom: 12px; background-color: #ccc;">KL</div>
-quando for selecionada em <input type="file" id="adm-foto" accept="image/*" class="hotsiteadm-input" style="padding: 5px;">
-
-
+altere em <a href="/paginasCliente/clienteAreaExclusiva.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-house-door me-2" style="color:#146ADB;"></i>Dashboard</a>
+de "Dashaboard" para "Área Exclusiva"
 
 SPRINT 2
-ajuste apra que em <div class="container1" id="container-avaliacoes-feitas">
-                <!-- As avaliações feitas pelo cliente (para prestadores) serão renderizadas dinamicamente via script.js -->
+ajuste para que aqui em <h1 class="hotsiteadm-titulo-pagina">Administração do Perfil — Cliente</h1>
+onde está escrito "Cliente", sempre seja mostrado o nome do cliente logado no sistema
 
-                <div id="hdr-av-feitas" style="font-size: 1rem; font-weight: 700; color: rgb(20, 106, 219); padding-bottom: 8px; border-bottom: 2px solid rgb(20, 106, 219); margin-bottom: 12px;"><i class="bi bi-star-fill me-2" style="color:#ffc107;"></i>Minhas Avaliações Realizadas</div><div id="msg-av-feitas" class="text-center text-muted py-4"><i class="bi bi-info-circle me-2"></i>Nenhuma avaliação ainda.</div><div class="d-flex justify-content-center">
-                    <button type="button" class="btn btn-warning">
-                        Carregar Mais Avaliações
-                    </button>
-                </div>
-            </div>
-fiquem disponíveis todas as avaliações que o cliente fez para os prestadores de serviço7
-implemente também o botão excluir, permitindo que o cliente exclua a avaliação se assim desejar
+torne obrigatório o preenchimento dos seguintes campos
+<input class="hotsiteadm-input" type="text" id="adm-cpf" value="" maxlength="14" placeholder="000.000.000-00">
+<input class="hotsiteadm-input" type="text" id="adm-cidade" value="">
+<input class="hotsiteadm-input" type="text" id="adm-endereco" value="">
+<input class="hotsiteadm-input" type="text" id="adm-tel" value="">
 
+o usuário não poderá salvar as alterações sem que estes campos estejam preenchidos
+caso o usuário tenta salvar, mas sem o preenchimento desses campos, informa a ele que são obrigatórios
+inclua um * (asterisco) nos campos obrigatórios sinalizando que são obrigatórios
 
+ajuste o botão <a href="clienteAreaExclusiva.html" class="conf-btn-voltar" style="background-color: red; color: white; border-color: red; flex: 1; text-align: center;">Cancelar</a>
+para que fique no mesmo padrão do botão <a href="/paginasPrestador/prestadorAreaExclusiva.html" id="btn-cancelar-hotsite" class="conf-btn-salvar" style="background-color:#dc3545; color:#fff; border:none; border-radius:4px; font-weight:bold; padding:10px 15px; cursor:pointer; flex:1; text-align:center; text-decoration:none; display:inline-block;"><i class="bi bi-x-circle me-1"></i> Cancelar</a>
+na página prestadorHotsiteAdm.html
 
 SPRINT 3 
-na página clienteAreaExclusiva.html
-em <div class="cli-stat-card destaque-azul">
-                    <div class="cli-stat-titulo">Pedidos em Aberto</div>
-                    <div class="cli-stat-valor">0</div>
-                    <div class="cli-stat-info azul"><i class="bi bi-hourglass"></i> <a href="#" id="link-aguardando" style="color:inherit;text-decoration:underline;">Aguardando Confirmação</a></div>
-                </div>
-desabilite o clique em <a href="#" id="link-aguardando" style="color:inherit;text-decoration:underline;">Aguardando Confirmação</a>
-e exclua o modal que é carregado ao ser clicado
-no lugar, mostre as informações do próximo serviço agendado
-nome do prestador
-telefone do prestador
-Serviço contratado
-data e hora do serviço agendado
-Valor do serviço
-forma de pagametno escolhida
+ajsute na página clientePerfilAdm.html
+em <div class="hotsite-meta-info">
+                                Cliente &nbsp;·&nbsp; Membro desde
+                            </div>
+informe o tempo que o cliente é membro cadastrado no site
+inclua aqui a média das avaliações do cliente, recebidas pelos prestadores de serviço que ele contratou
+informe a média em número e também a popntuação média com as estrelas
+em <i class="bi bi-geo-alt-fill me-1"></i>
+mostrar a cidade onde mora o cliente
+mostrar aqui <div class="hotsite-cabecalho-bloco">
+                                <div>
+                                    <div class="hotsite-secao-titulo">Dados Pessoais</div>
+                                    <p class="hotsite-desc">
+                                        <i class="bi bi-envelope me-1"></i>
+                                        &nbsp;&nbsp;
+                                        <i class="bi bi-telephone me-1"></i>
+                                        <br>
+                                        <i class="bi bi-house me-1"></i>
+                                    </p>
+                                </div>
+                            </div>
+os dados pessoais do cliente
+telefone
+e-mail 
+endereço
 
-desabilite esse clique em <a href="#" id="link-pagamentos" style="color:inherit;text-decoration:underline;">Ver detalhes</a>
-exclua o modal resultante do clique
-mostre em <div class="cli-stat-card destaque-amarelo">
-                    <div class="cli-stat-titulo">Serviços Pendentes de Pagamento</div>
-                    <div class="cli-stat-valor">R$ 250,00</div>
-                    <div class="cli-stat-info amarelo"><i class="bi bi-currency-dollar"></i> <a href="#" id="link-pagamentos" style="color:inherit;text-decoration:underline;">Ver detalhes</a></div>
-                </div>
-o valor de todos os serviçoes contratados e que estão pendentes de pagametno
-informar a quantidade de serviços contratados que originaram o valor dos débitos
-
-em <div class="cli-stat-card destaque-azul">
-                    <div class="cli-stat-titulo">Serviços Concluídos (Total)</div>
-                    <div class="cli-stat-valor">1</div>
-                    <div class="cli-stat-info azul"><i class="bi bi-patch-check"></i> <a href="#" id="link-historico" style="color:inherit;text-decoration:underline;">Ver Histórico</a></div>
-                </div>
-informar a quantidade de serviços concluídos
-ao clicar em <a href="#" id="link-historico" style="color:inherit;text-decoration:underline;">Ver Histórico</a>
-informar o histórico de serviços contratados e concluídos + valor de cada um + data de cada serviço concluídos
-
-
+excluir
+<div class="hotsite-depoimento"></div>
+excluir
+<div class="placeholder" style="margin-bottom: 16px;">
+                                Próximo agendamento: <strong></strong>
+                            </div>
+excluir
+<a class="cta cta-amarelo" href="/paginasCliente/clienteHistoricoServicos.html"><i class="bi bi-clock-history me-1"></i> Ver Histórico Completo</a>
 
 
 
 SPRINT 4
+implemente em <h6><i class="bi bi-person-circle me-1"></i>Dados do Cliente</h6>
+à frente de "dados do cliente" um btão "Ver Perfil"
+quando o botão ver perfil for clicado, abra o modal de perfil do cliente mostradno o perfil do cliente
+abrindo clientePerfil.html
+
+SPRINT 5
+na página prestadorAreaExclusiva.html
+retirar o botão editar de <li class="prest-historico-item" data-pedido-id="prest-pedido-1" data-cliente="Maria da Silva" data-servico="Troca de Válvula">
+                        <span class="prest-info-label"><strong>Serviço:</strong> Troca de Válvula &nbsp;|&nbsp; <strong>Cliente:</strong> Maria da Silva</span><span class="prest-badge concluido">Concluído</span>
+                        <div class="prest-historico-acoes">
+                            <button type="button" class="btn btn-primary btn-prest-avaliar">Avaliar</button>
+                            <button type="button" class="btn btn-warning btn-prest-editar">Editar</button>
+                            <button type="button" class="btn btn-danger btn-prest-excluir">Excluir</button>
+                        </div>
+                    </li>
+manter o mesmo padrão da página clienteAreaExclusiva.html
+em <li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Kleber Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-05 às 08:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#198754; color:#fff; font-size:.75rem;">Confirmado</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="ag-cli-1777858108435" data-prest-email="kleber@prestador.com" data-prest-nome="Kleber Prestador" data-servico="TI" data-data="2026-05-05" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li>
+
 
 SPRINT 6
 

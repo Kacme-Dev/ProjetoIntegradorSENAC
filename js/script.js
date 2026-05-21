@@ -6,23 +6,8 @@
  * Ao integrar com um backend real, substitua os métodos por fetch().
  */
 
-// =========================================================
-// LIMPEZA ÚNICA DE DADOS — reinicia o Storage para novos testes
-// Executa UMA única vez: apaga todo o localStorage, grava a flag
-// sg_reset_v1 e recarrega a página limpa.
-// Na próxima carga a flag já existe e o bloco é pulado.
-// Para forçar uma nova limpeza: troque 'sg_reset_v1' por 'sg_reset_v2'
-// =========================================================
-(function () {
-    var RESET_KEY = 'sg_reset_v1';
-    if (!localStorage.getItem(RESET_KEY)) {
-        localStorage.clear();
-        localStorage.setItem(RESET_KEY, '1');
-        window.location.reload();
-    }
-}());
-
 document.addEventListener('DOMContentLoaded', function () {
+
     // =========================================================
     // CAMADA DE DADOS — preparada para migração a Banco de Dados
     // =========================================================
@@ -3059,154 +3044,14 @@ document.addEventListener('DOMContentLoaded', function () {
             return modal;
         }
 
-        // Sprint 3 — stats direto do localStorage (independente do HTML estático legado)
-        var _usu3 = obterUsuarioLogado();
-        var _emailCli3 = _usu3 ? _usu3.email : '';
-        var _todosAgs = DB.get('clienteAgendamentos_' + _emailCli3) || [];
+        var stats = calcularEstatisticas();
+        atualizarStatCards(stats);
 
-        // Helper — escapa string para inserção segura no innerHTML
-        function _esc3(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-        // Classificações de status
-        var _statusAbertos = ['orcamento_pendente','orcamento_enviado','orcamento_aceito','confirmado'];
-        var _agsAbertos    = _todosAgs.filter(function(ag){ return _statusAbertos.indexOf(ag.status) >= 0; });
-        var _agsConcluidos = _todosAgs.filter(function(ag){ return ag.status === 'concluido'; });
-
-        // Sprint 3 — "Pendentes de Pagamento": confirmados ou concluídos com valor definido
-        var _agsPendPag = _todosAgs.filter(function(ag){
-            return (ag.status === 'confirmado' || ag.status === 'concluido') && Number(ag.valor) > 0;
-        });
-        var _totalPendPag = _agsPendPag.reduce(function(acc, ag){ return acc + (Number(ag.valor) || 0); }, 0);
-
-        // Sprint 3 — "Próximo serviço": o próximo confirmado no futuro (ou o mais recente em aberto)
-        var _agora = new Date();
-        var _proximos = _agsAbertos
-            .filter(function(ag){ return ag.status === 'confirmado'; })
-            .filter(function(ag){
-                var dt = new Date((ag.data || '') + 'T' + (ag.horario || '08:00').split(' - ')[0]);
-                return dt >= _agora;
-            })
-            .sort(function(a, b){
-                return new Date(a.data + 'T' + (a.horario||'').split(' - ')[0]) -
-                       new Date(b.data + 'T' + (b.horario||'').split(' - ')[0]);
-            });
-        var _proximo = _proximos.length ? _proximos[0]
-            : (_agsAbertos.length ? _agsAbertos[_agsAbertos.length - 1] : null);
-
-        // Atualiza os valores dos stat cards
+        // Links nos stat cards
         var cards = document.querySelectorAll('.cli-stat-card');
-
-        if (cards[0]) {
-            var v0 = cards[0].querySelector('.cli-stat-valor');
-            if (v0) v0.textContent = _agsAbertos.length;
-
-            // Sprint 3 — Card 1: sem link clicável; exibe inline o próximo serviço agendado
-            var info0 = cards[0].querySelector('.cli-stat-info');
-            if (info0) {
-                if (_proximo) {
-                    // Busca telefone do prestador no store de prestadores
-                    var _storePrest3 = obterStorePrestadores();
-                    var _dadosPrest3 = _storePrest3[_proximo.emailPrestador] || {};
-                    var _telPrest3   = _dadosPrest3.tel || '—';
-                    var _horIni3     = (_proximo.horario || '').split(' - ')[0] || '—';
-                    var _dataFmt3    = _proximo.data
-                        ? _proximo.data.split('-').reverse().join('/')
-                        : '—';
-                    var _valorFmt3   = Number(_proximo.valor) > 0
-                        ? 'R$ ' + Number(_proximo.valor).toFixed(2).replace('.', ',')
-                        : 'A definir';
-                    var _pagFmt3     = _proximo.formaPagamento || _proximo.formaPagamentoPreferida || 'A definir';
-
-                    info0.style.cssText = 'display:block; padding:10px 12px; background:rgba(20,106,219,.06); border-radius:8px; font-size:.82rem; line-height:1.8;';
-                    info0.innerHTML =
-                        '<div style="font-weight:700;color:#146ADB;margin-bottom:4px;"><i class="bi bi-calendar-check me-1"></i>Próximo Serviço Agendado</div>' +
-                        '<div><i class="bi bi-person-fill me-1" style="color:#555;"></i><strong>Prestador:</strong> ' + _esc3(_proximo.nomePrestador || '—') + '</div>' +
-                        '<div><i class="bi bi-telephone-fill me-1" style="color:#555;"></i><strong>Telefone:</strong> ' + _esc3(_telPrest3) + '</div>' +
-                        '<div><i class="bi bi-tools me-1" style="color:#555;"></i><strong>Serviço:</strong> ' + _esc3(_proximo.servico || '—') + '</div>' +
-                        '<div><i class="bi bi-clock me-1" style="color:#555;"></i><strong>Data/Hora:</strong> ' + _esc3(_dataFmt3) + ' às ' + _esc3(_horIni3) + '</div>' +
-                        '<div><i class="bi bi-cash-coin me-1" style="color:#555;"></i><strong>Valor:</strong> ' + _esc3(_valorFmt3) + '</div>' +
-                        '<div><i class="bi bi-credit-card me-1" style="color:#555;"></i><strong>Pagamento:</strong> ' + _esc3(_pagFmt3) + '</div>';
-                } else {
-                    info0.innerHTML = '<i class="bi bi-hourglass me-1"></i><span style="color:inherit;">Nenhum serviço agendado no momento.</span>';
-                }
-            }
-        }
-
-        if (cards[1]) {
-            var v1 = cards[1].querySelector('.cli-stat-valor');
-            if (v1) v1.textContent = 'R$ ' + _totalPendPag.toFixed(2).replace('.', ',');
-
-            // Sprint 3 — Card 2: sem link clicável; exibe qtd e total inline
-            var info1 = cards[1].querySelector('.cli-stat-info');
-            if (info1) {
-                if (_agsPendPag.length > 0) {
-                    info1.innerHTML =
-                        '<i class="bi bi-currency-dollar me-1"></i>' +
-                        '<span><strong>' + _agsPendPag.length + ' serviço' + (_agsPendPag.length !== 1 ? 's' : '') + '</strong> com pagamento pendente &mdash; total: <strong>R$ ' + _totalPendPag.toFixed(2).replace('.', ',') + '</strong></span>';
-                } else {
-                    info1.innerHTML = '<i class="bi bi-check-circle me-1" style="color:#198754;"></i><span style="color:inherit;">Nenhum pagamento pendente.</span>';
-                }
-            }
-        }
-
-        if (cards[2]) {
-            var v2 = cards[2].querySelector('.cli-stat-valor');
-            if (v2) v2.textContent = _agsConcluidos.length;
-
-            // Sprint 3 — Card 3: mantém link-historico clicável; modal com histórico completo
-            var info2 = cards[2].querySelector('.cli-stat-info');
-            if (info2) {
-                info2.innerHTML = '<i class="bi bi-patch-check"></i> <a href="#" id="link-historico" style="color:inherit;text-decoration:underline;">Ver Histórico</a>';
-                var linkHist = document.getElementById('link-historico');
-                if (linkHist) {
-                    linkHist.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        var conteudo;
-                        if (_agsConcluidos.length === 0) {
-                            conteudo = '<p class="text-muted text-center py-3"><i class="bi bi-info-circle me-2"></i>Nenhum serviço concluído ainda.</p>';
-                        } else {
-                            var totalHist = _agsConcluidos.reduce(function(acc, ag){ return acc + (Number(ag.valor) || 0); }, 0);
-                            conteudo =
-                                '<div class="table-responsive">' +
-                                '<table class="table table-striped table-bordered align-middle" style="font-size:.88rem;">' +
-                                '<thead class="table-dark"><tr>' +
-                                '<th>#</th><th>Serviço</th><th>Prestador</th><th>Data Conclusão</th><th>Valor</th><th>Pagamento</th>' +
-                                '</tr></thead><tbody>' +
-                                _agsConcluidos.map(function (ag, i) {
-                                    var dtConc = ag.concluidoEm
-                                        ? (function(){ var d = new Date(ag.concluidoEm); return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear(); })()
-                                        : (ag.data ? ag.data.split('-').reverse().join('/') : '—');
-                                    var vlr = Number(ag.valor) > 0
-                                        ? 'R$ ' + Number(ag.valor).toFixed(2).replace('.', ',')
-                                        : '—';
-                                    var pag = ag.formaPagamento || '—';
-                                    return '<tr>' +
-                                        '<td>' + (i + 1) + '</td>' +
-                                        '<td>' + _esc3(ag.servico || '—') + '</td>' +
-                                        '<td>' + _esc3(ag.nomePrestador || '—') + '</td>' +
-                                        '<td>' + _esc3(dtConc) + '</td>' +
-                                        '<td><strong>' + _esc3(vlr) + '</strong></td>' +
-                                        '<td>' + _esc3(pag) + '</td>' +
-                                        '</tr>';
-                                }).join('') +
-                                '</tbody>' +
-                                '<tfoot><tr class="table-secondary">' +
-                                '<td colspan="4" class="text-end fw-bold">Total gasto:</td>' +
-                                '<td colspan="2" class="fw-bold">R$ ' + totalHist.toFixed(2).replace('.', ',') + '</td>' +
-                                '</tr></tfoot>' +
-                                '</table></div>';
-                        }
-                        var modal = criarModal(
-                            'modalHistorico',
-                            '<i class="bi bi-patch-check me-2"></i>Histórico de Serviços Concluídos',
-                            '#FFC300',
-                            conteudo
-                        );
-                        new bootstrap.Modal(modal).show();
-                    });
-                }
-            }
-        }
+        if (cards[0]) { var info0 = cards[0].querySelector('.cli-stat-info'); if (info0) { info0.innerHTML = '<i class="bi bi-hourglass"></i> <a href="#" id="link-aguardando" style="color:inherit;text-decoration:underline;">Aguardando Confirmação</a>'; var linkAg = document.getElementById('link-aguardando'); if (linkAg) linkAg.addEventListener('click', function (e) { e.preventDefault(); _abrirModalAguardandoConf(criarModal); }); } }
+        if (cards[1]) { var info1 = cards[1].querySelector('.cli-stat-info'); if (info1) { info1.innerHTML = '<i class="bi bi-currency-dollar"></i> <a href="#" id="link-pagamentos" style="color:inherit;text-decoration:underline;">Ver detalhes</a>'; var linkPag = document.getElementById('link-pagamentos'); if (linkPag) linkPag.addEventListener('click', function (e) { e.preventDefault(); var modal = criarModal('modalPagamentos', '<i class="bi bi-currency-dollar me-2"></i>Pagamentos', '#FFC300', '<p>Total pago: <strong>R$ ' + stats.totalPago.toFixed(2).replace('.', ',') + '</strong></p>'); new bootstrap.Modal(modal).show(); }); } }
+        if (cards[2]) { var info2 = cards[2].querySelector('.cli-stat-info'); if (info2) { info2.innerHTML = '<i class="bi bi-patch-check"></i> <a href="#" id="link-historico" style="color:inherit;text-decoration:underline;">Ver Histórico</a>'; var linkHist = document.getElementById('link-historico'); if (linkHist) linkHist.addEventListener('click', function (e) { e.preventDefault(); var conteudo = stats.pedidosConcluidos.length === 0 ? '<p class="text-muted">Nenhum concluído.</p>' : '<table class="table"><thead><tr><th>#</th><th>Serviço</th><th>Prestador</th><th>Valor</th></tr></thead><tbody>' + stats.pedidosConcluidos.map(function (p, i) { return '<tr><td>' + (i + 1) + '</td><td>' + p.servico + '</td><td>' + p.profissional + '</td><td>R$' + p.valor.toFixed(2).replace('.', ',') + '</td></tr>'; }).join('') + '</tbody></table>'; var modal = criarModal('modalHistorico', '<i class="bi bi-patch-check me-2"></i>Histórico', '#FFC300', conteudo); new bootstrap.Modal(modal).show(); }); } }
 
         // Avaliações
         function initEstrelas(cont, hidden) {
@@ -3318,162 +3163,47 @@ document.addEventListener('DOMContentLoaded', function () {
         var btnSalvar = document.getElementById('btn-salvar-edicao-feita');
         var pedidoAtual = null;
 
-        // Sprint 2 — sanitização simples para inserção no innerHTML
-        function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
-        // Sprint 2 — helper toast (reutiliza a infra de toastNotificacao já na página)
-        function _toastAvalFeitas(msg, cor) {
-            var toastEl = document.getElementById('toastNotificacao');
-            var toastMsg = document.getElementById('toast-mensagem');
-            if (!toastEl || !toastMsg) { alert(msg); return; }
-            toastMsg.textContent = msg;
-            toastEl.className = 'toast align-items-center text-white border-0 ' + (cor || 'bg-dark');
-            bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 2800 }).show();
-        }
-
         function initEstrelas(c, h) { if (!c || !h) return; var stars = c.querySelectorAll('i'); stars.forEach(function (s, i) { s.addEventListener('click', function () { h.value = i + 1; stars.forEach(function (st, j) { st.className = j <= i ? 'bi bi-star-fill filled' : 'bi bi-star'; st.style.color = j <= i ? '#ffc107' : '#ccc'; }); }); s.addEventListener('mouseover', function () { stars.forEach(function (st, j) { st.style.color = j <= i ? '#ffc107' : '#ccc'; }); }); s.addEventListener('mouseout', function () { var cur = parseInt(h.value) || 0; stars.forEach(function (st, j) { st.style.color = j < cur ? '#ffc107' : '#ccc'; }); }); }); }
         function renderE(c, h, n) { if (!c || !h) return; var stars = c.querySelectorAll('i'); stars.forEach(function (s, i) { s.className = i < n ? 'bi bi-star-fill filled' : 'bi bi-star'; s.style.color = i < n ? '#ffc107' : '#ccc'; }); h.value = n; }
         initEstrelas(starsEl, notaEl);
-
-        // Sprint 2 — exibe confirmação inline no card antes de excluir
-        function _mostrarConfirmacaoExclusao(card, pedidoId) {
-            // Evita duplicar a confirmação
-            if (card.querySelector('.sg-confirm-excluir')) return;
-            var acoes = card.querySelector('.sg-acoes-card');
-            if (acoes) acoes.style.display = 'none';
-            var confirmDiv = document.createElement('div');
-            confirmDiv.className = 'sg-confirm-excluir d-flex align-items-center gap-2 mt-2';
-            confirmDiv.style.cssText = 'background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 12px;';
-            confirmDiv.innerHTML =
-                '<i class="bi bi-exclamation-triangle-fill" style="color:#e6a800;font-size:1.1rem;"></i>' +
-                '<span style="flex:1;font-size:.9rem;color:#7a5700;">Deseja realmente excluir esta avaliação?</span>' +
-                '<button type="button" class="btn btn-danger btn-sm sg-confirm-sim" data-pedido-id="' + pedidoId + '">' +
-                '<i class="bi bi-trash me-1"></i>Excluir</button>' +
-                '<button type="button" class="btn btn-secondary btn-sm sg-confirm-nao">' +
-                '<i class="bi bi-x me-1"></i>Cancelar</button>';
-            card.appendChild(confirmDiv);
-        }
 
         function renderizarLista() {
             container.querySelectorAll('.review-card-reverse[data-pedido-id]').forEach(function (c) { c.remove(); });
             container.querySelectorAll('#hdr-av-feitas, #msg-av-feitas').forEach(function (c) { c.remove(); });
             var avs = obterAvs();
             var botao = container.querySelector('.d-flex.justify-content-center');
-
-            // Sprint 2 — cabeçalho com contador de avaliações
-            var hdr = document.createElement('div');
-            hdr.id = 'hdr-av-feitas';
-            hdr.style.cssText = 'font-size:1rem;font-weight:700;color:#146ADB;padding-bottom:8px;border-bottom:2px solid #146ADB;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;';
-            hdr.innerHTML =
-                '<span><i class="bi bi-star-fill me-2" style="color:#ffc107;"></i>Minhas Avaliações Realizadas</span>' +
-                (avs.length > 0 ? '<span style="font-size:.82rem;font-weight:600;color:#555;background:#f0f0f0;border-radius:20px;padding:2px 10px;">' + avs.length + ' avaliação' + (avs.length !== 1 ? 'ões' : '') + '</span>' : '');
+            var hdr = document.createElement('div'); hdr.id = 'hdr-av-feitas'; hdr.style.cssText = 'font-size:1rem;font-weight:700;color:#146ADB;padding-bottom:8px;border-bottom:2px solid #146ADB;margin-bottom:12px;'; hdr.innerHTML = '<i class="bi bi-star-fill me-2" style="color:#ffc107;"></i>Minhas Avaliações Realizadas';
             container.insertBefore(hdr, botao || null);
-
-            if (avs.length === 0) {
-                var msg = document.createElement('div');
-                msg.id = 'msg-av-feitas';
-                msg.className = 'text-center text-muted py-4';
-                msg.innerHTML = '<i class="bi bi-info-circle me-2"></i>Nenhuma avaliação realizada ainda.';
-                container.insertBefore(msg, botao || null);
-                return;
-            }
-
-            // Sprint 2 — renderiza cards de avaliações feitas pelo cliente
+            if (avs.length === 0) { var msg = document.createElement('div'); msg.id = 'msg-av-feitas'; msg.className = 'text-center text-muted py-4'; msg.innerHTML = '<i class="bi bi-info-circle me-2"></i>Nenhuma avaliação ainda.'; container.insertBefore(msg, botao || null); return; }
             avs.slice().reverse().forEach(function (av) {
-                var stars = Array.from({ length: 5 }, function (_, i) {
-                    return i < av.nota
-                        ? '<i class="bi bi-star-fill" style="color:#ffc107;"></i>'
-                        : '<i class="bi bi-star" style="color:#ccc;"></i>';
-                }).join('');
-
-                var card = document.createElement('div');
-                card.className = 'review-card-reverse';
-                card.dataset.pedidoId = av.pedidoId;
-
-                card.innerHTML =
-                    '<div class="d-flex justify-content-between align-items-center mb-2">' +
-                        '<h5 class="mb-0">Prestador: ' + esc(av.profissional || '—') + ' (' + esc(av.servico || '') + ')</h5>' +
-                        '<span class="text-muted"><small>' + esc(av.data || '') + '</small></span>' +
-                    '</div>' +
-                    '<div class="rating">' + stars +
-                        '<h6 class="text-muted ms-2">Avaliação: ' + Number(av.nota).toFixed(1) + '</h6>' +
-                    '</div>' +
-                    '<p class="review-text">"' + esc(av.comentario || '') + '"</p>' +
-                    // Sprint 2 — botões de ação com classe sg-acoes-card para controle da confirmação
-                    '<div class="d-flex gap-2 mt-2 sg-acoes-card">' +
-                        '<button type="button" class="btn btn-warning btn-editar-feita" data-pedido-id="' + av.pedidoId + '">' +
-                            '<i class="bi bi-pencil-square me-1"></i>Editar</button>' +
-                        '<button type="button" class="btn btn-danger btn-excluir-feita" data-pedido-id="' + av.pedidoId + '">' +
-                            '<i class="bi bi-trash me-1"></i>Excluir</button>' +
-                    '</div>';
-
+                var stars = Array.from({ length: 5 }, function (_, i) { return i < av.nota ? '<i class="bi bi-star-fill" style="color:#ffc107;"></i>' : '<i class="bi bi-star" style="color:#ccc;"></i>'; }).join('');
+                var card = document.createElement('div'); card.className = 'review-card-reverse'; card.dataset.pedidoId = av.pedidoId;
+                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Prestador: ' + (av.profissional || av.profissional || '—') + ' (' + (av.servico || '') + ')</h5><span class="text-muted"><small>' + av.data + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + av.comentario + '"</p><div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-warning btn-editar-feita" data-pedido-id="' + av.pedidoId + '"><i class="bi bi-pencil-square me-1"></i>Editar</button><button type="button" class="btn btn-danger btn-excluir-feita" data-pedido-id="' + av.pedidoId + '"><i class="bi bi-trash me-1"></i>Excluir</button></div>';
                 container.insertBefore(card, botao || null);
             });
         }
 
-        // Sprint 2 — delegação de eventos: editar, iniciar exclusão, confirmar, cancelar
         container.addEventListener('click', function (e) {
-            var btnEd  = e.target.closest('.btn-editar-feita');
-            var btnEx  = e.target.closest('.btn-excluir-feita');
-            var btnSim = e.target.closest('.sg-confirm-sim');
-            var btnNao = e.target.closest('.sg-confirm-nao');
-
-            // Editar — abre modal existente
+            var btnEd = e.target.closest('.btn-editar-feita'); var btnEx = e.target.closest('.btn-excluir-feita');
             if (btnEd) {
-                var pid = btnEd.dataset.pedidoId;
-                var av = obterAvs().find(function (a) { return a.pedidoId === pid; });
-                if (!av) return;
-                pedidoAtual = pid;
-                if (infoEl) infoEl.innerHTML = '<strong>Serviço:</strong> ' + esc(av.servico) + ' &nbsp;|&nbsp; <strong>Prestador:</strong> ' + esc(av.profissional);
-                renderE(starsEl, notaEl, av.nota);
-                if (comentEl) comentEl.value = av.comentario;
+                var pid = btnEd.dataset.pedidoId; var av = obterAvs().find(function (a) { return a.pedidoId === pid; }); if (!av) return;
+                pedidoAtual = pid; if (infoEl) infoEl.innerHTML = '<strong>Serviço:</strong> ' + av.servico + ' | <strong>Prestador:</strong> ' + av.profissional;
+                renderE(starsEl, notaEl, av.nota); if (comentEl) comentEl.value = av.comentario;
                 if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
             }
-
-            // Sprint 2 — Excluir: exibe confirmação inline no card
-            if (btnEx) {
-                var card = btnEx.closest('.review-card-reverse');
-                if (card) _mostrarConfirmacaoExclusao(card, btnEx.dataset.pedidoId);
-            }
-
-            // Sprint 2 — Confirmou exclusão
-            if (btnSim) {
-                var pidEx = btnSim.dataset.pedidoId;
-                salvarAvs(obterAvs().filter(function (a) { return a.pedidoId !== pidEx; }));
-                renderizarLista();
-                _toastAvalFeitas('Avaliação excluída com sucesso.', 'bg-danger');
-            }
-
-            // Sprint 2 — Cancelou exclusão: restaura botões normais
-            if (btnNao) {
-                var confirmDiv = btnNao.closest('.sg-confirm-excluir');
-                if (confirmDiv) {
-                    var cardPai = confirmDiv.closest('.review-card-reverse');
-                    confirmDiv.remove();
-                    if (cardPai) {
-                        var acoes = cardPai.querySelector('.sg-acoes-card');
-                        if (acoes) acoes.style.display = '';
-                    }
-                }
-            }
+            if (btnEx) { var pidEx = btnEx.dataset.pedidoId; if (!confirm('Excluir?')) return; salvarAvs(obterAvs().filter(function (a) { return a.pedidoId !== pidEx; })); renderizarLista(); alert('Excluída!'); }
         });
 
-        // Sprint 2 — Salvar edição com toast em vez de alert
         if (btnSalvar) {
             btnSalvar.addEventListener('click', function () {
-                var nota = parseInt((notaEl || {}).value) || 0;
-                var coment = (comentEl || {}).value || '';
-                if (nota === 0) { _toastAvalFeitas('Selecione uma nota para salvar.', 'bg-warning'); return; }
-                if (!coment.trim()) { _toastAvalFeitas('Escreva um comentário para salvar.', 'bg-warning'); return; }
-                var avs = obterAvs();
-                var idx = avs.findIndex(function (a) { return a.pedidoId === pedidoAtual; });
+                var nota = parseInt((notaEl || {}).value) || 0; var coment = (comentEl || {}).value || '';
+                if (nota === 0) { alert('Selecione uma nota.'); return; } if (!coment.trim()) { alert('Escreva um comentário.'); return; }
+                var avs = obterAvs(); var idx = avs.findIndex(function (a) { return a.pedidoId === pedidoAtual; });
                 if (idx >= 0) { avs[idx].nota = nota; avs[idx].comentario = coment; salvarAvs(avs); }
                 if (modalEl) { var inst = bootstrap.Modal.getInstance(modalEl); if (inst) inst.hide(); }
-                renderizarLista();
-                _toastAvalFeitas('Avaliação atualizada com sucesso!', 'bg-success');
+                renderizarLista(); alert('Atualizada!');
             });
         }
-
         renderizarLista();
     }
 
@@ -3538,28 +3268,14 @@ document.addEventListener('DOMContentLoaded', function () {
         var tituloNome = document.getElementById('titulo-nome-cliente');
         if (tituloNome) tituloNome.textContent = (dadosUsu.nome || (usu ? usu.nome : '') || 'Cliente');
 
-        // Sprint 1 — popula o nome no preview lateral ao carregar a página
-        var _nomeElCarga = document.querySelector('.hotsite-nome');
-        if (_nomeElCarga) _nomeElCarga.textContent = inputNome.value.trim() || '—';
-
         if (dadosUsu.perfil) {
             if (inputCpf) inputCpf.value = dadosUsu.perfil.cpf || '';
             if (inputCidade) inputCidade.value = dadosUsu.perfil.cidade || '';
             if (inputEndereco) inputEndereco.value = dadosUsu.perfil.endereco || '';
             if (inputTel) inputTel.value = dadosUsu.perfil.tel || '';
-            // Sprint 1 — restaura foto salva no hotsite-avatar
-            if (dadosUsu.perfil.foto && avatarDiv) {
-                avatarDiv.style.backgroundImage = 'url(' + dadosUsu.perfil.foto + ')';
-                avatarDiv.style.backgroundSize = 'cover';
-                avatarDiv.style.backgroundPosition = 'center';
-                avatarDiv.textContent = '';
-                avatarDiv.dataset.base64 = dadosUsu.perfil.foto;
-            } else if (avatarDiv) {
-                avatarDiv.textContent = inputNome.value.substring(0, 2).toUpperCase();
-            }
-        } else {
-            if (avatarDiv) avatarDiv.textContent = inputNome.value.substring(0, 2).toUpperCase();
-        }
+            if (dadosUsu.perfil.foto && avatarDiv) { avatarDiv.style.backgroundImage = 'url(' + dadosUsu.perfil.foto + ')'; avatarDiv.style.backgroundSize = 'cover'; avatarDiv.textContent = ''; avatarDiv.dataset.base64 = dadosUsu.perfil.foto; }
+            else if (avatarDiv) avatarDiv.textContent = inputNome.value.substring(0, 2).toUpperCase();
+        } else { if (avatarDiv) avatarDiv.textContent = inputNome.value.substring(0, 2).toUpperCase(); }
 
         // Sprint 3 — popula elementos do preview lateral
 
@@ -3616,73 +3332,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (elTel)      elTel.textContent      = (dadosUsu.perfil && dadosUsu.perfil.tel)      ? dadosUsu.perfil.tel      : '—';
         if (elEndereco) elEndereco.textContent = (dadosUsu.perfil && dadosUsu.perfil.endereco) ? dadosUsu.perfil.endereco : '—';
 
-        // Sprint 1 — helper: mostra toast de notificação (usa a infra já existente na página)
-        function _toastPerfilCliente(msg, cor) {
-            var toastEl = document.getElementById('toastNotificacao');
-            var toastMsg = document.getElementById('toast-mensagem');
-            if (!toastEl || !toastMsg) { alert(msg); return; }
-            toastMsg.textContent = msg;
-            toastEl.className = 'toast align-items-center text-white border-0 ' + (cor || 'bg-dark');
-            var t = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3000 });
-            t.show();
-        }
-
-        // Sprint 1 — popula o nome no preview lateral (.hotsite-nome)
-        function _atualizarPreviewNome() {
-            var nomeEl = document.querySelector('.hotsite-nome');
-            if (nomeEl) nomeEl.textContent = inputNome ? (inputNome.value.trim() || '—') : '—';
-        }
-
-        // Sprint 1 — popula hotsite-nome na carga inicial
-        _atualizarPreviewNome();
-
-        // Sprint 1 — atualiza preview em tempo real enquanto o usuário digita
-        if (inputNome) {
-            inputNome.addEventListener('input', function () {
-                _atualizarPreviewNome();
-                // Atualiza também as iniciais do avatar se não houver foto
-                if (avatarDiv && !avatarDiv.dataset.base64) {
-                    avatarDiv.textContent = inputNome.value.substring(0, 2).toUpperCase();
-                }
-            });
-        }
-        if (inputCidade) {
-            inputCidade.addEventListener('input', function () {
-                var elCidPreview = document.getElementById('preview-cidade');
-                if (elCidPreview) elCidPreview.textContent = inputCidade.value.trim() || '—';
-            });
-        }
-        if (inputTel) {
-            inputTel.addEventListener('input', function () {
-                var elTelPreview = document.getElementById('preview-tel');
-                if (elTelPreview) elTelPreview.textContent = inputTel.value.trim() || '—';
-            });
-        }
-        if (inputEndereco) {
-            inputEndereco.addEventListener('input', function () {
-                var elEndPreview = document.getElementById('preview-endereco');
-                if (elEndPreview) elEndPreview.textContent = inputEndereco.value.trim() || '—';
-            });
-        }
-
-        // Sprint 1 — foto selecionada: exibe imediatamente no hotsite-avatar e guarda base64
-        if (inputFoto) {
-            inputFoto.addEventListener('change', function (e) {
-                var f = e.target.files[0];
-                if (!f) return;
-                var r = new FileReader();
-                r.onload = function (ev) {
-                    if (avatarDiv) {
-                        avatarDiv.style.backgroundImage = 'url(' + ev.target.result + ')';
-                        avatarDiv.style.backgroundSize = 'cover';
-                        avatarDiv.style.backgroundPosition = 'center';
-                        avatarDiv.textContent = '';
-                        avatarDiv.dataset.base64 = ev.target.result;
-                    }
-                };
-                r.readAsDataURL(f);
-            });
-        }
+        if (inputFoto) { inputFoto.addEventListener('change', function (e) { var f = e.target.files[0]; if (!f) return; var r = new FileReader(); r.onload = function (ev) { if (avatarDiv) { avatarDiv.style.backgroundImage = 'url(' + ev.target.result + ')'; avatarDiv.style.backgroundSize = 'cover'; avatarDiv.textContent = ''; avatarDiv.dataset.base64 = ev.target.result; } }; r.readAsDataURL(f); }); }
 
         if (btnSalvar) {
             btnSalvar.addEventListener('click', function () {
@@ -3695,29 +3345,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 ];
                 var faltando = camposObrigatorios.filter(function (c) { return !c.el || !c.el.value.trim(); }).map(function (c) { return c.nome; });
                 if (faltando.length > 0) {
-                    _toastPerfilCliente('Campos obrigatórios em falta: ' + faltando.join(', '), 'bg-danger');
-                    if (inputCpf && !inputCpf.value.trim()) inputCpf.focus();
+                    alert('Os seguintes campos são obrigatórios e precisam ser preenchidos:\n• ' + faltando.join('\n• '));
+                    if (faltando.length > 0 && inputCpf && !inputCpf.value.trim()) inputCpf.focus();
                     else if (faltando.indexOf('Cidade') >= 0 && inputCidade) inputCidade.focus();
                     else if (faltando.indexOf('Endereço') >= 0 && inputEndereco) inputEndereco.focus();
                     else if (faltando.indexOf('Telefone') >= 0 && inputTel) inputTel.focus();
                     return;
                 }
-                // Sprint 1 — persiste todos os dados do perfil no localStorage
-                dadosUsu.nome = inputNome.value.trim();
-                if (usu) { usu.nome = dadosUsu.nome; DB.set('usuarioLogado', usu); }
-                dadosUsu.perfil = {
-                    cpf:      inputCpf      ? inputCpf.value.trim()      : '',
-                    cidade:   inputCidade   ? inputCidade.value.trim()   : '',
-                    endereco: inputEndereco ? inputEndereco.value.trim() : '',
-                    tel:      inputTel      ? inputTel.value.trim()      : '',
-                    // Sprint 1 — salva foto base64 do hotsite-avatar para persistência
-                    foto:     (avatarDiv && avatarDiv.dataset.base64) ? avatarDiv.dataset.base64 : ''
-                };
+                dadosUsu.nome = inputNome.value;
+                if (usu) { usu.nome = inputNome.value; DB.set('usuarioLogado', usu); }
+                dadosUsu.perfil = { cpf: inputCpf ? inputCpf.value : '', cidade: inputCidade ? inputCidade.value : '', endereco: inputEndereco ? inputEndereco.value : '', tel: inputTel ? inputTel.value : '', foto: (avatarDiv && avatarDiv.dataset.base64) || '' };
                 usuarios[emailLogado] = dadosUsu;
                 salvarUsuariosCadastrados(usuarios);
-                // Sprint 1 — usa toast em vez de alert, depois recarrega para fixar os dados
-                _toastPerfilCliente('Perfil salvo com sucesso!', 'bg-success');
-                setTimeout(function () { window.location.reload(); }, 1400);
+                alert('Perfil salvo!'); window.location.reload();
             });
         }
         if (btnLimpar) {
@@ -6111,65 +5751,176 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // =========================================================
-    // SPRINT 4 — CATÁLOGO PÚBLICO (agendarServicos.html)
-    // Renderiza os cards de prestadores cadastrados para qualquer
-    // página que possua #catalogo-loading mas NÃO seja o
-    // clienteAgendarServicos.html (que tem seu próprio script inline).
+    // CATÁLOGO PÚBLICO (agendarServicos.html)
+    //
+    // Responsabilidades (migradas do script inline da página):
+    //   1. Verificar sessão:
+    //      - Cliente logado   → redireciona para clienteAgendarServicos.html
+    //      - Prestador/Admin  → oculta banner de convidado
+    //      - Visitante (guest)→ exibe banner de convidado
+    //   2. Renderizar o catálogo de prestadores em modo somente leitura.
+    //   3. Aplicar filtros por categoria, incluindo lista fixa de categorias.
+    //   4. "Saiba Mais" redireciona para prestadorHotsite.html?email=EMAIL.
+    //   5. Não exibir painel de agendamento (apenas visualização pública).
+    //
+    // Nota: clienteAgendarServicos.html possui seu próprio bloco de
+    // inicialização via inicializarAgendarServicos() — não duplicar.
     // =========================================================
     function inicializarCatalogoPublico() {
+
         var loadingEl = document.getElementById('catalogo-loading');
-        if (!loadingEl) return; // página não tem catálogo
-        // clienteAgendarServicos.html já tem script inline próprio — não duplicar
+        if (!loadingEl) return; // página não tem catálogo público
+
+        // Evita duplicação com a página autenticada de agendamento
         if (window.location.pathname.includes('clienteAgendarServicos')) return;
 
-        var usu       = obterUsuarioLogado();
-        var estaLogado = usu && (usu.tipo === 'cliente' || usu.tipo === 'admin');
+        // ── 1. Verificação de sessão ──────────────────────────
+        // Migrado de agendarServicos.html — centraliza o controle aqui.
+        try {
+            var usu = obterUsuarioLogado();
 
-        // ── Helpers ──────────────────────────────────────────
+            if (usu && usu.tipo === 'cliente') {
+                // Cliente logado: redireciona para a página autenticada,
+                // preservando o parâmetro ?tipo= da URL caso exista.
+                var params = new URLSearchParams(window.location.search);
+                var tipoParam = params.get('tipo') || '';
+                var urlRedir  = '/paginasCliente/clienteAgendarServicos.html';
+                if (tipoParam) urlRedir += '?tipo=' + encodeURIComponent(tipoParam);
+                window.location.replace(urlRedir);
+                return; // interrompe — o redirect irá ocorrer
+            }
+
+            var bannerGuest = document.getElementById('banner-guest');
+
+            if (usu && (usu.tipo === 'prestador' || usu.tipo === 'admin')) {
+                // Prestador ou Admin: já tem sessão, oculta o banner de convidado
+                if (bannerGuest) bannerGuest.style.display = 'none';
+            } else {
+                // Visitante sem sessão: garante o banner de login visível
+                if (bannerGuest) bannerGuest.style.display = '';
+            }
+        } catch (e) { /* localStorage indisponível — continua em modo guest */ }
+
+        // ── 2. Constantes de visual ───────────────────────────
+        // Lista fixa de categorias sempre exibidas nos filtros,
+        // mesmo sem prestadores cadastrados naquela categoria ainda.
+        var CATS_FIXAS = [
+            'Alimentação', 'Beleza', 'Construção', 'Consultoria', 'Design',
+            'Lazer', 'Logística', 'Manutenção Predial', 'Saúde', 'Segurança', 'TI'
+        ];
+
         var GRAD = {
-            'Saúde':['#0ea5e9','#0369a1'],'Beleza':['#ec4899','#be185d'],
-            'Manutenção Predial':['#f59e0b','#b45309'],'TI':['#8b5cf6','#6d28d9'],
-            'Lazer':['#7c3aed','#5b21b6'],'Alimentação':['#ea580c','#c2410c'],
-            'Design':['#0891b2','#0e7490'],'Segurança':['#dc2626','#991b1b'],
-            'Logística':['#ca8a04','#a16207'],'Consultoria':['#475569','#334155'],
-            'Construção':['#92400e','#78350f']
+            'Saúde':              ['#0ea5e9', '#0369a1'],
+            'Beleza':             ['#ec4899', '#be185d'],
+            'Manutenção Predial': ['#f59e0b', '#b45309'],
+            'TI':                 ['#8b5cf6', '#6d28d9'],
+            'Lazer':              ['#7c3aed', '#5b21b6'],
+            'Alimentação':        ['#ea580c', '#c2410c'],
+            'Design':             ['#0891b2', '#0e7490'],
+            'Segurança':          ['#dc2626', '#991b1b'],
+            'Logística':          ['#ca8a04', '#a16207'],
+            'Consultoria':        ['#475569', '#334155'],
+            'Construção':         ['#92400e', '#78350f']
         };
         var ICO = {
-            'Saúde':'bi-heart-pulse-fill','Beleza':'bi-scissors',
-            'Manutenção Predial':'bi-tools','TI':'bi-cpu-fill',
-            'Lazer':'bi-controller','Alimentação':'bi-basket-fill',
-            'Design':'bi-palette-fill','Segurança':'bi-shield-fill',
-            'Logística':'bi-truck','Consultoria':'bi-briefcase-fill',
-            'Construção':'bi-building'
+            'Saúde':              'bi-heart-pulse-fill',
+            'Beleza':             'bi-scissors',
+            'Manutenção Predial': 'bi-tools',
+            'TI':                 'bi-cpu-fill',
+            'Lazer':              'bi-controller',
+            'Alimentação':        'bi-basket-fill',
+            'Design':             'bi-palette-fill',
+            'Segurança':          'bi-shield-fill',
+            'Logística':          'bi-truck',
+            'Consultoria':        'bi-briefcase-fill',
+            'Construção':         'bi-building'
         };
 
+        // ── 3. Helpers internos ───────────────────────────────
+
+        /** Retorna gradiente CSS para uma categoria. */
         function grad(cat) {
-            var g = GRAD[cat] || ['#146ADB','#0d4fa3'];
+            var g = GRAD[cat] || ['#146ADB', '#0d4fa3'];
             return 'linear-gradient(135deg,' + g[0] + ',' + g[1] + ')';
         }
+
+        /** Extrai as iniciais do nome do prestador. */
         function ini(nome) {
             var p = (nome || '').trim().split(/\s+/);
             return p.length >= 2
                 ? (p[0][0] + p[p.length - 1][0]).toUpperCase()
                 : (p[0] || 'P').slice(0, 2).toUpperCase();
         }
+
+        /** Escapa caracteres HTML para uso em innerHTML. */
         function esc(s) {
             return String(s || '')
-                .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-                .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
+
+        /**
+         * Calcula a média e total de avaliações recebidas por um prestador.
+         * @param {string} email - E-mail do prestador
+         * @returns {{ media: number, total: number }}
+         */
         function mediaAval(email) {
             var store = DB.get('avaliacoesRecebidasPrestador') || {};
-            var lista = (store[email] || []).filter(function (a) { return typeof a.nota === 'number'; });
+            var lista = (store[email] || []).filter(function (a) {
+                return typeof a.nota === 'number';
+            });
             if (!lista.length) return { media: 0, total: 0 };
-            return { media: lista.reduce(function (s, a) { return s + a.nota; }, 0) / lista.length, total: lista.length };
+            return {
+                media: lista.reduce(function (s, a) { return s + a.nota; }, 0) / lista.length,
+                total: lista.length
+            };
         }
+
+        /**
+         * Obtém a lista consolidada de prestadores, fundindo duas fontes:
+         *   1) hotsitePrestadorDados  — perfis completos (prioridade)
+         *   2) usuariosCadastrados    — prestadores sem hotsite preenchido
+         * @returns {Array} Lista de objetos de prestadores
+         */
         function obterPrestadores() {
-            var s = obterStorePrestadores();
-            return Object.keys(s)
-                .map(function (e) { return Object.assign({}, s[e], { email: e }); })
+            var hotsite  = obterStorePrestadores();
+            var usuarios = DB.get('usuariosCadastrados') || {};
+            var merged   = {};
+
+            // Fonte 1: dados completos do hotsite
+            Object.keys(hotsite).forEach(function (email) {
+                var p = hotsite[email];
+                if (p && p.nome && p.categoria) {
+                    merged[email] = Object.assign({}, p, { email: email });
+                }
+            });
+
+            // Fonte 2: prestadores sem perfil de hotsite ainda
+            Object.keys(usuarios).forEach(function (email) {
+                var u = usuarios[email];
+                if (u && u.tipo === 'prestador' && !merged[email]) {
+                    merged[email] = {
+                        email:     email,
+                        nome:      u.nome      || email,
+                        categoria: u.categoria || 'Outros',
+                        descricao: u.descricao || '',
+                        tel:       u.tel       || '',
+                        cidade:    u.cidade    || '',
+                        foto:      u.foto      || u.fotoPerfil || ''
+                    };
+                }
+            });
+
+            return Object.keys(merged)
+                .map(function (e) { return merged[e]; })
                 .filter(function (p) { return p.nome && p.categoria; });
         }
+
+        /**
+         * Agrupa a lista de prestadores por categoria.
+         * @param {Array} lista
+         * @returns {Object} Mapa { categoria: [prestadores] }
+         */
         function agrupar(lista) {
             var g = {};
             lista.forEach(function (p) {
@@ -6179,34 +5930,40 @@ document.addEventListener('DOMContentLoaded', function () {
             return g;
         }
 
-        // ── Elementos do DOM ──────────────────────────────────
-        var secoesEl = document.getElementById('catalogo-secoes');
-        var vazioEl  = document.getElementById('catalogo-vazio');
+        // ── 4. Referências ao DOM ─────────────────────────────
+        var secoesEl    = document.getElementById('catalogo-secoes');
+        var vazioEl     = document.getElementById('catalogo-vazio');
         var filtrosCont = document.getElementById('filtros-container');
         if (!secoesEl) return;
 
         var catAtiva = '';
 
-        // Lê categoria da URL (?tipo=Saúde)
-        var urlParams = new URLSearchParams(window.location.search);
-        var tipoUrl   = urlParams.get('tipo') || '';
+        // Lê categoria pré-selecionada via ?tipo= na URL
+        var urlParamsCat = new URLSearchParams(window.location.search);
+        var tipoUrl      = urlParamsCat.get('tipo') || '';
 
-        // ── Foto / placeholder ────────────────────────────────
+        // ── 5. Foto / placeholder do card ─────────────────────
+
+        /** Cria elemento de placeholder com iniciais e ícone de categoria. */
         function mkPlh(prest) {
             var d = document.createElement('div');
             d.className = 'prest-card-foto-placeholder';
             d.style.background = grad(prest.categoria);
-            d.innerHTML = '<span class="av-ini">' + ini(prest.nome) + '</span>' +
+            d.innerHTML =
+                '<span class="av-ini">' + ini(prest.nome) + '</span>' +
                 '<span class="av-ico"><i class="bi ' + (ICO[prest.categoria] || 'bi-person') + '"></i></span>';
             return d;
         }
+
+        /** Cria o elemento de foto do card, com fallback para placeholder. */
         function fotoEl(prest) {
             var wrap = document.createElement('div');
             wrap.className = 'prest-card-foto';
             var foto = prest.fotoPerfil || prest.foto || '';
             if (foto) {
                 var img = document.createElement('img');
-                img.src = foto; img.alt = prest.nome;
+                img.src = foto;
+                img.alt = prest.nome;
                 var plh = mkPlh(prest);
                 img.onerror = function () { img.style.display = 'none'; plh.style.display = 'flex'; };
                 plh.style.display = 'none';
@@ -6215,30 +5972,43 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 wrap.appendChild(mkPlh(prest));
             }
+            // Badge flutuante com o nome da categoria
             var badge = document.createElement('div');
             badge.className = 'prest-card-cat-badge';
-            badge.innerHTML = '<i class="bi ' + (ICO[prest.categoria] || 'bi-tag') + '"></i>' + esc(prest.categoria);
+            badge.innerHTML =
+                '<i class="bi ' + (ICO[prest.categoria] || 'bi-tag') + '"></i>' +
+                esc(prest.categoria);
             wrap.appendChild(badge);
             return wrap;
         }
 
-        // ── Criação do card ───────────────────────────────────
+        // ── 6. Criação do card de prestador ───────────────────
+
+        /**
+         * Constrói o card completo de um prestador no catálogo público.
+         * Clique no card ou em "Saiba Mais" navega para o HotSite do prestador.
+         * @param {Object} prest - Dados do prestador
+         * @returns {HTMLElement} Elemento do card
+         */
         function criarCard(prest) {
             var card = document.createElement('div');
             card.className = 'prest-card';
             card.dataset.email = prest.email;
 
+            // Área da foto
             card.appendChild(fotoEl(prest));
 
+            // Corpo do card
             var corpo = document.createElement('div');
             corpo.className = 'prest-card-corpo';
 
+            // Nome do prestador
             var nomeEl = document.createElement('div');
             nomeEl.className = 'prest-card-nome';
             nomeEl.textContent = prest.nome;
             corpo.appendChild(nomeEl);
 
-            // Avaliação
+            // Estrelas de avaliação (somente se houver avaliações)
             var av = mediaAval(prest.email);
             if (av.total > 0) {
                 var rEl = document.createElement('div');
@@ -6247,11 +6017,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 for (var i = 1; i <= 5; i++) {
                     st += '<i class="bi ' + (i <= Math.round(av.media) ? 'bi-star-fill' : 'bi-star') + '"></i>';
                 }
-                rEl.innerHTML = st + '<span class="txt-nota">' + av.media.toFixed(1) + ' (' + av.total + ')</span>';
+                rEl.innerHTML = st +
+                    '<span class="txt-nota">' + av.media.toFixed(1) + ' (' + av.total + ')</span>';
                 corpo.appendChild(rEl);
             }
 
-            // Descrição
+            // Descrição resumida
             var desc = (prest.descricao || prest.especializacao || '').trim();
             if (desc) {
                 var dEl = document.createElement('div');
@@ -6260,14 +6031,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 corpo.appendChild(dEl);
             }
 
-            // Contato
+            // Informações de contato (somente exibição)
             var ct = document.createElement('div');
             ct.className = 'prest-card-contato';
-            if (prest.tel) ct.innerHTML += '<span><i class="bi bi-telephone-fill"></i>' + esc(prest.tel) + '</span>';
+            if (prest.tel) {
+                ct.innerHTML += '<span><i class="bi bi-telephone-fill"></i>' + esc(prest.tel) + '</span>';
+            }
             ct.innerHTML += '<span><i class="bi bi-envelope-fill"></i>' + esc(prest.email) + '</span>';
             corpo.appendChild(ct);
 
-            // Botão — sempre "Saiba Mais" → hotsite (convidados podem visualizar)
+            // Ação: "Saiba Mais" → HotSite do prestador (modo somente visualização)
             var ac = document.createElement('div');
             ac.className = 'prest-card-acoes';
             var btnS = document.createElement('button');
@@ -6278,10 +6051,12 @@ document.addEventListener('DOMContentLoaded', function () {
             corpo.appendChild(ac);
             card.appendChild(corpo);
 
-            // Navega para o HotSite ao clicar no card ou no botão
+            // Navegação para o HotSite do prestador
             function _irHotsite(e) {
                 if (e) e.stopPropagation();
-                window.location.href = '/paginasPrestador/prestadorHotsite.html?email=' + encodeURIComponent(prest.email);
+                window.location.href =
+                    '/paginasPrestador/prestadorHotsite.html?email=' +
+                    encodeURIComponent(prest.email);
             }
             btnS.addEventListener('click', _irHotsite);
             card.addEventListener('click', function () { _irHotsite(); });
@@ -6289,29 +6064,55 @@ document.addEventListener('DOMContentLoaded', function () {
             return card;
         }
 
-        // ── Filtros ───────────────────────────────────────────
+        // ── 7. Filtros por categoria ──────────────────────────
+
+        /**
+         * Renderiza as pílulas de filtro de categoria.
+         * Mescla as categorias dos prestadores com a lista fixa CATS_FIXAS,
+         * garantindo que todas as categorias padrão apareçam mesmo sem
+         * prestadores cadastrados nelas.
+         * @param {string[]} cats - Categorias dos prestadores cadastrados
+         */
         function renderFiltros(cats) {
             if (!filtrosCont) return;
+
+            // Mescla categorias fixas com quaisquer extras dos prestadores
+            var todasCats = CATS_FIXAS.slice();
+            cats.forEach(function (c) {
+                if (todasCats.indexOf(c) < 0) todasCats.push(c);
+            });
+            todasCats.sort();
+
+            // Preserva o botão "Todos" que existe no HTML
             var btnTodos = filtrosCont.querySelector('.filtro-pill-todos');
             filtrosCont.innerHTML = '';
             if (btnTodos) filtrosCont.appendChild(btnTodos);
-            cats.slice().sort().forEach(function (cat) {
+
+            todasCats.forEach(function (cat) {
                 var btn = document.createElement('button');
                 btn.className = 'filtro-pill';
                 btn.dataset.cat = cat;
                 btn.innerHTML = '<i class="bi ' + (ICO[cat] || 'bi-tag-fill') + '"></i> ' + cat;
                 filtrosCont.appendChild(btn);
             });
+
+            // Conecta eventos de clique em todos os filtros
             filtrosCont.querySelectorAll('.filtro-pill').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     catAtiva = btn.dataset.cat || '';
-                    filtrosCont.querySelectorAll('.filtro-pill').forEach(function (b) { b.classList.remove('ativo'); });
+                    filtrosCont.querySelectorAll('.filtro-pill').forEach(function (b) {
+                        b.classList.remove('ativo');
+                    });
                     btn.classList.add('ativo');
                     filtrar(catAtiva);
                 });
             });
         }
 
+        /**
+         * Exibe ou oculta as seções por categoria conforme o filtro ativo.
+         * @param {string} cat - Categoria selecionada (vazio = todas)
+         */
         function filtrar(cat) {
             var secoes = secoesEl.querySelectorAll('.catalogo-secao');
             var vis = 0;
@@ -6322,55 +6123,69 @@ document.addEventListener('DOMContentLoaded', function () {
             if (vazioEl) vazioEl.style.display = vis ? 'none' : 'block';
         }
 
-        // ── Renderização principal ────────────────────────────
+        // ── 8. Renderização principal do catálogo ─────────────
+
+        /**
+         * Popula o DOM com as seções de categoria e os cards de prestadores.
+         * @param {Array} lista - Lista de prestadores a exibir
+         */
         function renderCatalogo(lista) {
             loadingEl.style.display = 'none';
+
+            // Sempre renderiza os filtros (com as categorias fixas)
+            var grupos = lista.length ? agrupar(lista) : {};
+            var cats   = Object.keys(grupos).sort();
+            renderFiltros(cats);
+
             if (!lista.length) {
                 if (vazioEl) vazioEl.style.display = 'block';
                 return;
             }
-            var grupos = agrupar(lista);
-            var cats   = Object.keys(grupos).sort();
-            renderFiltros(cats);
+
             secoesEl.innerHTML = '';
             cats.forEach(function (cat) {
                 var lista2 = grupos[cat];
                 var ico    = ICO[cat] || 'bi-tag-fill';
-                var secao  = document.createElement('div');
+
+                var secao = document.createElement('div');
                 secao.className = 'catalogo-secao';
                 secao.dataset.cat = cat;
+
                 var titulo = document.createElement('div');
                 titulo.className = 'catalogo-secao-titulo';
                 titulo.innerHTML =
                     '<span class="cat-icon"><i class="bi ' + ico + '"></i></span>' +
                     '<span>' + cat + '</span>' +
-                    '<span class="badge-count">' + lista2.length + ' prestador' + (lista2.length !== 1 ? 'es' : '') + '</span>';
+                    '<span class="badge-count">' + lista2.length +
+                    ' prestador' + (lista2.length !== 1 ? 'es' : '') + '</span>';
+
                 var grid = document.createElement('div');
                 grid.className = 'catalogo-grid';
                 lista2.forEach(function (p) { grid.appendChild(criarCard(p)); });
+
                 secao.appendChild(titulo);
                 secao.appendChild(grid);
                 secoesEl.appendChild(secao);
             });
 
-            // Aplica filtro de categoria da URL
+            // Aplica filtro de categoria pré-selecionado via URL (?tipo=...)
             if (tipoUrl) {
                 catAtiva = tipoUrl;
-                var btnAtivo = filtrosCont
-                    ? filtrosCont.querySelector('.filtro-pill[data-cat="' + tipoUrl + '"]')
-                    : null;
                 if (filtrosCont) {
-                    filtrosCont.querySelectorAll('.filtro-pill').forEach(function (b) { b.classList.remove('ativo'); });
+                    filtrosCont.querySelectorAll('.filtro-pill').forEach(function (b) {
+                        b.classList.remove('ativo');
+                    });
+                    var btnAtivo = filtrosCont.querySelector('.filtro-pill[data-cat="' + tipoUrl + '"]');
+                    if (btnAtivo) btnAtivo.classList.add('ativo');
                 }
-                if (btnAtivo) btnAtivo.classList.add('ativo');
                 filtrar(tipoUrl);
             }
         }
 
-        // ── Executa ───────────────────────────────────────────
+        // ── 9. Executa a renderização ─────────────────────────
         var lista = obterPrestadores();
         if (!lista.length) {
-            // Tenta novamente após 400 ms (localStorage pode ainda estar carregando)
+            // Aguarda possível escrita assíncrona no localStorage (ex.: seed)
             setTimeout(function () {
                 renderCatalogo(obterPrestadores());
             }, 400);
