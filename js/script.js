@@ -312,11 +312,18 @@ document.addEventListener('DOMContentLoaded', function () {
     function salvarAgendamentosPrestador(emailPrest, ags) {
         DB.set('agendamentos_' + emailPrest, ags);
     }
-    function _atualizarStatusClienteAgendamento(agId, emailCliente, novoStatus) {
+    function _atualizarStatusClienteAgendamento(agId, emailCliente, novoStatus, extra) {
         if (!emailCliente || !agId) return;
         var cliAgs = DB.get('clienteAgendamentos_' + emailCliente) || [];
         var idx = cliAgs.findIndex(function (a) { return a.id === agId; });
-        if (idx >= 0) { cliAgs[idx].status = novoStatus; cliAgs[idx].atualizadoEm = new Date().toISOString(); DB.set('clienteAgendamentos_' + emailCliente, cliAgs); }
+        if (idx >= 0) {
+            cliAgs[idx].status = novoStatus;
+            cliAgs[idx].atualizadoEm = new Date().toISOString();
+            if (extra && typeof extra === 'object') {
+                Object.keys(extra).forEach(function (k) { cliAgs[idx][k] = extra[k]; });
+            }
+            DB.set('clienteAgendamentos_' + emailCliente, cliAgs);
+        }
     }
 
     // =========================================================
@@ -1443,7 +1450,22 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
 
-                li.innerHTML = '<div><div class="agenda-slot-dia">' + diaLabel + '</div><div class="agenda-slot-tempo">' + horario + '</div></div><div><div class="agenda-cliente-nome">' + (ag.cliente || '—') + '</div><p class="agenda-cliente-servico">Serviço: ' + (ag.servico || '—') + '</p><p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>' + (ag.endereco || '') + '</p></div><div class="agenda-status-area"><span class="agenda-status-tag ' + statusTag + '">' + statusTexto + '</span><div class="agenda-botoes">' + botoesHTML + '</div></div>';
+                // Badge extra: "Serviço em aberto" para confirmados, "Pago" para concluídos
+                var badgeExtra = '';
+                if (aba === 'proximos' && ag.status === 'confirmado') {
+                    badgeExtra = '<span style="display:inline-block;margin-top:4px;background:#0d6efd;color:#fff;' +
+                        'font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:20px;' +
+                        'white-space:nowrap;"><i class="bi bi-clock me-1"></i>Serviço em aberto</span>';
+                } else if (ag.status === 'concluido' && ag.pago) {
+                    badgeExtra = '<span style="display:inline-block;margin-top:4px;background:#198754;color:#fff;' +
+                        'font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:20px;' +
+                        'white-space:nowrap;"><i class="bi bi-check-circle-fill me-1"></i>Pago</span>';
+                }
+                // Subcategorias do cliente
+                var subcatHtml = (ag.subcategoriasCliente && ag.subcategoriasCliente.length > 0)
+                    ? '<p class="agenda-cliente-servico" style="font-size:.78rem;color:#555;"><i class="bi bi-list-check me-1"></i>' + ag.subcategoriasCliente.map(function(sc){ return _escaparHtml(sc); }).join(', ') + '</p>'
+                    : '';
+                li.innerHTML = '<div><div class="agenda-slot-dia">' + diaLabel + '</div><div class="agenda-slot-tempo">' + horario + '</div></div><div><div class="agenda-cliente-nome">' + (ag.cliente || '—') + '</div><p class="agenda-cliente-servico">Serviço: ' + (ag.servico || '—') + '</p>' + subcatHtml + '<p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>' + (ag.endereco || '') + '</p></div><div class="agenda-status-area"><span class="agenda-status-tag ' + statusTag + '">' + statusTexto + '</span>' + badgeExtra + '<div class="agenda-botoes">' + botoesHTML + '</div></div>';
                 listaEl.appendChild(li);
             });
         }
@@ -1547,6 +1569,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 var diaLabel = _formatarDiaLabel(ag.data);
                 var horario  = ag.horario || '—';
                 var botoesHTML = '<a href="#" class="agenda-btn" data-acao="detalhes"><i class="bi bi-info-circle me-1"></i>Detalhes</a>';
+                var pagoBadge = ag.pago
+                    ? '<span style="display:inline-block;margin-top:4px;background:#198754;color:#fff;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;"><i class="bi bi-check-circle-fill me-1"></i>Pago</span>'
+                    : '';
+                var subcatHtml = (ag.subcategoriasCliente && ag.subcategoriasCliente.length > 0)
+                    ? '<p class="agenda-cliente-servico" style="font-size:.78rem;color:#555;"><i class="bi bi-list-check me-1"></i>' + ag.subcategoriasCliente.map(function(sc){ return _escaparHtml(sc); }).join(', ') + '</p>'
+                    : '';
                 li.innerHTML =
                     '<div>' +
                         '<div class="agenda-slot-dia">'    + diaLabel + '</div>' +
@@ -1555,10 +1583,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<div>' +
                         '<div class="agenda-cliente-nome">' + (ag.cliente || '—') + '</div>' +
                         '<p class="agenda-cliente-servico">Serviço: ' + (ag.servico || '—') + '</p>' +
+                        subcatHtml +
                         '<p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>' + (ag.endereco || '') + '</p>' +
                     '</div>' +
                     '<div class="agenda-status-area">' +
-                        '<span class="agenda-status-tag concluido">Concluído</span>' +
+                        '<span class="agenda-status-tag concluido">Concluído</span>' + pagoBadge +
                         '<div class="agenda-botoes">' + botoesHTML + '</div>' +
                     '</div>';
                 listaEl.appendChild(li);
@@ -1653,6 +1682,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         agendamentos[idx].status      = 'concluido';
         agendamentos[idx].concluidoEm = new Date().toISOString();
+        agendamentos[idx].pago        = true;
+        agendamentos[idx].valorPago   = parseFloat(agendamentos[idx].valor) || 0;
         salvarAgs();
 
         // Registra o recebimento (usa valor já salvo no agendamento, se houver)
@@ -1688,10 +1719,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!motivo) { alert('Selecione um motivo de cancelamento.'); return; }
                 var obs = (document.getElementById('motivo-observacao') || {}).value || '';
                 var idx = agendamentos.findIndex(function (a) { return a.id === ag.id; });
-                if (idx >= 0) { agendamentos[idx].status = 'cancelado'; agendamentos[idx].motivoCancelamento = motivo + (obs ? ' — ' + obs : ''); salvarAgs(); }
+                var motivoCompleto = motivo + (obs ? ' — ' + obs : '');
+                if (idx >= 0) { agendamentos[idx].status = 'cancelado'; agendamentos[idx].motivoCancelamento = motivoCompleto; salvarAgs(); }
                 if (ag.clienteEmail) {
-                    _atualizarStatusClienteAgendamento(ag.id, ag.clienteEmail, 'cancelado');
-                    sgCriarNotificacao(ag.clienteEmail, 'cancelamento', { servico: ag.servico, motivo: motivo });
+                    _atualizarStatusClienteAgendamento(ag.id, ag.clienteEmail, 'cancelado', { motivoCancelamento: motivoCompleto });
+                    sgCriarNotificacao(ag.clienteEmail, 'cancelamento', { servico: ag.servico, motivo: motivoCompleto });
                 }
                 inst.hide();
                 exibirToast('Agendamento cancelado.');
@@ -3045,11 +3077,58 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         var stats = calcularEstatisticas();
+
+        // Sprint 1 — inclui solicitações novas (orcamento_pendente) na contagem de Pedidos em Aberto
+        (function _complementarStatComSolicitacoes() {
+            var usu0 = obterUsuarioLogado();
+            var emailCli0 = usu0 ? usu0.email : '';
+            var agsAll0 = DB.get('clienteAgendamentos_' + emailCli0) || [];
+            var countAtivos = agsAll0.filter(function (a) {
+                return a.status === 'orcamento_pendente' || a.status === 'orcamento_enviado';
+            }).length;
+            // Soma com emAberto existente (pedidos estáticos da lista)
+            stats.emAberto += countAtivos;
+        }());
+
         atualizarStatCards(stats);
 
         // Links nos stat cards
         var cards = document.querySelectorAll('.cli-stat-card');
-        if (cards[0]) { var info0 = cards[0].querySelector('.cli-stat-info'); if (info0) { info0.innerHTML = '<i class="bi bi-hourglass"></i> <a href="#" id="link-aguardando" style="color:inherit;text-decoration:underline;">Aguardando Confirmação</a>'; var linkAg = document.getElementById('link-aguardando'); if (linkAg) linkAg.addEventListener('click', function (e) { e.preventDefault(); _abrirModalAguardandoConf(criarModal); }); } }
+        /* Sprint 1 — link do stat card mostra estado correto para cada status */
+        (function _configurarLinkAguardando() {
+            var usu2 = obterUsuarioLogado();
+            var emailCli2 = usu2 ? usu2.email : '';
+            var agsCliAll = DB.get('clienteAgendamentos_' + emailCli2) || [];
+            var pendEnviado  = agsCliAll.filter(function (a) { return a.status === 'orcamento_enviado'; });
+            var pendAguard   = agsCliAll.filter(function (a) { return a.status === 'orcamento_pendente'; });
+            var cancelados   = agsCliAll.filter(function (a) { return a.status === 'cancelado'; });
+            if (cards[0]) {
+                var info0 = cards[0].querySelector('.cli-stat-info');
+                if (info0) {
+                    if (pendEnviado.length > 0) {
+                        // Sprint 2 — sem links; ações ficam na seção inline sprint1-sol-card
+                        info0.innerHTML =
+                            '<i class="bi bi-check-circle" style="color:#198754;"></i> Proposta recebida — ver detalhes abaixo';
+                    } else if (pendAguard.length > 0) {
+                        // Sprint 2 — texto simples, sem link clicável
+                        info0.innerHTML =
+                            '<i class="bi bi-hourglass"></i> Aguardando confirmação do prestador';
+                    } else if (cancelados.length > 0) {
+                        // Prestador cancelou — permite ver o motivo
+                        info0.innerHTML =
+                            '<i class="bi bi-x-circle" style="color:#dc3545;"></i> ' +
+                            '<a href="#" id="link-solicitacao-cancelada" style="color:#dc3545;text-decoration:underline;">Solicitação cancelada</a>';
+                        var linkCan = document.getElementById('link-solicitacao-cancelada');
+                        if (linkCan) linkCan.addEventListener('click', function (e) { e.preventDefault(); _abrirModalSolicitacaoCancelada(cancelados, criarModal); });
+                    } else {
+                        info0.innerHTML = '<i class="bi bi-hourglass"></i> Nenhum orçamento pendente';
+                    }
+                }
+            }
+        }());
+
+        // Sprint 1 — Renderiza seção inline de solicitações em andamento
+        _renderizarSolicitacoesPendentes();
         if (cards[1]) { var info1 = cards[1].querySelector('.cli-stat-info'); if (info1) { info1.innerHTML = '<i class="bi bi-currency-dollar"></i> <a href="#" id="link-pagamentos" style="color:inherit;text-decoration:underline;">Ver detalhes</a>'; var linkPag = document.getElementById('link-pagamentos'); if (linkPag) linkPag.addEventListener('click', function (e) { e.preventDefault(); var modal = criarModal('modalPagamentos', '<i class="bi bi-currency-dollar me-2"></i>Pagamentos', '#FFC300', '<p>Total pago: <strong>R$ ' + stats.totalPago.toFixed(2).replace('.', ',') + '</strong></p>'); new bootstrap.Modal(modal).show(); }); } }
         if (cards[2]) { var info2 = cards[2].querySelector('.cli-stat-info'); if (info2) { info2.innerHTML = '<i class="bi bi-patch-check"></i> <a href="#" id="link-historico" style="color:inherit;text-decoration:underline;">Ver Histórico</a>'; var linkHist = document.getElementById('link-historico'); if (linkHist) linkHist.addEventListener('click', function (e) { e.preventDefault(); var conteudo = stats.pedidosConcluidos.length === 0 ? '<p class="text-muted">Nenhum concluído.</p>' : '<table class="table"><thead><tr><th>#</th><th>Serviço</th><th>Prestador</th><th>Valor</th></tr></thead><tbody>' + stats.pedidosConcluidos.map(function (p, i) { return '<tr><td>' + (i + 1) + '</td><td>' + p.servico + '</td><td>' + p.profissional + '</td><td>R$' + p.valor.toFixed(2).replace('.', ',') + '</td></tr>'; }).join('') + '</tbody></table>'; var modal = criarModal('modalHistorico', '<i class="bi bi-patch-check me-2"></i>Histórico', '#FFC300', conteudo); new bootstrap.Modal(modal).show(); }); } }
 
@@ -3130,18 +3209,418 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    /* ── Sprint 1 ─────────────────────────────────────────────────────────────────
+       Modal "Aguardando Confirmação": exibe APENAS os agendamentos com status
+       orcamento_enviado, com todos os dados do orçamento retornado pelo prestador.
+       Permite aceitar ou recusar diretamente por aqui.
+       Após a última ação, remove o link do stat card chamando
+       _atualizarLinkAguardandoStatCard().
+    ─────────────────────────────────────────────────────────────────────────── */
     function _abrirModalAguardandoConf(criarModal) {
         var usu = obterUsuarioLogado();
         var emailCli = usu ? usu.email : '';
-        var ags = DB.get('clienteAgendamentos_' + emailCli) || [];
-        var html = ags.length === 0 ? '<p class="text-muted text-center py-3">Nenhuma solicitação registrada.</p>' :
-            '<div class="table-responsive"><table class="table table-bordered"><thead class="table-dark"><tr><th>#</th><th>Serviço</th><th>Prestador</th><th>Data</th><th>Status</th></tr></thead><tbody>' +
-            ags.map(function (ag, i) {
-                var statusMap = { pendente: { cor: '#0d6efd', texto: 'Aguardando' }, confirmado: { cor: '#198754', texto: 'Confirmado' }, cancelado: { cor: '#dc3545', texto: 'Cancelado' } };
-                var st = statusMap[ag.status] || { cor: '#6c757d', texto: ag.status || '—' };
-                return '<tr><td>' + (i + 1) + '</td><td>' + (ag.servico || '—') + '</td><td>' + (ag.nomePrestador || '—') + '</td><td>' + (ag.data || '—') + '</td><td><span class="badge" style="background:' + st.cor + ';">' + st.texto + '</span></td></tr>';
-            }).join('') + '</tbody></table></div>';
-        var modal = criarModal('modalAguardando', '<i class="bi bi-hourglass me-2"></i>Meus Agendamentos', '#FFC300', html);
+        var agsAll  = DB.get('clienteAgendamentos_' + emailCli) || [];
+        /* Filtra somente os que ainda estão aguardando resposta do cliente */
+        var ags = agsAll.filter(function (a) { return a.status === 'orcamento_enviado'; });
+
+        function _esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        var html;
+        if (ags.length === 0) {
+            html = '<p class="text-muted text-center py-4"><i class="bi bi-check-all me-2" style="color:#198754;font-size:1.2rem;"></i>Nenhum orçamento pendente de confirmação.</p>';
+        } else {
+            html = ags.map(function (ag) {
+                /* Busca dados completos do orçamento no registro do prestador */
+                var agsPrest = obterAgendamentosPrestador(ag.emailPrestador || '');
+                var agP = agsPrest.find(function (a) { return a.id === ag.id; }) || {};
+
+                var valor        = agP.valor !== undefined ? parseFloat(agP.valor) : null;
+                var formaPgto    = agP.formaPagamento || ag.formaPagamentoPreferida || '';
+                var parcelas     = agP.parcelas || '';
+                var valorParcela = agP.valorParcela || '';
+                var local        = agP.clienteEndereco || '';
+                var dataFmt      = (ag.data || '').split('-').reverse().join('/');
+                var horario      = ag.horario ? ag.horario.split(' - ')[0] : '';
+                var subcats      = (ag.subcategoriasCliente || []);
+
+                var linhas = '';
+                /* Nome do Prestador */
+                linhas += '<p style="margin:4px 0;font-size:.88rem;"><i class="bi bi-person-fill me-1" style="color:#146ADB;"></i><strong>Prestador:</strong> ' + _esc(ag.nomePrestador) + '</p>';
+                /* Tipo de serviço / subcategoria */
+                linhas += '<p style="margin:4px 0;font-size:.88rem;"><i class="bi bi-tools me-1" style="color:#146ADB;"></i><strong>Serviço:</strong> ' + _esc(ag.servico);
+                if (subcats.length > 0) linhas += ' &mdash; <span style="color:#555;">' + subcats.map(_esc).join(', ') + '</span>';
+                linhas += '</p>';
+                /* Data e hora */
+                if (dataFmt || horario) {
+                    linhas += '<p style="margin:4px 0;font-size:.88rem;"><i class="bi bi-calendar3 me-1" style="color:#146ADB;"></i><strong>Data/Hora:</strong> ' + _esc(dataFmt) + (horario ? ' às ' + _esc(horario) : '') + '</p>';
+                }
+                /* Local */
+                if (local) {
+                    linhas += '<p style="margin:4px 0;font-size:.88rem;"><i class="bi bi-geo-alt-fill me-1" style="color:#146ADB;"></i><strong>Local:</strong> ' + _esc(local) + '</p>';
+                }
+                /* Valor */
+                if (valor !== null) {
+                    linhas += '<p style="margin:4px 0;font-size:.88rem;"><i class="bi bi-cash-coin me-1" style="color:#146ADB;"></i><strong>Valor:</strong> R$ ' + valor.toFixed(2).replace('.', ',') + '</p>';
+                }
+                /* Forma de pagamento */
+                if (formaPgto) {
+                    linhas += '<p style="margin:4px 0;font-size:.88rem;"><i class="bi bi-credit-card me-1" style="color:#146ADB;"></i><strong>Pagamento:</strong> ' + _esc(formaPgto);
+                    if (formaPgto === 'Cartão' && parcelas) {
+                        linhas += ' — até ' + _esc(String(parcelas)) + ' parcela(s)' + (valorParcela ? ' de R$ ' + parseFloat(valorParcela).toFixed(2).replace('.', ',') : '');
+                    }
+                    linhas += '</p>';
+                }
+
+                return '<div class="notif-item-cli-aguardando" data-ag-id="' + _esc(ag.id) + '" ' +
+                    'data-prest-email="' + _esc(ag.emailPrestador) + '" ' +
+                    'data-prest-nome="' + _esc(ag.nomePrestador) + '" ' +
+                    'data-servico="' + _esc(ag.servico) + '" ' +
+                    'style="border-left:4px solid #146ADB;padding:12px 16px;background:#f0f4ff;border-radius:0 10px 10px 0;margin-bottom:14px;transition:opacity .3s;">' +
+                    '<div style="font-weight:700;font-size:.95rem;margin-bottom:8px;color:#0d3d78;">' +
+                    '<i class="bi bi-hourglass-split me-2" style="color:#146ADB;"></i>Orçamento Recebido — Aguardando sua Confirmação' +
+                    '</div>' +
+                    linhas +
+                    '<div style="display:flex;gap:8px;margin-top:12px;">' +
+                    '<button type="button" class="btn btn-danger btn-sm btn-aw-recusar">' +
+                    '<i class="bi bi-x-circle me-1"></i>Recusar</button>' +
+                    '<button type="button" class="btn btn-success btn-sm btn-aw-aceitar">' +
+                    '<i class="bi bi-calendar-check me-1"></i>Aceitar e Confirmar</button>' +
+                    '</div>' +
+                    '</div>';
+            }).join('');
+        }
+
+        /* Reutiliza criarModal para manter o padrão visual */
+        var modal = criarModal('modalAguardando', '<i class="bi bi-hourglass me-2"></i>Orçamentos Aguardando Confirmação', '#146ADB', html);
+        var bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+
+        /* ── Botões Recusar ── */
+        modal.querySelectorAll('.btn-aw-recusar').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var card       = btn.closest('.notif-item-cli-aguardando');
+                var agId       = card.dataset.agId;
+                var prestEmail = card.dataset.prestEmail;
+                var servico    = card.dataset.servico;
+                if (!confirm('Tem certeza que deseja recusar este orçamento?')) return;
+
+                /* Atualiza storage do prestador */
+                var agsPr = obterAgendamentosPrestador(prestEmail);
+                var idxPr = agsPr.findIndex(function (a) { return a.id === agId; });
+                if (idxPr >= 0) { agsPr[idxPr].status = 'orcamento_recusado'; salvarAgendamentosPrestador(prestEmail, agsPr); }
+
+                /* Atualiza storage do cliente */
+                _atualizarStatusClienteAgendamento(agId, emailCli, 'orcamento_recusado');
+
+                /* Notifica prestador */
+                sgCriarNotificacao(prestEmail, 'orcamento_recusado', { agendamentoId: agId, servico: servico });
+
+                /* Marca notificação correspondente como lida */
+                var notifsC = sgObterNotificacoes(emailCli);
+                var nOrc = notifsC.find(function (n) { return n.tipo === 'orcamento_enviado' && (n.dados || {}).agendamentoId === agId; });
+                if (nOrc) sgMarcarNotifLidaPorId(emailCli, nOrc.id);
+
+                /* Remove card do modal com fade */
+                card.style.opacity = '0';
+                setTimeout(function () {
+                    card.remove();
+                    var restantes = modal.querySelectorAll('.notif-item-cli-aguardando');
+                    if (restantes.length === 0) {
+                        modal.querySelector('.modal-body').innerHTML =
+                            '<p class="text-muted text-center py-4"><i class="bi bi-check-all me-2" style="color:#198754;font-size:1.2rem;"></i>Todos os orçamentos foram respondidos!</p>';
+                        setTimeout(function () { bsModal.hide(); }, 1200);
+                    }
+                }, 320);
+
+                _atualizarLinkAguardandoStatCard(emailCli);
+                if (typeof exibirToast === 'function') exibirToast('Orçamento recusado. O prestador foi notificado.');
+            });
+        });
+
+        /* ── Botões Aceitar ── */
+        modal.querySelectorAll('.btn-aw-aceitar').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var card       = btn.closest('.notif-item-cli-aguardando');
+                var agId       = card.dataset.agId;
+                var prestEmail = card.dataset.prestEmail;
+                var prestNome  = card.dataset.prestNome;
+                var servico    = card.dataset.servico;
+
+                /* Atualiza storage do prestador */
+                var agsPr = obterAgendamentosPrestador(prestEmail);
+                var idxPr = agsPr.findIndex(function (a) { return a.id === agId; });
+                if (idxPr >= 0) { agsPr[idxPr].status = 'confirmado'; salvarAgendamentosPrestador(prestEmail, agsPr); }
+
+                /* Atualiza storage do cliente */
+                _atualizarStatusClienteAgendamento(agId, emailCli, 'confirmado');
+
+                /* Notifica prestador */
+                sgCriarNotificacao(prestEmail, 'confirmacao', {
+                    agendamentoId: agId, servico: servico,
+                    clienteNome: usu ? usu.nome : ''
+                });
+
+                /* Marca notificação correspondente como lida */
+                var notifsC = sgObterNotificacoes(emailCli);
+                var nOrc = notifsC.find(function (n) { return n.tipo === 'orcamento_enviado' && (n.dados || {}).agendamentoId === agId; });
+                if (nOrc) sgMarcarNotifLidaPorId(emailCli, nOrc.id);
+
+                /* Remove card do modal com fade */
+                card.style.opacity = '0';
+                setTimeout(function () {
+                    card.remove();
+                    var restantes = modal.querySelectorAll('.notif-item-cli-aguardando');
+                    if (restantes.length === 0) {
+                        modal.querySelector('.modal-body').innerHTML =
+                            '<p class="text-muted text-center py-4"><i class="bi bi-check-all me-2" style="color:#198754;font-size:1.2rem;"></i>Agendamento confirmado com sucesso!</p>';
+                        setTimeout(function () { bsModal.hide(); }, 1200);
+                    }
+                }, 320);
+
+                _atualizarLinkAguardandoStatCard(emailCli);
+                if (typeof exibirToast === 'function') exibirToast('Agendamento confirmado! Serviço com ' + prestNome + ' está agendado.');
+            });
+        });
+    }
+
+    /* ── Sprint 1 — helper: atualiza (ou remove) o link "Aguardando Confirmação"
+       no stat card após o cliente aceitar ou recusar um orçamento.             */
+    function _atualizarLinkAguardandoStatCard(emailCli) {
+        var agsAtual = DB.get('clienteAgendamentos_' + (emailCli || '')) || [];
+        var pendEnviado = agsAtual.filter(function (a) { return a.status === 'orcamento_enviado'; });
+        var pendAguard  = agsAtual.filter(function (a) { return a.status === 'orcamento_pendente'; });
+        var cancelados  = agsAtual.filter(function (a) { return a.status === 'cancelado'; });
+        var card0 = document.querySelector('.cli-stat-card.destaque-azul, .cli-stat-card:first-child');
+        if (!card0) { var todos = document.querySelectorAll('.cli-stat-card'); if (todos.length > 0) card0 = todos[0]; }
+        if (!card0) return;
+        var info0 = card0.querySelector('.cli-stat-info');
+        if (!info0) return;
+
+        function _cm(idM, titulo, corT, body) {
+            var ex2 = document.getElementById(idM); if (ex2) ex2.remove();
+            var m = document.createElement('div');
+            m.className = 'modal fade'; m.id = idM; m.setAttribute('tabindex', '-1');
+            m.innerHTML = '<div class="modal-dialog modal-lg"><div class="modal-content">' +
+                '<div class="modal-header" style="background-color:' + corT + ';color:' + (corT === '#dc3545' ? '#fff' : '#fff') + ';">' +
+                '<h5 class="modal-title">' + titulo + '</h5>' +
+                '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>' +
+                '<div class="modal-body">' + body + '</div>' +
+                '<div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button></div>' +
+                '</div></div>';
+            document.body.appendChild(m); return m;
+        }
+
+        if (pendEnviado.length > 0) {
+            // Sprint 2 — sem links de ação no stat card; ações estão na seção inline
+            info0.innerHTML = '<i class="bi bi-check-circle" style="color:#198754;"></i> Proposta recebida — ver detalhes abaixo';
+        } else if (pendAguard.length > 0) {
+            // Sprint 2 — texto simples, sem link clicável
+            info0.innerHTML = '<i class="bi bi-hourglass"></i> Aguardando confirmação do prestador';
+        } else if (cancelados.length > 0) {
+            info0.innerHTML = '<i class="bi bi-x-circle" style="color:#dc3545;"></i> <a href="#" id="link-solicitacao-cancelada" style="color:#dc3545;text-decoration:underline;">Solicitação cancelada</a>';
+            var lc = document.getElementById('link-solicitacao-cancelada');
+            if (lc) lc.addEventListener('click', function (e) { e.preventDefault(); _abrirModalSolicitacaoCancelada(cancelados, _cm); });
+        } else {
+            info0.innerHTML = '<i class="bi bi-hourglass"></i> Nenhum orçamento pendente';
+        }
+
+        // Atualiza também a seção inline
+        if (typeof _renderizarSolicitacoesPendentes === 'function') _renderizarSolicitacoesPendentes();
+    }
+
+    // =========================================================
+    // SPRINT 1 — HELPERS DE SOLICITAÇÃO DE AGENDAMENTO (CLIENTE)
+    // =========================================================
+
+    /* Renderiza a seção inline #cli-solicitacoes-sprint1 na Área do Cliente
+       com todos os pedidos em andamento (orcamento_pendente, orcamento_enviado, cancelado). */
+    function _renderizarSolicitacoesPendentes() {
+        var usu = obterUsuarioLogado();
+        if (!usu) return;
+        var section = document.getElementById('cli-solicitacoes-sprint1');
+        var lista   = document.getElementById('cli-solicitacoes-lista');
+        if (!section || !lista) return;
+
+        var agsAll = DB.get('clienteAgendamentos_' + usu.email) || [];
+        var ativos = agsAll.filter(function (a) {
+            return a.status === 'orcamento_pendente' ||
+                   a.status === 'orcamento_enviado'  ||
+                   a.status === 'cancelado';
+        });
+
+        if (ativos.length === 0) { section.style.display = 'none'; return; }
+        section.style.display = '';
+
+        function _esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+        lista.innerHTML = ativos.map(function (ag) {
+            var agsPrest   = obterAgendamentosPrestador(ag.emailPrestador || '');
+            var agP        = agsPrest.find(function (a) { return a.id === ag.id; }) || {};
+            var dataFmt    = (ag.data || '').split('-').reverse().join('/');
+            var horario    = ag.horario ? ag.horario.split(' - ')[0] : '';
+            var subcats    = (ag.subcategoriasCliente || []);
+            var valor      = (agP.valor !== undefined && agP.valor !== 0) ? parseFloat(agP.valor) : null;
+            var formaPgto  = agP.formaPagamento || ag.formaPagamentoPreferida || '';
+            var parcelas   = agP.parcelas || '';
+            var valorParc  = agP.valorParcela || '';
+
+            // ── Sprint 2: orcamento_enviado → estilo notif-item-cli com todos os detalhes ──
+            if (ag.status === 'orcamento_enviado') {
+                var ts = ag.criadoEm
+                    ? new Date(ag.criadoEm).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
+                    : '';
+                var linhas = '';
+                linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-tools me-1" style="color:#6c757d;"></i><strong>Serviço:</strong> ' + _esc(ag.servico) + '</p>';
+                linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-person-fill me-1" style="color:#6c757d;"></i><strong>Prestador:</strong> ' + _esc(ag.nomePrestador) + '</p>';
+                if (dataFmt) linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-calendar3 me-1" style="color:#6c757d;"></i><strong>Data:</strong> ' + _esc(dataFmt) + (horario ? ' às ' + _esc(horario) : '') + '</p>';
+                if (valor !== null) linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-cash-coin me-1" style="color:#6c757d;"></i><strong>Valor à vista:</strong> R$ ' + valor.toFixed(2).replace('.', ',') + '</p>';
+                if (formaPgto) linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-credit-card me-1" style="color:#6c757d;"></i><strong>Pagamento:</strong> ' + _esc(formaPgto) + '</p>';
+                if (formaPgto === 'Cartão' && parcelas)
+                    linhas += '<p style="margin:3px 0;font-size:.85rem;padding:5px 10px;background:#fff8e1;border-left:3px solid #FFC300;border-radius:0 6px 6px 0;">' +
+                        '<i class="bi bi-credit-card me-1" style="color:#e6a800;"></i>' +
+                        '<strong>Parcelamento:</strong> até ' + _esc(String(parcelas)) + ' parcela(s)' +
+                        (valorParc ? ' de R$ ' + parseFloat(valorParc).toFixed(2).replace('.', ',') : '') + '</p>';
+                if (ag.descricaoCliente) linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-chat-quote me-1" style="color:#6c757d;"></i><strong>Serviço solicitado:</strong> ' + _esc(ag.descricaoCliente) + '</p>';
+                if (subcats.length > 0)
+                    linhas += '<p style="margin:3px 0;font-size:.85rem;"><i class="bi bi-list-check me-1" style="color:#6c757d;"></i><strong>Serviços selecionados:</strong> ' +
+                        subcats.map(function (sc) {
+                            return '<span style="display:inline-block;background:#FFC300;color:#000;font-size:.78rem;font-weight:700;padding:1px 8px;border-radius:12px;margin:1px 2px;">' + _esc(sc) + '</span>';
+                        }).join('') + '</p>';
+                linhas += '<div style="display:flex;gap:8px;margin-top:10px;">' +
+                    '<button type="button" class="btn btn-danger btn-sm btn-sprint1-recusar" data-ag-id="' + _esc(ag.id) + '" data-prest-email="' + _esc(ag.emailPrestador) + '" data-servico="' + _esc(ag.servico) + '">' +
+                    '<i class="bi bi-x-circle me-1"></i>Recusar Orçamento</button>' +
+                    '<button type="button" class="btn btn-success btn-sm btn-sprint1-confirmar" data-ag-id="' + _esc(ag.id) + '" data-prest-email="' + _esc(ag.emailPrestador) + '" data-servico="' + _esc(ag.servico) + '" data-prest-nome="' + _esc(ag.nomePrestador) + '">' +
+                    '<i class="bi bi-calendar-check me-1"></i>Aceitar e Agendar</button>' +
+                    '</div>';
+                if (ts) linhas += '<p style="margin:6px 0 0;font-size:.76rem;color:#adb5bd;"><i class="bi bi-clock me-1"></i>' + ts + '</p>';
+
+                return '<div class="sprint1-sol-card" data-status="orcamento_enviado" style="margin-bottom:14px;transition:opacity .3s;">' +
+                    '<div class="notif-item-cli" style="border-left:4px solid #146ADB;padding:10px 14px;background:#f8f9fa;border-radius:0 8px 8px 0;">' +
+                    '<div style="font-weight:700;font-size:.92rem;margin-bottom:6px;"><i class="bi bi-file-earmark-text me-2" style="color:#146ADB;font-size:1rem;"></i>Orçamento Recebido do Prestador</div>' +
+                    linhas + '</div></div>';
+            }
+
+            // ── orcamento_pendente ──
+            if (ag.status === 'orcamento_pendente') {
+                return '<div class="sprint1-sol-card" data-status="orcamento_pendente" ' +
+                    'style="border-left:4px solid #146ADB;padding:14px 16px;background:#fafbff;border-radius:0 10px 10px 0;margin-bottom:14px;transition:opacity .3s;">' +
+                    '<div style="font-weight:700;font-size:.9rem;color:#146ADB;margin-bottom:8px;">' +
+                    '<i class="bi bi-hourglass-split me-2"></i>Aguardando confirmação do prestador</div>' +
+                    '<p style="margin:3px 0;font-size:.87rem;"><i class="bi bi-person-fill me-1" style="color:#146ADB;"></i><strong>Prestador:</strong> ' + _esc(ag.nomePrestador) + '</p>' +
+                    '<p style="margin:3px 0;font-size:.87rem;"><i class="bi bi-tools me-1" style="color:#146ADB;"></i><strong>Serviço:</strong> ' + _esc(ag.servico) + (subcats.length > 0 ? ' &mdash; ' + subcats.map(_esc).join(', ') : '') + '</p>' +
+                    (dataFmt ? '<p style="margin:3px 0;font-size:.87rem;"><i class="bi bi-calendar3 me-1" style="color:#146ADB;"></i><strong>Data/Hora:</strong> ' + _esc(dataFmt) + (horario ? ' às ' + _esc(horario) : '') + '</p>' : '') +
+                    '<p style="margin:3px 0;font-size:.87rem;"><i class="bi bi-credit-card me-1" style="color:#146ADB;"></i><strong>Pagamento preferido:</strong> ' + _esc(ag.formaPagamentoPreferida || '—') + '</p>' +
+                    '</div>';
+            }
+
+            // ── cancelado ──
+            var motivoCan = agP.motivoCancelamento || ag.motivoCancelamento || '';
+            return '<div class="sprint1-sol-card" data-status="cancelado" ' +
+                'style="border-left:4px solid #dc3545;padding:14px 16px;background:#fafbff;border-radius:0 10px 10px 0;margin-bottom:14px;transition:opacity .3s;">' +
+                '<div style="font-weight:700;font-size:.9rem;color:#dc3545;margin-bottom:8px;">' +
+                '<i class="bi bi-x-circle-fill me-2"></i>Solicitação cancelada</div>' +
+                '<p style="margin:3px 0;font-size:.87rem;"><i class="bi bi-person-fill me-1" style="color:#dc3545;"></i><strong>Prestador:</strong> ' + _esc(ag.nomePrestador) + '</p>' +
+                '<p style="margin:3px 0;font-size:.87rem;"><i class="bi bi-tools me-1" style="color:#dc3545;"></i><strong>Serviço:</strong> ' + _esc(ag.servico) + '</p>' +
+                '<div style="margin-top:8px;">' +
+                '<a href="#" class="btn-sprint1-ver-motivo" data-ag-id="' + _esc(ag.id) + '" data-motivo="' + _esc(motivoCan) + '" style="color:#dc3545;font-size:.85rem;text-decoration:underline;">' +
+                '<i class="bi bi-info-circle me-1"></i>Ver motivo do cancelamento</a>' +
+                '</div></div>';
+        }).join('');
+
+        // Delegação de clique — Confirmar
+        lista.querySelectorAll('.btn-sprint1-confirmar').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var agId = btn.dataset.agId, prestEmail = btn.dataset.prestEmail;
+                var prestNome = btn.dataset.prestNome, servico = btn.dataset.servico;
+                var agsPr = obterAgendamentosPrestador(prestEmail);
+                var idxPr = agsPr.findIndex(function (a) { return a.id === agId; });
+                if (idxPr >= 0) { agsPr[idxPr].status = 'confirmado'; salvarAgendamentosPrestador(prestEmail, agsPr); }
+                _atualizarStatusClienteAgendamento(agId, usu.email, 'confirmado');
+                sgCriarNotificacao(prestEmail, 'confirmacao', { agendamentoId: agId, servico: servico, clienteNome: usu.nome });
+                var notifsC = sgObterNotificacoes(usu.email);
+                var nOrc = notifsC.find(function (n) { return n.tipo === 'orcamento_enviado' && (n.dados || {}).agendamentoId === agId; });
+                if (nOrc) sgMarcarNotifLidaPorId(usu.email, nOrc.id);
+                if (typeof exibirToast === 'function') exibirToast('Agendamento confirmado! Serviço com ' + prestNome + ' está agendado.');
+                _renderizarSolicitacoesPendentes();
+                _atualizarLinkAguardandoStatCard(usu.email);
+            });
+        });
+
+        // Delegação de clique — Recusar
+        lista.querySelectorAll('.btn-sprint1-recusar').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var agId = btn.dataset.agId, prestEmail = btn.dataset.prestEmail, servico = btn.dataset.servico;
+                if (!confirm('Tem certeza que deseja recusar este orçamento?')) return;
+                var agsPr = obterAgendamentosPrestador(prestEmail);
+                var idxPr = agsPr.findIndex(function (a) { return a.id === agId; });
+                if (idxPr >= 0) { agsPr[idxPr].status = 'orcamento_recusado'; salvarAgendamentosPrestador(prestEmail, agsPr); }
+                _atualizarStatusClienteAgendamento(agId, usu.email, 'orcamento_recusado');
+                sgCriarNotificacao(prestEmail, 'orcamento_recusado', { agendamentoId: agId, servico: servico });
+                var notifsC = sgObterNotificacoes(usu.email);
+                var nOrc = notifsC.find(function (n) { return n.tipo === 'orcamento_enviado' && (n.dados || {}).agendamentoId === agId; });
+                if (nOrc) sgMarcarNotifLidaPorId(usu.email, nOrc.id);
+                if (typeof exibirToast === 'function') exibirToast('Orçamento recusado. O prestador foi notificado.');
+                _renderizarSolicitacoesPendentes();
+                _atualizarLinkAguardandoStatCard(usu.email);
+            });
+        });
+
+        // Delegação de clique — Ver motivo do cancelamento
+        lista.querySelectorAll('.btn-sprint1-ver-motivo').forEach(function (link) {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                var motivo = link.dataset.motivo || 'Motivo não informado pelo prestador.';
+                _abrirModalSolicitacaoCancelada([{ motivoCancelamento: motivo }], function (idM, titulo, corT, body) {
+                    var ex = document.getElementById(idM); if (ex) ex.remove();
+                    var m = document.createElement('div');
+                    m.className = 'modal fade'; m.id = idM; m.setAttribute('tabindex', '-1');
+                    m.innerHTML = '<div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header" style="background-color:' + corT + ';color:#fff;"><h5 class="modal-title">' + titulo + '</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body">' + body + '</div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button></div></div></div>';
+                    document.body.appendChild(m); return m;
+                });
+            });
+        });
+    }
+
+    /* Abre modal mostrando solicitações com status orcamento_pendente */
+    function _abrirModalSolicitacoesAndamento(criarModal) {
+        var usu = obterUsuarioLogado();
+        if (!usu) return;
+        var agsAll = DB.get('clienteAgendamentos_' + usu.email) || [];
+        var pendentes = agsAll.filter(function (a) { return a.status === 'orcamento_pendente'; });
+        function _esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        var html = pendentes.length === 0
+            ? '<p class="text-muted text-center py-4"><i class="bi bi-check-all me-2" style="color:#198754;font-size:1.2rem;"></i>Nenhuma solicitação pendente.</p>'
+            : pendentes.map(function (ag) {
+                var dataFmt = (ag.data || '').split('-').reverse().join('/');
+                var horario = ag.horario ? ag.horario.split(' - ')[0] : '';
+                var subcats = (ag.subcategoriasCliente || []);
+                return '<div style="border-left:4px solid #146ADB;padding:12px 16px;background:#f0f4ff;border-radius:0 10px 10px 0;margin-bottom:14px;">' +
+                    '<div style="font-weight:700;font-size:.92rem;color:#0d3d78;margin-bottom:6px;"><i class="bi bi-hourglass-split me-2" style="color:#146ADB;"></i>Aguardando confirmação do prestador</div>' +
+                    '<p style="margin:3px 0;font-size:.87rem;"><i class="bi bi-person-fill me-1" style="color:#146ADB;"></i><strong>Prestador:</strong> ' + _esc(ag.nomePrestador) + '</p>' +
+                    '<p style="margin:3px 0;font-size:.87rem;"><i class="bi bi-tools me-1" style="color:#146ADB;"></i><strong>Serviço:</strong> ' + _esc(ag.servico) + (subcats.length > 0 ? ' &mdash; ' + subcats.map(_esc).join(', ') : '') + '</p>' +
+                    (dataFmt ? '<p style="margin:3px 0;font-size:.87rem;"><i class="bi bi-calendar3 me-1" style="color:#146ADB;"></i><strong>Data/Hora:</strong> ' + _esc(dataFmt) + (horario ? ' às ' + _esc(horario) : '') + '</p>' : '') +
+                    '<p style="margin:3px 0;font-size:.87rem;"><i class="bi bi-credit-card me-1" style="color:#146ADB;"></i><strong>Pagamento preferido:</strong> ' + _esc(ag.formaPagamentoPreferida || '—') + '</p>' +
+                    '</div>';
+            }).join('');
+        var modal = criarModal('modalSolAndamento', '<i class="bi bi-hourglass-split me-2"></i>Pedidos Aguardando Confirmação', '#146ADB', html);
+        new bootstrap.Modal(modal).show();
+    }
+
+    /* Abre modal mostrando motivo do cancelamento pelo prestador */
+    function _abrirModalSolicitacaoCancelada(cancelados, criarModal) {
+        function _esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        var html = cancelados.map(function (ag) {
+            var motivo = ag.motivoCancelamento || 'Motivo não informado pelo prestador.';
+            return '<div style="border-left:4px solid #dc3545;padding:14px 16px;background:#fff5f5;border-radius:0 10px 10px 0;margin-bottom:12px;">' +
+                '<div style="font-weight:700;font-size:.92rem;color:#dc3545;margin-bottom:8px;"><i class="bi bi-x-circle-fill me-2"></i>Solicitação Cancelada pelo Prestador</div>' +
+                (ag.nomePrestador ? '<p style="margin:3px 0;font-size:.87rem;"><i class="bi bi-person-fill me-1" style="color:#dc3545;"></i><strong>Prestador:</strong> ' + _esc(ag.nomePrestador) + '</p>' : '') +
+                (ag.servico ? '<p style="margin:3px 0;font-size:.87rem;"><i class="bi bi-tools me-1" style="color:#dc3545;"></i><strong>Serviço:</strong> ' + _esc(ag.servico) + '</p>' : '') +
+                '<div style="margin-top:10px;padding:10px 14px;background:#fff;border:1px solid #f5c6cb;border-radius:6px;">' +
+                '<strong style="font-size:.88rem;color:#dc3545;"><i class="bi bi-chat-left-text me-1"></i>Motivo informado pelo prestador:</strong>' +
+                '<p style="margin:6px 0 0;font-size:.88rem;color:#5a0000;">' + _esc(motivo) + '</p>' +
+                '</div></div>';
+        }).join('');
+        var modal = criarModal('modalSolCancelada', '<i class="bi bi-x-zcircle me-2"></i>Solicitação Cancelada', '#dc3545', html);
         new bootstrap.Modal(modal).show();
     }
 
@@ -3585,87 +4064,74 @@ document.addEventListener('DOMContentLoaded', function () {
             preencherTipos();
         }
 
-        var btnAgendar = mainAgendar.querySelector('#btn-solicitar-orcamento, .cta');
+        // Sprint 1 — btnAgendar abre o modal de agenda; a solicitação é criada dentro do callback
+        var btnAgendar = mainAgendar.querySelector('#btn-solicitar-orcamento, .cta-agendar, .cta');
         if (btnAgendar) {
             btnAgendar.addEventListener('click', function (e) {
                 e.preventDefault();
                 if (!estaLogado) { _modalLoginNecessario(); return; }
-                if (!selectPrestador.value) { alert('Selecione um prestador.'); return; }
+                if (!selectPrestador.value) { alert('Selecione um prestador antes de agendar.'); return; }
+
                 var cliServInputV = document.getElementById('cli-servico-desejado');
                 var descricaoCliente = cliServInputV ? (cliServInputV.value || '').trim() : '';
-                if (!descricaoCliente) { alert('Preencha o campo "Informações Adicionais" antes de solicitar o orçamento.'); return; }
-
-                // Sprint 7 — captura e valida a forma de pagamento antes de criar o agendamento,
-                // garantindo que formaPagamentoPreferida seja sempre enviada ao prestador.
+                if (!descricaoCliente) {
+                    if (cliServInputV) { cliServInputV.classList.add('is-invalid'); cliServInputV.focus(); }
+                    alert('Preencha o campo "Informações Adicionais" antes de agendar.');
+                    return;
+                }
                 var pagamentoPref = (document.getElementById('cli-forma-pagamento') || {}).value || '';
-                if (!pagamentoPref) { alert('Selecione a Forma de Pagamento antes de solicitar o orçamento.'); return; }
+                if (!pagamentoPref) { alert('Selecione a Forma de Pagamento antes de agendar.'); return; }
 
-                // Coleta subcategorias selecionadas pelo cliente
                 var subcatsSelecionadas = Array.from(
                     mainAgendar.querySelectorAll('.prest-subcat-cb:checked')
                 ).map(function (cb) { return cb.value; });
 
-                // Sprint 4 — usa slot escolhido pelo cliente no calendário; senão calcula o primeiro disponível
-                var novoId = 'orc-cli-' + Date.now();
-                var dataSlot, horarioSlot, labelSlot;
-                if (slotAtual && slotAtual.data && slotAtual.horario) {
-                    dataSlot   = slotAtual.data;
-                    var _hFimCal = String(parseInt(slotAtual.horario.split(':')[0]) + 1).padStart(2, '0') + ':00';
-                    horarioSlot  = slotAtual.horario + ' - ' + _hFimCal;
-                    labelSlot    = slotAtual.label;
-                } else {
-                    var slots = _calcularSlotsDisponiveis(selectPrestador.value, 30);
-                    dataSlot   = slots.length > 0 ? slots[0].data : '';
-                    var fimH   = slots.length > 0 ? String(parseInt(slots[0].slots[0].split(':')[0]) + 1).padStart(2, '0') + ':00' : '';
-                    horarioSlot  = slots.length > 0 ? (slots[0].slots[0] + ' - ' + fimH) : '';
-                    labelSlot    = slots.length > 0 ? (slots[0].label + ' às ' + slots[0].slots[0]) : '—';
-                }
+                // Abre modal de agenda; cria solicitação ao confirmar horário
+                _abrirModalAgenda(selectPrestador.value, function (slot) {
+                    slotAtual = { data: slot.data, horario: slot.horario, label: slot.label };
+                    var novoId = 'orc-cli-' + Date.now();
+                    var dataSlot    = slot.data;
+                    var fimH        = String(parseInt(slot.horario.split(':')[0]) + 1).padStart(2, '0') + ':00';
+                    var horarioSlot = slot.horario + ' - ' + fimH;
+                    var labelSlot   = slot.label + ' às ' + slot.horario;
 
-                var ags = obterAgendamentosPrestador(selectPrestador.value);
-                var usuData = obterUsuariosCadastrados()[usu.email] || {};
-                var perfil = usuData.perfil || {};
-                ags.push({
-                    id: novoId, status: 'orcamento_pendente',
-                    data: dataSlot, horario: horarioSlot,
-                    cliente: usu.nome, clienteEmail: usu.email,
-                    clienteTel: perfil.tel || '', clienteEndereco: perfil.endereco || '',
-                    servico: selectTipo.value || 'Serviço',
-                    descricaoCliente: descricaoCliente,
-                    subcategoriasCliente: subcatsSelecionadas,
-                    formaPagamentoPreferida: pagamentoPref,
-                    observacoes: '', lembretes: [], valor: 0, formaPagamento: ''
-                });
-                salvarAgendamentosPrestador(selectPrestador.value, ags);
+                    var ags = obterAgendamentosPrestador(selectPrestador.value);
+                    var usuData = obterUsuariosCadastrados()[usu.email] || {};
+                    var perfil = usuData.perfil || {};
+                    ags.push({
+                        id: novoId, status: 'orcamento_pendente',
+                        data: dataSlot, horario: horarioSlot,
+                        cliente: usu.nome, clienteEmail: usu.email,
+                        clienteTel: perfil.tel || '', clienteEndereco: perfil.endereco || '',
+                        servico: selectTipo.value || 'Serviço',
+                        descricaoCliente: descricaoCliente,
+                        subcategoriasCliente: subcatsSelecionadas,
+                        formaPagamentoPreferida: pagamentoPref,
+                        observacoes: '', lembretes: [], valor: 0, formaPagamento: ''
+                    });
+                    salvarAgendamentosPrestador(selectPrestador.value, ags);
 
-                var cliAgs = DB.get('clienteAgendamentos_' + usu.email) || [];
-                var storeV = obterStorePrestadores();
-                var nomePrest = (storeV[selectPrestador.value] || {}).nome || selectPrestador.value;
-                cliAgs.push({
-                    id: novoId, emailPrestador: selectPrestador.value, nomePrestador: nomePrest,
-                    servico: selectTipo.value, descricaoCliente: descricaoCliente,
-                    subcategoriasCliente: subcatsSelecionadas,
-                    formaPagamentoPreferida: pagamentoPref, data: dataSlot, horario: horarioSlot,
-                    status: 'orcamento_pendente', criadoEm: new Date().toISOString()
-                });
-                DB.set('clienteAgendamentos_' + usu.email, cliAgs);
+                    var cliAgs = DB.get('clienteAgendamentos_' + usu.email) || [];
+                    var storeV = obterStorePrestadores();
+                    var nomePrest = (storeV[selectPrestador.value] || {}).nome || selectPrestador.value;
+                    cliAgs.push({
+                        id: novoId, emailPrestador: selectPrestador.value, nomePrestador: nomePrest,
+                        servico: selectTipo.value, descricaoCliente: descricaoCliente,
+                        subcategoriasCliente: subcatsSelecionadas,
+                        formaPagamentoPreferida: pagamentoPref, data: dataSlot, horario: horarioSlot,
+                        status: 'orcamento_pendente', criadoEm: new Date().toISOString()
+                    });
+                    DB.set('clienteAgendamentos_' + usu.email, cliAgs);
 
-                sgCriarNotificacao(selectPrestador.value, 'orcamento_solicitado', {
-                    agendamentoId: novoId, clienteNome: usu.nome, clienteEmail: usu.email,
-                    servico: selectTipo.value, descricaoCliente: descricaoCliente,
-                    subcategoriasCliente: subcatsSelecionadas, label: labelSlot
-                });
+                    sgCriarNotificacao(selectPrestador.value, 'orcamento_solicitado', {
+                        agendamentoId: novoId, clienteNome: usu.nome, clienteEmail: usu.email,
+                        servico: selectTipo.value, descricaoCliente: descricaoCliente,
+                        subcategoriasCliente: subcatsSelecionadas, label: labelSlot
+                    });
 
-                alert('Solicitação de orçamento enviada!\nPrestador: ' + nomePrest + '\n\nAguarde o retorno com o orçamento.');
-                // Resetar formulário
-                if (cliServInputV) cliServInputV.value = '';
-                var cnt = document.getElementById('cli-servico-contador'); if (cnt) cnt.textContent = '0';
-                var avBol = document.getElementById('aviso-boleto'); if (avBol) avBol.style.display = 'none';
-                mainAgendar.querySelectorAll('.prest-subcat-cb:checked').forEach(function (cb) {
-                    cb.checked = false;
-                    var lbl = cb.closest('label');
-                    if (lbl) { lbl.style.background = '#fff'; lbl.style.color = ''; lbl.style.fontWeight = '500'; }
+                    // Sprint 1 — redireciona para Área do Cliente para acompanhar o pedido
+                    window.location.href = '/paginasCliente/clienteAreaExclusiva.html';
                 });
-                atualizarInfoPrestador(selectPrestador.value);
             });
         }
 
@@ -4174,56 +4640,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function inicializarNotificacoesDashboardCliente() {
-        var mainEl = document.querySelector('.cli-main');
-        if (!mainEl || !document.querySelector('.cli-pedidos-lista')) return;
-        var usu = obterUsuarioLogado(); if (!usu) return;
-        var emailCli = usu.email;
-
-        var todas = sgObterNotificacoes(emailCli);
-        var notifs = todas.filter(function (n) { return !n.lida; });
-        if (notifs.length === 0) return;
-
-        // Notificações que são retorno do prestador (confirmação / cancelamento / conclusão / orçamento)
-        var notifsRetorno = notifs.filter(function (n) {
-            return n.tipo === 'confirmacao' || n.tipo === 'cancelamento' || n.tipo === 'conclusao' || n.tipo === 'orcamento_enviado';
-        });
-
-        var barra = document.createElement('div');
-        barra.id = 'sg-notif-barra-cli';
-        barra.style.cssText = 'margin-bottom:16px;';
-        barra.innerHTML =
-            '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;' +
-            'padding:10px 16px;background:#e8f4fd;border:1.5px solid #146ADB;border-radius:10px;">' +
-            '<i class="bi bi-bell-fill" style="color:#146ADB;font-size:1.2rem;"></i>' +
-            '<strong style="color:#0d3d78;">Você tem ' + notifs.length + ' nova(s) notificação(ões)</strong>' +
-            (notifsRetorno.length > 0
-                ? '<button type="button" class="btn btn-sm" id="btn-notif-cli-visualizar" ' +
-                  'style="background:#146ADB;border-color:#146ADB;color:#fff;font-weight:600;">' +
-                  '<i class="bi bi-eye me-1"></i>Visualizar (' + notifsRetorno.length + ')</button>'
-                : '') +
-            '<button type="button" class="btn btn-outline-secondary btn-sm" ' +
-            'id="btn-notif-cli-marcar-lidas">Marcar como lidas</button>' +
-            '</div>';
-
-        mainEl.insertBefore(barra, mainEl.firstChild);
-
-        var btnMarcar = document.getElementById('btn-notif-cli-marcar-lidas');
-        if (btnMarcar) {
-            btnMarcar.addEventListener('click', function () {
-                sgMarcarTodasLidas(emailCli);
-                barra.remove();
-            });
-        }
-
-        var btnVis = document.getElementById('btn-notif-cli-visualizar');
-        if (btnVis) {
-            btnVis.addEventListener('click', function () {
-                _abrirModalNotificacoesCliente(emailCli, notifsRetorno, function () {
-                    sgMarcarTodasLidas(emailCli);
-                    barra.remove();
-                });
-            });
-        }
+        // Sprint 2 — banner de notificações removido; retornos do prestador
+        // são exibidos diretamente na seção inline (#cli-solicitacoes-sprint1).
     }
 
     // =========================================================
@@ -4439,6 +4857,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Remove o card do modal; mantém os demais abertos
                 _removerItemEVerificar(notifId, usuCli ? usuCli.email : '');
                 exibirToast('Orçamento recusado. O prestador foi notificado.');
+
+                /* Sprint 1 — atualiza o link "Aguardando Confirmação" no stat card */
+                if (usuCli) _atualizarLinkAguardandoStatCard(usuCli.email);
             });
         });
 
@@ -4473,6 +4894,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Remove o card do modal; mantém os demais abertos
                 _removerItemEVerificar(notifId, usuCli ? usuCli.email : '');
                 exibirToast('Agendamento confirmado! Seu serviço com ' + prestNome + ' está agendado.');
+
+                /* Sprint 1 — atualiza (ou remove) o link "Aguardando Confirmação"
+                   no stat card da Área Exclusiva do cliente.                      */
+                if (usuCli) _atualizarLinkAguardandoStatCard(usuCli.email);
             });
         });
     }
@@ -4662,28 +5087,65 @@ document.addEventListener('DOMContentLoaded', function () {
             ativos.forEach(function (ag) {
                 var chat = DB.get('agendaChat_' + ag.id) || [];
                 var unread = chat.filter(function (m) { return m.tipo === 'prest' && !m.lidaCliente; }).length;
-                var corStatus = ag.status === 'confirmado' ? '#198754' : '#146ADB';
-                var txtStatus = ag.status === 'confirmado' ? 'Confirmado' : 'Concluído';
                 var horIni = (ag.horario || '').split(' - ')[0] || '—';
+                // Sprint 3 — busca valor e forma de pagamento do registro do prestador
+                var agsPrestConf = obterAgendamentosPrestador(ag.emailPrestador || '');
+                var agPConf      = agsPrestConf.find(function (a) { return a.id === ag.id; }) || {};
+                var valorConf    = (agPConf.valor !== undefined && agPConf.valor !== 0) ? parseFloat(agPConf.valor) : null;
+                var pgtoConf     = agPConf.formaPagamento || ag.formaPagamentoPreferida || '';
+                // Sprint 1 — badge de status enriquecido
+                var statusBadgesHtml;
+                if (ag.status === 'confirmado') {
+                    statusBadgesHtml =
+                        '<span class="badge" style="background:#198754; color:#fff; font-size:.75rem;">Confirmado</span>' +
+                        '&nbsp;<span class="badge" style="background:#0d6efd; color:#fff; font-size:.72rem;white-space:nowrap;">' +
+                        '<i class="bi bi-clock me-1"></i>Serviço em aberto</span>';
+                } else {
+                    statusBadgesHtml =
+                        '<span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span>' +
+                        (agPConf.pago
+                            ? '&nbsp;<span class="badge" style="background:#198754; color:#fff; font-size:.72rem;white-space:nowrap;">' +
+                              '<i class="bi bi-check-circle-fill me-1"></i>Pago</span>'
+                            : '');
+                }
+                // Sprint 1 — subcategoria do serviço
+                var subcatCliHtml = (ag.subcategoriasCliente && ag.subcategoriasCliente.length > 0)
+                    ? '<br><small class="text-muted"><i class="bi bi-list-check me-1"></i>' +
+                      ag.subcategoriasCliente.map(function(sc){ return _escaparHtml(sc); }).join(', ') + '</small>'
+                    : '';
                 html +=
                     '<li class="cli-pedidos-item">' +
                     '<div>' +
                     '<strong>' + _escaparHtml(ag.servico || '—') + '</strong>' +
+                    subcatCliHtml +
                     '<br><span style="font-size:.82rem;color:#6c757d;">' + _escaparHtml(ag.nomePrestador || '—') + '</span>' +
                     '<br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>' + _escaparHtml(ag.data || '—') + ' às ' + horIni + '</small>' +
+                    (valorConf !== null ? '<br><small class="text-muted"><i class="bi bi-cash-coin me-1"></i>R$ ' + valorConf.toFixed(2).replace('.', ',') + (pgtoConf ? ' &mdash; ' + _escaparHtml(pgtoConf) : '') + '</small>' : '') +
                     '</div>' +
                     '<div class="cli-pedidos-acoes">' +
-                    '<span class="badge" style="background:' + corStatus + '; color:#fff; font-size:.75rem;">' + txtStatus + '</span>' +
-                    '<button type="button" class="btn btn-sm btn-chat-cliente" ' +
-                    'data-ag-id="' + _escaparHtml(ag.id) + '" ' +
-                    'data-prest-email="' + _escaparHtml(ag.emailPrestador || '') + '" ' +
-                    'data-prest-nome="' + _escaparHtml(ag.nomePrestador || '') + '" ' +
-                    'data-servico="' + _escaparHtml(ag.servico || '') + '" ' +
-                    'data-data="' + _escaparHtml(ag.data || '') + '" ' +
-                    'style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;">' +
-                    '<i class="bi bi-chat-dots me-1"></i>Chat' +
-                    (unread > 0 ? ' <span class="badge bg-danger" style="font-size:.65rem;vertical-align:middle;">' + unread + '</span>' : '') +
-                    '</button>' +
+                    statusBadgesHtml +
+                    (ag.status === 'concluido'
+                        // Serviço concluído — chat bloqueado, botão vira "Ver Histórico"
+                        ? '<button type="button" class="btn btn-sm btn-chat-cliente ms-1" ' +
+                          'data-ag-id="' + _escaparHtml(ag.id) + '" ' +
+                          'data-prest-email="' + _escaparHtml(ag.emailPrestador || '') + '" ' +
+                          'data-prest-nome="' + _escaparHtml(ag.nomePrestador || '') + '" ' +
+                          'data-servico="' + _escaparHtml(ag.servico || '') + '" ' +
+                          'data-data="' + _escaparHtml(ag.data || '') + '" ' +
+                          'data-readonly="1" ' +
+                          'style="background:#6c757d;border-color:#6c757d;color:#fff;font-weight:600;">' +
+                          '<i class="bi bi-clock-history me-1"></i>Ver Histórico de Mensagens</button>'
+                        // Serviço em aberto — chat ativo
+                        : '<button type="button" class="btn btn-sm btn-chat-cliente" ' +
+                          'data-ag-id="' + _escaparHtml(ag.id) + '" ' +
+                          'data-prest-email="' + _escaparHtml(ag.emailPrestador || '') + '" ' +
+                          'data-prest-nome="' + _escaparHtml(ag.nomePrestador || '') + '" ' +
+                          'data-servico="' + _escaparHtml(ag.servico || '') + '" ' +
+                          'data-data="' + _escaparHtml(ag.data || '') + '" ' +
+                          'style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;">' +
+                          '<i class="bi bi-chat-dots me-1"></i>Enviar Mensagem' +
+                          (unread > 0 ? ' <span class="badge bg-danger" style="font-size:.65rem;vertical-align:middle;">' + unread + '</span>' : '') +
+                          '</button>') +
                     (ag.status === 'concluido'
                         ? (_jaAvaliouConfirmado(ag.id, ag.emailPrestador || '')
                             ? ' <span class="badge ms-1" style="background:#198754;color:#fff;font-size:.75rem;"><i class="bi bi-check-circle me-1"></i>Avaliado</span>'
@@ -4703,16 +5165,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
             tabela.querySelectorAll('.btn-chat-cliente').forEach(function (btn) {
                 btn.addEventListener('click', function () {
+                    var somenteLeitura = btn.dataset.readonly === '1';
                     _abrirChatCliente(
                         btn.dataset.agId,
                         btn.dataset.prestEmail,
                         btn.dataset.prestNome,
                         btn.dataset.servico,
                         btn.dataset.data,
-                        emailCli
+                        emailCli,
+                        somenteLeitura
                     );
-                    // Re-render após fechar modal para atualizar contagem
-                    setTimeout(renderConfirmados, 400);
+                    // Só re-renderiza após fechar se o chat estava ativo (pode ter novas mensagens)
+                    if (!somenteLeitura) {
+                        setTimeout(renderConfirmados, 400);
+                    }
                 });
             });
 
@@ -4812,7 +5278,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // =========================================================
     // CHAT CLIENTE → PRESTADOR (Sprint 3)
     // =========================================================
-    function _abrirChatCliente(agId, prestEmail, prestNome, servico, data, emailCli) {
+    function _abrirChatCliente(agId, prestEmail, prestNome, servico, data, emailCli, somenteLeitura) {
         var CHAT_KEY = 'agendaChat_' + agId;
         var modalId = 'modalChatCliente_' + agId;
         var ex = document.getElementById(modalId);
@@ -4822,11 +5288,46 @@ document.addEventListener('DOMContentLoaded', function () {
         modal.className = 'modal fade';
         modal.id = modalId;
         modal.setAttribute('tabindex', '-1');
+
+        // ── Cabeçalho — muda ícone/título conforme modo ────────────────────
+        var headerIcone = somenteLeitura ? 'bi-clock-history' : 'bi-chat-dots';
+        var headerTitulo = somenteLeitura
+            ? 'Histórico de Mensagens — ' + _escaparHtml(prestNome)
+            : 'Chat com ' + _escaparHtml(prestNome);
+
+        // Botão Imprimir Mensagens (somente no modo leitura)
+        var btnImprimirHtml = somenteLeitura
+            ? '<button type="button" class="btn btn-sm btn-outline-light me-2" id="chat-cli-imprimir-' + agId + '">' +
+              '<i class="bi bi-printer me-1"></i>Imprimir Mensagens</button>'
+            : '';
+
+        // ── Área de composição — ativa ou bloqueada ─────────────────────────
+        var composerHtml = somenteLeitura
+            ? '<div style="padding:12px 16px;background:#f8f9fa;border-top:1px solid #dee2e6;text-align:center;">' +
+              '<span style="font-size:.85rem;color:#6c757d;">' +
+              '<i class="bi bi-lock-fill me-2"></i>Serviço concluído — novas mensagens não são permitidas.' +
+              '</span></div>'
+            : '<div class="agenda-chat-composer">' +
+              '<textarea class="form-control agenda-chat-textarea" id="chat-cli-input-' + agId + '" maxlength="500" placeholder="Digite sua mensagem para o prestador..."></textarea>' +
+              '<div class="agenda-chat-contador"><span id="chat-cli-cont-' + agId + '">0</span>/500</div>' +
+              '</div>';
+
+        // ── Rodapé — botões variam conforme modo ────────────────────────────
+        var rodapeHtml = somenteLeitura
+            ? '<div class="agenda-chat-rodape">' +
+              '<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-circle me-1"></i>Fechar</button>' +
+              '</div>'
+            : '<div class="agenda-chat-rodape">' +
+              '<button type="button" class="btn btn-secondary btn-sm" id="chat-cli-limpar-' + agId + '"><i class="bi bi-x-circle me-1"></i>Limpar</button>' +
+              '<button type="button" class="btn btn-sm" id="chat-cli-enviar-' + agId + '" style="background:var(--azul-principal);border-color:var(--azul-principal);color:#fff;font-weight:600;"><i class="bi bi-send me-1"></i>Enviar</button>' +
+              '</div>';
+
         modal.innerHTML =
             '<div class="modal-dialog modal-dialog-centered modal-lg">' +
             '<div class="modal-content agenda-chat-modal">' +
             '<div class="modal-header" style="background:var(--azul-principal,#146ADB);color:#fff;">' +
-            '<h5 class="modal-title"><i class="bi bi-chat-dots me-2"></i>Chat com ' + _escaparHtml(prestNome) + '</h5>' +
+            '<h5 class="modal-title"><i class="bi ' + headerIcone + ' me-2"></i>' + headerTitulo + '</h5>' +
+            btnImprimirHtml +
             '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>' +
             '</div>' +
             '<div class="agenda-chat-info">' +
@@ -4835,15 +5336,10 @@ document.addEventListener('DOMContentLoaded', function () {
             '<span class="agenda-chat-info-item"><i class="bi bi-calendar3"></i> <strong>' + _escaparHtml(data) + '</strong></span>' +
             '</div>' +
             '<div class="agenda-chat-historico" id="chat-cli-hist-' + agId + '" aria-live="polite"></div>' +
-            '<div class="agenda-chat-composer">' +
-            '<textarea class="form-control agenda-chat-textarea" id="chat-cli-input-' + agId + '" maxlength="500" placeholder="Digite sua mensagem para o prestador..."></textarea>' +
-            '<div class="agenda-chat-contador"><span id="chat-cli-cont-' + agId + '">0</span>/500</div>' +
-            '</div>' +
-            '<div class="agenda-chat-rodape">' +
-            '<button type="button" class="btn btn-secondary btn-sm" id="chat-cli-limpar-' + agId + '"><i class="bi bi-x-circle me-1"></i>Limpar</button>' +
-            '<button type="button" class="btn btn-sm" id="chat-cli-enviar-' + agId + '" style="background:var(--azul-principal);border-color:var(--azul-principal);color:#fff;font-weight:600;"><i class="bi bi-send me-1"></i>Enviar</button>' +
-            '</div>' +
+            composerHtml +
+            rodapeHtml +
             '</div></div>';
+
         document.body.appendChild(modal);
 
         function carregarMsgs() {
@@ -4856,11 +5352,13 @@ document.addEventListener('DOMContentLoaded', function () {
             var histEl = document.getElementById('chat-cli-hist-' + agId);
             if (!histEl) return;
             if (msgs.length === 0) {
-                histEl.innerHTML = '<div class="agenda-chat-vazio"><i class="bi bi-chat-dots"></i>Nenhuma mensagem ainda. Seja o primeiro a escrever!</div>';
+                histEl.innerHTML = '<div class="agenda-chat-vazio"><i class="bi bi-chat-dots"></i>' +
+                    (somenteLeitura ? 'Nenhuma mensagem foi trocada neste serviço.' : 'Nenhuma mensagem ainda. Seja o primeiro a escrever!') +
+                    '</div>';
                 return;
             }
             histEl.innerHTML = msgs.map(function (m) {
-                var lado = m.tipo === 'cliente' ? 'prest' : 'cliente'; // cliente vê próprias msgs à direita
+                var lado = m.tipo === 'cliente' ? 'prest' : 'cliente';
                 var autor = m.tipo === 'cliente' ? 'Você' : _escaparHtml(prestNome);
                 var hora = m.timestamp
                     ? new Date(m.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -4878,56 +5376,123 @@ document.addEventListener('DOMContentLoaded', function () {
         bsModal.show();
         modal.addEventListener('hidden.bs.modal', function () { modal.remove(); });
 
-        // Contador
-        var inputEl = document.getElementById('chat-cli-input-' + agId);
-        var contEl = document.getElementById('chat-cli-cont-' + agId);
-        if (inputEl && contEl) {
-            inputEl.addEventListener('input', function () { contEl.textContent = inputEl.value.length; });
-        }
+        // ── Botão Imprimir Mensagens ────────────────────────────────────────
+        if (somenteLeitura) {
+            var btnImprimir = document.getElementById('chat-cli-imprimir-' + agId);
+            if (btnImprimir) {
+                btnImprimir.addEventListener('click', function () {
+                    var msgs = DB.get(CHAT_KEY) || [];
+                    var linhas = msgs.map(function (m) {
+                        var autor = m.tipo === 'cliente' ? 'Você (cliente)' : _escaparHtml(prestNome);
+                        var hora = m.timestamp
+                            ? new Date(m.timestamp).toLocaleString('pt-BR')
+                            : '';
+                        var alinhamento = m.tipo === 'cliente' ? 'right' : 'left';
+                        var bg = m.tipo === 'cliente' ? '#e8f4fd' : '#f0f4ff';
+                        var border = m.tipo === 'cliente' ? '2px solid #0dcaf0' : '2px solid #146ADB';
+                        return '<div style="text-align:' + alinhamento + ';margin-bottom:14px;">' +
+                            '<div style="display:inline-block;max-width:75%;background:' + bg + ';' +
+                            'border-left:' + (m.tipo === 'cliente' ? 'none' : border) + ';' +
+                            'border-right:' + (m.tipo === 'cliente' ? border : 'none') + ';' +
+                            'padding:10px 14px;border-radius:8px;text-align:left;">' +
+                            '<div style="font-size:.78rem;font-weight:700;color:#555;margin-bottom:4px;">' + autor + '</div>' +
+                            '<div style="font-size:.9rem;color:#212529;">' + _escaparHtml(m.texto) + '</div>' +
+                            '<div style="font-size:.72rem;color:#888;margin-top:4px;text-align:right;">' + hora + '</div>' +
+                            '</div></div>';
+                    }).join('');
 
-        // Limpar
-        var btnLimpar = document.getElementById('chat-cli-limpar-' + agId);
-        if (btnLimpar && inputEl) {
-            btnLimpar.addEventListener('click', function () {
-                inputEl.value = '';
-                if (contEl) contEl.textContent = '0';
-            });
-        }
-
-        // Enviar
-        var btnEnviar = document.getElementById('chat-cli-enviar-' + agId);
-        if (btnEnviar && inputEl) {
-            btnEnviar.addEventListener('click', function () {
-                var texto = (inputEl.value || '').trim();
-                if (!texto) { alert('Digite uma mensagem.'); return; }
-                var msgs = DB.get(CHAT_KEY) || [];
-                msgs.push({
-                    id: 'msg-cli-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
-                    tipo: 'cliente',
-                    texto: texto,
-                    timestamp: new Date().toISOString(),
-                    lidaPrest: false,
-                    lidaCliente: true
+                    var dataImpressao = new Date().toLocaleString('pt-BR');
+                    var win = window.open('', '_blank', 'width=800,height=700');
+                    win.document.write(
+                        '<!DOCTYPE html><html lang="pt-br"><head>' +
+                        '<meta charset="UTF-8">' +
+                        '<title>Histórico de Mensagens — ServGo!</title>' +
+                        '<style>' +
+                        'body{font-family:Arial,sans-serif;padding:30px;color:#212529;}' +
+                        'h2{color:#146ADB;margin-bottom:4px;}' +
+                        '.meta{font-size:.82rem;color:#6c757d;margin-bottom:24px;padding-bottom:12px;border-bottom:2px solid #dee2e6;}' +
+                        '.rodape{margin-top:32px;font-size:.75rem;color:#aaa;text-align:center;border-top:1px solid #dee2e6;padding-top:12px;}' +
+                        '@media print{button{display:none!important;}}' +
+                        '</style></head><body>' +
+                        '<div style="text-align:center;margin-bottom:20px;">' +
+                        '<span style="font-size:1.4rem;font-weight:900;color:#146ADB;">Serv</span>' +
+                        '<span style="font-size:1.4rem;font-weight:900;color:#FFC300;">Go!</span>' +
+                        '</div>' +
+                        '<h2><i></i>Histórico de Mensagens</h2>' +
+                        '<div class="meta">' +
+                        '<strong>Serviço:</strong> ' + _escaparHtml(servico) + ' &nbsp;|&nbsp; ' +
+                        '<strong>Prestador:</strong> ' + _escaparHtml(prestNome) + ' &nbsp;|&nbsp; ' +
+                        '<strong>Data do Serviço:</strong> ' + _escaparHtml(data) + '<br>' +
+                        '<strong>Impresso em:</strong> ' + dataImpressao +
+                        '</div>' +
+                        (msgs.length === 0
+                            ? '<p style="color:#6c757d;text-align:center;">Nenhuma mensagem foi trocada neste serviço.</p>'
+                            : linhas) +
+                        '<div class="rodape">ServGo! — Documento gerado automaticamente em ' + dataImpressao + '</div>' +
+                        '<div style="text-align:center;margin-top:20px;">' +
+                        '<button onclick="window.print()" style="background:#146ADB;color:#fff;border:none;padding:8px 24px;border-radius:6px;font-size:.9rem;cursor:pointer;">Imprimir / Salvar PDF</button>' +
+                        '</div>' +
+                        '</body></html>'
+                    );
+                    win.document.close();
+                    win.focus();
                 });
-                DB.set(CHAT_KEY, msgs);
-                inputEl.value = '';
-                if (contEl) contEl.textContent = '0';
-                // Notifica o prestador
-                if (prestEmail) {
-                    sgCriarNotificacao(prestEmail, 'nova_mensagem_cliente', {
-                        agendamentoId: agId,
-                        clienteNome: emailCli,
-                        servico: servico
+            }
+        } else {
+            // ── Modo ativo: contador, limpar e enviar ───────────────────────
+            var inputEl = document.getElementById('chat-cli-input-' + agId);
+            var contEl = document.getElementById('chat-cli-cont-' + agId);
+            if (inputEl && contEl) {
+                inputEl.addEventListener('input', function () { contEl.textContent = inputEl.value.length; });
+            }
+
+            var btnLimpar = document.getElementById('chat-cli-limpar-' + agId);
+            if (btnLimpar && inputEl) {
+                btnLimpar.addEventListener('click', function () {
+                    inputEl.value = '';
+                    if (contEl) contEl.textContent = '0';
+                });
+            }
+
+            var btnEnviar = document.getElementById('chat-cli-enviar-' + agId);
+            if (btnEnviar && inputEl) {
+                btnEnviar.addEventListener('click', function () {
+                    var texto = (inputEl.value || '').trim();
+                    if (!texto) { alert('Digite uma mensagem.'); return; }
+                    var msgs = DB.get(CHAT_KEY) || [];
+                    msgs.push({
+                        id: 'msg-cli-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+                        tipo: 'cliente',
+                        texto: texto,
+                        timestamp: new Date().toISOString(),
+                        lidaPrest: false,
+                        lidaCliente: true
                     });
-                }
-                carregarMsgs();
+                    DB.set(CHAT_KEY, msgs);
+                    inputEl.value = '';
+                    if (contEl) contEl.textContent = '0';
+                    if (prestEmail) {
+                        sgCriarNotificacao(prestEmail, 'nova_mensagem_cliente', {
+                            agendamentoId: agId,
+                            clienteNome: emailCli,
+                            servico: servico
+                        });
+                    }
+                    carregarMsgs();
+                });
+            }
+
+            // Polling de msgs a cada 5 s (apenas modo ativo)
+            var pollingChat = setInterval(carregarMsgs, 5000);
+            modal.addEventListener('hidden.bs.modal', function () {
+                clearInterval(pollingChat);
+                _atualizarAvisoNavbarMsgsCliente(emailCli);
             });
+            return; // evita o listener duplicado abaixo
         }
-        // Polling de msgs a cada 5 s enquanto modal aberto
-        var pollingChat = setInterval(carregarMsgs, 5000);
+
+        // Sprint 6 — atualiza o sininho da navbar ao fechar (modo leitura)
         modal.addEventListener('hidden.bs.modal', function () {
-            clearInterval(pollingChat);
-            // Sprint 6 — atualiza o sininho da navbar imediatamente após a leitura
             _atualizarAvisoNavbarMsgsCliente(emailCli);
         });
     }
@@ -5079,7 +5644,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 btnChat.href = '#';
                 btnChat.className = 'agenda-btn chat';
                 btnChat.dataset.acao = 'chat';
-                btnChat.innerHTML = '<i class="bi bi-chat-dots me-1"></i>Chat' +
+                btnChat.innerHTML = '<i class="bi bi-chat-dots me-1"></i>Enviar Mensagem' +
                     (unread > 0 ? ' <span class="agenda-btn-sino"><i class="bi bi-bell-fill"></i></span>' : '');
                 btnChat.addEventListener('click', function (e) {
                     e.preventDefault();
