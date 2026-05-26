@@ -3,87 +3,32 @@ disponibilize os arquivos atualizados após conluir todas as Sprints
 para saber qual é a íultima Sprint será dado o comando Sprints Concluídas. Após esse comando, você poderá concluir o projeto e entregar os arquivos ajustados e atualizados na íntgra, completos para serem utilizados imediatamente
 
 SPRINT 1
-altere em <a href="/paginasCliente/clienteAreaExclusiva.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;"><i class="bi bi-house-door me-2" style="color:#146ADB;"></i>Dashboard</a>
-de "Dashaboard" para "Área Exclusiva"
+na página clienteAvaliacoesFeitas.html
+em <div class="review-card-reverse" data-pedido-id="cli-aval-conf-orc-cli-1779673574342"><div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Prestador: Prestador Teste (TI)</h5><span class="text-muted"><small>25/05/2026</small></span></div><div class="rating"><i class="bi bi-star-fill" style="color:#ffc107;"></i><i class="bi bi-star-fill" style="color:#ffc107;"></i><i class="bi bi-star-fill" style="color:#ffc107;"></i><i class="bi bi-star-fill" style="color:#ffc107;"></i><i class="bi bi-star-fill" style="color:#ffc107;"></i><h6 class="text-muted ms-2">Avaliação: 5.0</h6></div><p class="review-text">"Teste"</p><div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-warning btn-editar-feita" data-pedido-id="cli-aval-conf-orc-cli-1779673574342"><i class="bi bi-pencil-square me-1"></i>Editar</button><button type="button" class="btn btn-danger btn-excluir-feita" data-pedido-id="cli-aval-conf-orc-cli-1779673574342"><i class="bi bi-trash me-1"></i>Excluir</button></div></div>
+excluir o botão <button type="button" class="btn btn-danger btn-excluir-feita" data-pedido-id="cli-aval-conf-orc-cli-1779673574342"><i class="bi bi-trash me-1"></i>Excluir</button>
+
 
 SPRINT 2
-ajuste para que aqui em <h1 class="hotsiteadm-titulo-pagina">Administração do Perfil — Cliente</h1>
-onde está escrito "Cliente", sempre seja mostrado o nome do cliente logado no sistema
+na página clienteAreaExclusiva.html
+ajustar a lógica em <div class="modal-body"><div class="table-responsive"><table class="table table-sm table-bordered align-middle"><thead class="table-light"><tr><th>#</th><th>Data</th><th>Serviço / Subcategoria</th><th>Prestador</th><th>Valor</th><th>Pagamento</th></tr></thead><tbody><tr><td>1</td><td style="white-space:nowrap;">2026-05-21</td><td>TI</td><td>—</td><td style="white-space:nowrap;">R$ 0,00</td><td>—</td></tr><tr><td>2</td><td style="white-space:nowrap;">2026-05-26</td><td>TI</td><td>—</td><td style="white-space:nowrap;">R$ 0,00</td><td>—</td></tr><tr><td>3</td><td style="white-space:nowrap;">2026-05-26</td><td>TI</td><td>—</td><td style="white-space:nowrap;">R$ 0,00</td><td>—</td></tr></tbody></table></div></div>
+para mostrar em <table class="table table-sm table-bordered align-middle"><thead class="table-light"><tr><th>#</th><th>Data</th><th>Serviço / Subcategoria</th><th>Prestador</th><th>Valor</th><th>Pagamento</th></tr></thead><tbody><tr><td>1</td><td style="white-space:nowrap;">2026-05-21</td><td>TI</td><td>—</td><td style="white-space:nowrap;">R$ 0,00</td><td>—</td></tr><tr><td>2</td><td style="white-space:nowrap;">2026-05-26</td><td>TI</td><td>—</td><td style="white-space:nowrap;">R$ 0,00</td><td>—</td></tr><tr><td>3</td><td style="white-space:nowrap;">2026-05-26</td><td>TI</td><td>—</td><td style="white-space:nowrap;">R$ 0,00</td><td>—</td></tr></tbody></table>
+os dados de  Data	Serviço / Subcategoria	Prestador	Valor	Pagamento
+dos serviços concluídos
 
-torne obrigatório o preenchimento dos seguintes campos
-<input class="hotsiteadm-input" type="text" id="adm-cpf" value="" maxlength="14" placeholder="000.000.000-00">
-<input class="hotsiteadm-input" type="text" id="adm-cidade" value="">
-<input class="hotsiteadm-input" type="text" id="adm-endereco" value="">
-<input class="hotsiteadm-input" type="text" id="adm-tel" value="">
-
-o usuário não poderá salvar as alterações sem que estes campos estejam preenchidos
-caso o usuário tenta salvar, mas sem o preenchimento desses campos, informa a ele que são obrigatórios
-inclua um * (asterisco) nos campos obrigatórios sinalizando que são obrigatórios
-
-ajuste o botão <a href="clienteAreaExclusiva.html" class="conf-btn-voltar" style="background-color: red; color: white; border-color: red; flex: 1; text-align: center;">Cancelar</a>
-para que fique no mesmo padrão do botão <a href="/paginasPrestador/prestadorAreaExclusiva.html" id="btn-cancelar-hotsite" class="conf-btn-salvar" style="background-color:#dc3545; color:#fff; border:none; border-radius:4px; font-weight:bold; padding:10px 15px; cursor:pointer; flex:1; text-align:center; text-decoration:none; display:inline-block;"><i class="bi bi-x-circle me-1"></i> Cancelar</a>
-na página prestadorHotsiteAdm.html
 
 SPRINT 3 
-ajsute na página clientePerfilAdm.html
-em <div class="hotsite-meta-info">
-                                Cliente &nbsp;·&nbsp; Membro desde
-                            </div>
-informe o tempo que o cliente é membro cadastrado no site
-inclua aqui a média das avaliações do cliente, recebidas pelos prestadores de serviço que ele contratou
-informe a média em número e também a popntuação média com as estrelas
-em <i class="bi bi-geo-alt-fill me-1"></i>
-mostrar a cidade onde mora o cliente
-mostrar aqui <div class="hotsite-cabecalho-bloco">
-                                <div>
-                                    <div class="hotsite-secao-titulo">Dados Pessoais</div>
-                                    <p class="hotsite-desc">
-                                        <i class="bi bi-envelope me-1"></i>
-                                        &nbsp;&nbsp;
-                                        <i class="bi bi-telephone me-1"></i>
-                                        <br>
-                                        <i class="bi bi-house me-1"></i>
-                                    </p>
-                                </div>
-                            </div>
-os dados pessoais do cliente
-telefone
-e-mail 
-endereço
-
-excluir
-<div class="hotsite-depoimento"></div>
-excluir
-<div class="placeholder" style="margin-bottom: 16px;">
-                                Próximo agendamento: <strong></strong>
-                            </div>
-excluir
-<a class="cta cta-amarelo" href="/paginasCliente/clienteHistoricoServicos.html"><i class="bi bi-clock-history me-1"></i> Ver Histórico Completo</a>
-
+alterar a cor de <span class="badge" style="background:#146ADB; color:#fff; font-size:.75rem;">Concluído</span>
+para #0056b3
+alterar a cor de <span class="badge" style="background:#198754; color:#fff; font-size:.72rem;white-space:nowrap;"><i class="bi bi-check-circle-fill me-1"></i>Pago</span>
+para #198754
+alterar a cor de <span class="badge ms-1" style="background:#198754;color:#fff;font-size:.75rem;"><i class="bi bi-check-circle me-1"></i>Avaliado</span>
+para #FFC300
 
 
 SPRINT 4
-implemente em <h6><i class="bi bi-person-circle me-1"></i>Dados do Cliente</h6>
-à frente de "dados do cliente" um btão "Ver Perfil"
-quando o botão ver perfil for clicado, abra o modal de perfil do cliente mostradno o perfil do cliente
-abrindo clientePerfil.html
 
 SPRINT 5
-na página prestadorAreaExclusiva.html
-retirar o botão editar de <li class="prest-historico-item" data-pedido-id="prest-pedido-1" data-cliente="Maria da Silva" data-servico="Troca de Válvula">
-                        <span class="prest-info-label"><strong>Serviço:</strong> Troca de Válvula &nbsp;|&nbsp; <strong>Cliente:</strong> Maria da Silva</span><span class="prest-badge concluido">Concluído</span>
-                        <div class="prest-historico-acoes">
-                            <button type="button" class="btn btn-primary btn-prest-avaliar">Avaliar</button>
-                            <button type="button" class="btn btn-warning btn-prest-editar">Editar</button>
-                            <button type="button" class="btn btn-danger btn-prest-excluir">Excluir</button>
-                        </div>
-                    </li>
-manter o mesmo padrão da página clienteAreaExclusiva.html
-em <li class="cli-pedidos-item"><div><strong>TI</strong><br><span style="font-size:.82rem;color:#6c757d;">Kleber Prestador</span><br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>2026-05-05 às 08:00</small></div><div class="cli-pedidos-acoes"><span class="badge" style="background:#198754; color:#fff; font-size:.75rem;">Confirmado</span><button type="button" class="btn btn-sm btn-chat-cliente" data-ag-id="ag-cli-1777858108435" data-prest-email="kleber@prestador.com" data-prest-nome="Kleber Prestador" data-servico="TI" data-data="2026-05-05" style="background:#0dcaf0;border-color:#0dcaf0;color:#fff;font-weight:600;"><i class="bi bi-chat-dots me-1"></i>Chat</button></div></li>
-
 
 SPRINT 6
 
-
 SPRINT 7
-

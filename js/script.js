@@ -3129,8 +3129,174 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Sprint 1 — Renderiza seção inline de solicitações em andamento
         _renderizarSolicitacoesPendentes();
-        if (cards[1]) { var info1 = cards[1].querySelector('.cli-stat-info'); if (info1) { info1.innerHTML = '<i class="bi bi-currency-dollar"></i> <a href="#" id="link-pagamentos" style="color:inherit;text-decoration:underline;">Ver detalhes</a>'; var linkPag = document.getElementById('link-pagamentos'); if (linkPag) linkPag.addEventListener('click', function (e) { e.preventDefault(); var modal = criarModal('modalPagamentos', '<i class="bi bi-currency-dollar me-2"></i>Pagamentos', '#FFC300', '<p>Total pago: <strong>R$ ' + stats.totalPago.toFixed(2).replace('.', ',') + '</strong></p>'); new bootstrap.Modal(modal).show(); }); } }
-        if (cards[2]) { var info2 = cards[2].querySelector('.cli-stat-info'); if (info2) { info2.innerHTML = '<i class="bi bi-patch-check"></i> <a href="#" id="link-historico" style="color:inherit;text-decoration:underline;">Ver Histórico</a>'; var linkHist = document.getElementById('link-historico'); if (linkHist) linkHist.addEventListener('click', function (e) { e.preventDefault(); var conteudo = stats.pedidosConcluidos.length === 0 ? '<p class="text-muted">Nenhum concluído.</p>' : '<table class="table"><thead><tr><th>#</th><th>Serviço</th><th>Prestador</th><th>Valor</th></tr></thead><tbody>' + stats.pedidosConcluidos.map(function (p, i) { return '<tr><td>' + (i + 1) + '</td><td>' + p.servico + '</td><td>' + p.profissional + '</td><td>R$' + p.valor.toFixed(2).replace('.', ',') + '</td></tr>'; }).join('') + '</tbody></table>'; var modal = criarModal('modalHistorico', '<i class="bi bi-patch-check me-2"></i>Histórico', '#FFC300', conteudo); new bootstrap.Modal(modal).show(); }); } }
+
+        // ── Sprint 2/3 — Stat cards: lógica baseada no DB ───────────────────
+        (function _configurarCardsStatSprint2() {
+            var usuS2 = obterUsuarioLogado();
+            var emailS2 = usuS2 ? usuS2.email : '';
+            var agsS2 = DB.get('clienteAgendamentos_' + emailS2) || [];
+
+            // Agendamentos em aberto = não concluídos e não cancelados
+            var agsAbertos = agsS2.filter(function (a) {
+                return a.status !== 'concluido' && a.status !== 'cancelado';
+            });
+
+            // Agendamentos concluídos pelo prestador
+            var agsConcluidos = agsS2.filter(function (a) {
+                return a.status === 'concluido';
+            });
+
+            // ── Sprint 3 — enriquece registro do cliente com dados financeiros
+            // do storage do prestador (valor e formaPagamento não são gravados
+            // em clienteAgendamentos_ pelo fluxo atual).
+            function enriquecerAg(ag) {
+                var agPrest = null;
+                if (ag.emailPrestador) {
+                    var listaPrest = obterAgendamentosPrestador(ag.emailPrestador);
+                    agPrest = listaPrest.find(function (p) { return p.id === ag.id; }) || null;
+                }
+                return {
+                    data:           ag.data || '',
+                    // horario no clienteAgendamentos_ vem como "HH:MM - HH:MM"; pega só o início
+                    horario:        (ag.horario || '').split(' - ')[0].trim(),
+                    servico:        ag.servico || (agPrest ? agPrest.servico : '') || '—',
+                    // subcategoriasCliente é o campo correto no storage do cliente
+                    subcategorias:  ag.subcategoriasCliente || (agPrest ? (agPrest.subcategoriasCliente || []) : []),
+                    // nomePrestador é o campo correto no storage do cliente
+                    prestador:      ag.nomePrestador || (agPrest ? (agPrest.prestador || agPrest.prestadorNome || '') : '') || '—',
+                    // valor e formaPagamento vêm do storage do prestador quando ausentes no cliente
+                    valor:          parseFloat(ag.valor) || (agPrest ? parseFloat(agPrest.valor) || 0 : 0),
+                    formaPagamento: ag.formaPagamento || (agPrest ? agPrest.formaPagamento : '') || '—'
+                };
+            }
+
+            // Total monetário dos agendamentos em aberto (via dados enriquecidos)
+            var totalPendente = 0;
+            agsAbertos.forEach(function (a) {
+                totalPendente += enriquecerAg(a).valor;
+            });
+
+            // Helper — "YYYY-MM-DD às HH:MM"
+            function fmtDH(ag) {
+                var d = (ag.data || '').trim();
+                var h = (ag.horario || '').trim();
+                return d + (h ? ' às ' + h : '');
+            }
+
+            // Helper — serviço + subcategorias concatenados
+            function fmtSrv(ag) {
+                var partes = [];
+                if (ag.servico) partes.push(ag.servico);
+                var subs = Array.isArray(ag.subcategorias) ? ag.subcategorias : [];
+                subs.forEach(function (s) { if (s && partes.indexOf(s) < 0) partes.push(s); });
+                return partes.filter(Boolean).join(', ') || '—';
+            }
+
+            // Helper — valor em BRL
+            function fmtBRL(v) {
+                return 'R$ ' + parseFloat(v || 0).toFixed(2).replace('.', ',');
+            }
+
+            // ── Card[0]: Pedidos em Aberto — atualiza valor via DB ────────────
+            if (cards[0]) {
+                var valEl0 = cards[0].querySelector('.cli-stat-valor');
+                if (valEl0) valEl0.textContent = agsAbertos.length;
+            }
+
+            // ── Card[1]: Serviços Pendentes de Pagamento ──────────────────────
+            if (cards[1]) {
+                var valEl1 = cards[1].querySelector('.cli-stat-valor');
+                var info1 = cards[1].querySelector('.cli-stat-info');
+
+                // Valor: mostra total pendente ou traço se não houver nada pendente
+                if (valEl1) {
+                    valEl1.textContent = agsAbertos.length > 0
+                        ? fmtBRL(totalPendente)
+                        : '—';
+                }
+
+                if (info1) {
+                    if (agsAbertos.length > 0) {
+                        info1.innerHTML = '<i class="bi bi-currency-dollar"></i> <a href="#" id="link-pagamentos" style="color:inherit;text-decoration:underline;">Ver detalhes</a>';
+                        var linkPag = document.getElementById('link-pagamentos');
+                        if (linkPag) {
+                            linkPag.addEventListener('click', function (e) {
+                                e.preventDefault();
+                                var rows1 = agsAbertos.map(function (a) {
+                                    var d = enriquecerAg(a);
+                                    return '<tr>' +
+                                        '<td style="white-space:nowrap;">' + fmtDH(d) + '</td>' +
+                                        '<td>' + fmtSrv(d) + '</td>' +
+                                        '<td>' + d.prestador + '</td>' +
+                                        '<td style="white-space:nowrap;">' + fmtBRL(d.valor) + '</td>' +
+                                        '<td>' + d.formaPagamento + '</td>' +
+                                        '</tr>';
+                                }).join('');
+                                var conteudo1 =
+                                    '<p class="mb-3"><strong>Valor do Serviço: ' + fmtBRL(totalPendente) + '</strong></p>' +
+                                    '<div class="table-responsive">' +
+                                    '<table class="table table-sm table-bordered align-middle">' +
+                                    '<thead class="table-light"><tr>' +
+                                    '<th>Data</th><th>Serviço / Subcategoria</th>' +
+                                    '<th>Prestador</th><th>Valor</th><th>Pagamento</th>' +
+                                    '</tr></thead>' +
+                                    '<tbody>' + rows1 + '</tbody>' +
+                                    '</table></div>';
+                                var modal1 = criarModal('modalPagamentos', '<i class="bi bi-currency-dollar me-2"></i>Pagamentos Pendentes', '#FFC300', conteudo1);
+                                new bootstrap.Modal(modal1).show();
+                            });
+                        }
+                    } else {
+                        info1.innerHTML = '<i class="bi bi-currency-dollar"></i> Nenhum pagamento pendente';
+                    }
+                }
+            }
+
+            // ── Card[2]: Serviços Concluídos — Ver Histórico (somente concluídos) ──
+            if (cards[2]) {
+                var valEl2 = cards[2].querySelector('.cli-stat-valor');
+                var info2 = cards[2].querySelector('.cli-stat-info');
+
+                if (valEl2) valEl2.textContent = agsConcluidos.length;
+
+                if (info2) {
+                    info2.innerHTML = '<i class="bi bi-patch-check"></i> <a href="#" id="link-historico" style="color:inherit;text-decoration:underline;">Ver Histórico</a>';
+                    var linkHist = document.getElementById('link-historico');
+                    if (linkHist) {
+                        linkHist.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            var conteudo2;
+                            if (agsConcluidos.length === 0) {
+                                conteudo2 = '<p class="text-muted text-center py-3"><i class="bi bi-info-circle me-2"></i>Nenhum serviço concluído ainda.</p>';
+                            } else {
+                                var rows2 = agsConcluidos.map(function (a, i) {
+                                    var d = enriquecerAg(a);
+                                    return '<tr>' +
+                                        '<td>' + (i + 1) + '</td>' +
+                                        '<td style="white-space:nowrap;">' + fmtDH(d) + '</td>' +
+                                        '<td>' + fmtSrv(d) + '</td>' +
+                                        '<td>' + d.prestador + '</td>' +
+                                        '<td style="white-space:nowrap;">' + fmtBRL(d.valor) + '</td>' +
+                                        '<td>' + d.formaPagamento + '</td>' +
+                                        '</tr>';
+                                }).join('');
+                                conteudo2 =
+                                    '<div class="table-responsive">' +
+                                    '<table class="table table-sm table-bordered align-middle">' +
+                                    '<thead class="table-light"><tr>' +
+                                    '<th>#</th><th>Data</th><th>Serviço / Subcategoria</th>' +
+                                    '<th>Prestador</th><th>Valor</th><th>Pagamento</th>' +
+                                    '</tr></thead>' +
+                                    '<tbody>' + rows2 + '</tbody>' +
+                                    '</table></div>';
+                            }
+                            var modal2 = criarModal('modalHistorico', '<i class="bi bi-patch-check me-2"></i>Histórico de Serviços', '#FFC300', conteudo2);
+                            new bootstrap.Modal(modal2).show();
+                        });
+                    }
+                }
+            }
+        }());
 
         // Avaliações
         function initEstrelas(cont, hidden) {
@@ -3657,20 +3823,19 @@ document.addEventListener('DOMContentLoaded', function () {
             avs.slice().reverse().forEach(function (av) {
                 var stars = Array.from({ length: 5 }, function (_, i) { return i < av.nota ? '<i class="bi bi-star-fill" style="color:#ffc107;"></i>' : '<i class="bi bi-star" style="color:#ccc;"></i>'; }).join('');
                 var card = document.createElement('div'); card.className = 'review-card-reverse'; card.dataset.pedidoId = av.pedidoId;
-                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Prestador: ' + (av.profissional || av.profissional || '—') + ' (' + (av.servico || '') + ')</h5><span class="text-muted"><small>' + av.data + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + av.comentario + '"</p><div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-warning btn-editar-feita" data-pedido-id="' + av.pedidoId + '"><i class="bi bi-pencil-square me-1"></i>Editar</button><button type="button" class="btn btn-danger btn-excluir-feita" data-pedido-id="' + av.pedidoId + '"><i class="bi bi-trash me-1"></i>Excluir</button></div>';
+                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Prestador: ' + (av.profissional || av.profissional || '—') + ' (' + (av.servico || '') + ')</h5><span class="text-muted"><small>' + av.data + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + av.comentario + '"</p><div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-warning btn-editar-feita" data-pedido-id="' + av.pedidoId + '"><i class="bi bi-pencil-square me-1"></i>Editar</button></div>';
                 container.insertBefore(card, botao || null);
             });
         }
 
         container.addEventListener('click', function (e) {
-            var btnEd = e.target.closest('.btn-editar-feita'); var btnEx = e.target.closest('.btn-excluir-feita');
+            var btnEd = e.target.closest('.btn-editar-feita');
             if (btnEd) {
                 var pid = btnEd.dataset.pedidoId; var av = obterAvs().find(function (a) { return a.pedidoId === pid; }); if (!av) return;
                 pedidoAtual = pid; if (infoEl) infoEl.innerHTML = '<strong>Serviço:</strong> ' + av.servico + ' | <strong>Prestador:</strong> ' + av.profissional;
                 renderE(starsEl, notaEl, av.nota); if (comentEl) comentEl.value = av.comentario;
                 if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
             }
-            if (btnEx) { var pidEx = btnEx.dataset.pedidoId; if (!confirm('Excluir?')) return; salvarAvs(obterAvs().filter(function (a) { return a.pedidoId !== pidEx; })); renderizarLista(); alert('Excluída!'); }
         });
 
         if (btnSalvar) {

@@ -126,6 +126,20 @@
                 </div>
             </div>
 
+            <!-- ============================================================ -->
+            <!-- Sprint 1 — Seção de Solicitações em Andamento (inline)        -->
+            <!-- Populada dinamicamente por script.js →                        -->
+            <!-- _renderizarSolicitacoesPendentes()                            -->
+            <!-- ============================================================ -->
+            <div id="cli-solicitacoes-sprint1" class="cli-card" style="display:none; margin-bottom:20px;">
+                <div class="cli-card-cabecalho">
+                    <span><i class="bi bi-hourglass-split me-2" style="color:#FFC300;"></i>Pedidos em Andamento</span>
+                </div>
+                <div id="cli-solicitacoes-lista" class="p-3">
+                    <!-- preenchido por script.js → _renderizarSolicitacoesPendentes() -->
+                </div>
+            </div>
+
             <div class="cli-card">
                 <div class="cli-card-cabecalho" id="cli-cabecalho-pedidos">
                     <span>Status dos Últimos Pedidos</span>
@@ -147,26 +161,6 @@
                 </div>
 
                 <ul class="cli-pedidos-lista">
-                    <li class="cli-pedidos-item" data-pedido-id="pedido-2" data-servico="Diarista" data-profissional="João Souza">
-                        <span><strong>Serviço:</strong> Diarista &nbsp;|&nbsp; <strong>Profissional:</strong> João Souza</span>
-                        <span class="cli-badge concluido">Concluído</span>
-                        <div class="cli-pedidos-acoes">
-                            <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
-                            <button type="button" class="btn btn-warning btn-editar">Editar</button>
-                            <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
-                            
-                        </div>
-                    </li>
-                    <li class="cli-pedidos-item" data-pedido-id="pedido-3" data-servico="Montador de Móveis" data-profissional="N/A">
-                        <span><strong>Serviço:</strong> Montador de Móveis &nbsp;|&nbsp; <strong>Profissional:</strong> N/A</span>
-                        <span class="cli-badge cancelado">Cancelado</span>
-                        <div class="cli-pedidos-acoes">
-                            <button type="button" class="btn btn-primary btn-avaliar">Avaliar</button>
-                            <button type="button" class="btn btn-warning btn-editar">Editar</button>
-                            <button type="button" class="btn btn-danger btn-excluir">Excluir</button>
-                            
-                        </div>
-                    </li>
                 </ul>
             </div>
         </main>
@@ -218,6 +212,29 @@
             </div>
         </div>
     </footer>
+
+    <!-- ============================================== -->
+    <!--  MODAL: MOTIVO DE CANCELAMENTO DO PRESTADOR    -->
+    <!-- ============================================== -->
+    <div class="modal fade" id="modalMotivoCancelamento" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color:#dc3545; color:#fff;">
+                    <h5 class="modal-title"><i class="bi bi-x-circle me-2"></i>Solicitação Cancelada</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body" id="modal-motivo-corpo">
+                    <!-- preenchido via JS -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <a href="/paginasCliente/clienteAgendarServicos.html" class="btn btn-warning">
+                        <i class="bi bi-search me-1"></i>Buscar novo prestador
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="modal fade" id="modalAvaliar" tabindex="-1" aria-labelledby="modalAvaliarLabel" aria-hidden="true">
         <div class="modal-dialog">

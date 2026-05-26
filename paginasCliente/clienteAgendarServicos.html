@@ -227,9 +227,9 @@
                     </div>
                 </div>
                 <div class="agendar-acoes">
-                    <button class="cta" id="btn-solicitar-orcamento">
-                        <i class="bi bi-file-earmark-text me-1"></i> Solicitar Orçamento
-                    </button>
+                    <a class="cta cta-agendar" href="#" id="btn-solicitar-orcamento">
+                        <i class="bi bi-calendar-check me-1"></i> Agendar Serviço
+                    </a>
                     <a class="agendar-link" id="link-hotsite" href="/paginasPrestador/prestadorHotsite.html">Ver Hotsite</a>
                 </div>
             </div>
@@ -492,13 +492,17 @@ function criarCard(prest){
   corpo.appendChild(ac);
   card.appendChild(corpo);
 
-  // Navega para o HotSite do prestador ao clicar no botão ou no card
+  // "Saiba Mais" → navega para o HotSite do prestador
   function _irHotsite(e){
     if(e) e.stopPropagation();
     window.location.href='/paginasPrestador/prestadorHotsite.html?email='+encodeURIComponent(prest.email);
   }
   btnS.addEventListener('click',_irHotsite);
-  card.addEventListener('click',function(){ _irHotsite(); });
+  // Sprint 1 — clicar no card SELECIONA o prestador e exibe o painel de agendamento
+  card.addEventListener('click',function(e){
+    if(e.target.closest('.btn-card-sel')) return; // delega ao botão "Saiba Mais"
+    selecionar(prest,card);
+  });
 
   return card;
 }
