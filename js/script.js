@@ -689,11 +689,11 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // No indexPrestador: não há sidebar — adiciona dropdown "Meu Perfil"
-        if (isIndexPrest) {
-            _criarDropdownMeuPerfil(usu);
-        } else {
-            // Nas demais páginas: adicionar Sair ao sidebar via inicializarSidebarPrestador
+        // Em todas as páginas do prestador: garante o dropdown "Meu Perfil" na navbar
+        _criarDropdownMeuPerfil(usu);
+
+        // Nas páginas com sidebar (todas exceto indexPrestador): inicializa a sidebar também
+        if (!isIndexPrest) {
             inicializarSidebarPrestador();
         }
     }
@@ -701,55 +701,80 @@ document.addEventListener('DOMContentLoaded', function () {
     function _criarDropdownMeuPerfil(usu) {
         var span = document.querySelector('.navbar-logada-info');
         if (!span) return;
-        if (document.getElementById('prest-perfil-toggle')) return; // já criado
 
-        span.style.cssText += '; position:relative; display:inline-flex; flex-direction:column; align-items:center; cursor:default;';
+        // Atualiza a saudação com o nome real do usuário
+        // Preserva apenas os filhos não-texto (toggle/dropdown) e reescreve o texto
+        var primeiroFilho = span.firstChild;
+        // Substitui o nó de texto da saudação sem apagar elementos filhos
+        var nos = Array.from(span.childNodes);
+        nos.forEach(function (n) { if (n.nodeType === 3) span.removeChild(n); });
+        span.insertBefore(document.createTextNode('Olá, ' + usu.nome + '!'), span.firstChild);
 
-        var toggle = document.createElement('a');
-        toggle.id = 'prest-perfil-toggle';
-        toggle.href = '#';
-        toggle.style.cssText = 'font-size:0.72rem; color:var(--azul-principal,#146ADB); text-decoration:underline; cursor:pointer; white-space:nowrap;';
-        toggle.innerHTML = '<i class="bi bi-chevron-down" id="prest-chevron" style="font-size:.65rem;"></i> Meu Perfil';
+        // Verifica se o toggle já existe no HTML (páginas que o têm hardcoded)
+        var toggleExistente = document.getElementById('prest-perfil-toggle');
+        var dropdownExistente = document.getElementById('prest-perfil-dropdown');
 
-        var dropdown = document.createElement('div');
-        dropdown.id = 'prest-perfil-dropdown';
-        dropdown.style.cssText = 'display:none; position:absolute; top:calc(100% + 4px); left:50%; transform:translateX(-50%); min-width:230px; background:var(--fundo-card,#fff); border:1.5px solid var(--borda,#dee2e6); border-radius:8px; box-shadow:0 4px 18px rgba(0,0,0,.13); z-index:1055; padding:6px 0;';
+        if (toggleExistente && toggleExistente.dataset.eventoBound) return; // já inicializado
 
-        var base = '/paginasPrestador/';
-        var links = [
-            { href: base + 'prestadorAreaExclusiva.html', icon: 'bi-house-door', text: 'Área Exclusiva' },
-            { href: base + 'prestadorServicosAgendados.html', icon: 'bi-calendar-check', text: 'Meus Agendamentos' },
-            { href: base + 'prestadorConfigurarAgenda.html', icon: 'bi-calendar3', text: 'Gerenciar Agenda' },
-            { href: base + 'prestadorHotsiteAdm.html', icon: 'bi-globe', text: 'Meu Hot Site' },
-            { href: base + 'prestadorAvaliacoesFeitas.html', icon: 'bi-star', text: 'Avaliações Feitas' },
-            { href: base + 'prestadorAvaliacoesRecebidas.html', icon: 'bi-star-half', text: 'Avaliações Recebidas' },
-            { href: base + 'dashboardPrestador.html', icon: 'bi-grid-1x2', text: 'Dashboard' },
-            { href: base + 'prestadorContato.html', icon: 'bi-chat-text', text: 'Suporte/Contato' }
-        ];
+        var toggle, dropdown;
 
-        links.forEach(function (item) {
-            var a = document.createElement('a');
-            a.href = item.href;
-            a.style.cssText = 'display:block; padding:7px 16px; color:var(--texto-principal,#212529); text-decoration:none; font-size:.88rem;';
-            a.innerHTML = '<i class="bi ' + item.icon + ' me-2" style="color:#146ADB;"></i>' + item.text;
-            a.addEventListener('mouseover', function () { a.style.background = '#f0f4ff'; });
-            a.addEventListener('mouseout', function () { a.style.background = ''; });
-            dropdown.appendChild(a);
-        });
+        if (toggleExistente) {
+            // Toggle já está no HTML — apenas reutiliza e liga os eventos
+            toggle = toggleExistente;
+            dropdown = dropdownExistente;
+        } else {
+            // Toggle não existe — cria dinamicamente (indexPrestador e demais páginas sem hardcode)
+            span.style.cssText += '; position:relative; display:inline-flex; flex-direction:column; align-items:center; cursor:default;';
 
-        var hr = document.createElement('div');
-        hr.style.cssText = 'border-top:1px solid var(--borda,#dee2e6); margin:6px 0;';
-        dropdown.appendChild(hr);
+            toggle = document.createElement('a');
+            toggle.id = 'prest-perfil-toggle';
+            toggle.href = '#';
+            toggle.style.cssText = 'font-size:0.72rem; color:var(--azul-principal,#146ADB); text-decoration:underline; cursor:pointer; white-space:nowrap;';
+            toggle.innerHTML = '<i class="bi bi-chevron-down" id="prest-chevron" style="font-size:.65rem;"></i> Meu Perfil';
 
-        var sair = document.createElement('a');
-        sair.href = '/index.html';
-        sair.style.cssText = 'display:block; padding:7px 16px; color:#dc3545; text-decoration:none; font-size:.88rem; font-weight:600;';
-        sair.innerHTML = '<i class="bi bi-box-arrow-right me-2"></i>Sair';
-        sair.addEventListener('click', function () { DB.remove('usuarioLogado'); });
-        dropdown.appendChild(sair);
+            dropdown = document.createElement('div');
+            dropdown.id = 'prest-perfil-dropdown';
+            dropdown.style.cssText = 'display:none; position:absolute; top:calc(100% + 4px); left:50%; transform:translateX(-50%); min-width:230px; background:var(--fundo-card,#fff); border:1.5px solid var(--borda,#dee2e6); border-radius:8px; box-shadow:0 4px 18px rgba(0,0,0,.13); z-index:1055; padding:6px 0;';
 
-        span.appendChild(toggle);
-        span.appendChild(dropdown);
+            var base = '/paginasPrestador/';
+            var links = [
+                { href: base + 'prestadorAreaExclusiva.html', icon: 'bi-house-door', text: 'Área Exclusiva' },
+                { href: base + 'prestadorServicosAgendados.html', icon: 'bi-calendar-check', text: 'Meus Agendamentos' },
+                { href: base + 'prestadorConfigurarAgenda.html', icon: 'bi-calendar3', text: 'Gerenciar Agenda' },
+                { href: base + 'prestadorHotsiteAdm.html', icon: 'bi-globe', text: 'Meu Hot Site' },
+                { href: base + 'prestadorAvaliacoesFeitas.html', icon: 'bi-star', text: 'Avaliações Feitas' },
+                { href: base + 'prestadorAvaliacoesRecebidas.html', icon: 'bi-star-half', text: 'Avaliações Recebidas' },
+                { href: base + 'dashboardPrestador.html', icon: 'bi-grid-1x2', text: 'Dashboard' },
+                { href: base + 'prestadorContato.html', icon: 'bi-chat-text', text: 'Suporte/Contato' }
+            ];
+
+            links.forEach(function (item) {
+                var a = document.createElement('a');
+                a.href = item.href;
+                a.style.cssText = 'display:block; padding:7px 16px; color:var(--texto-principal,#212529); text-decoration:none; font-size:.88rem;';
+                a.innerHTML = '<i class="bi ' + item.icon + ' me-2" style="color:#146ADB;"></i>' + item.text;
+                a.addEventListener('mouseover', function () { a.style.background = '#f0f4ff'; });
+                a.addEventListener('mouseout', function () { a.style.background = ''; });
+                dropdown.appendChild(a);
+            });
+
+            var hr = document.createElement('div');
+            hr.style.cssText = 'border-top:1px solid var(--borda,#dee2e6); margin:6px 0;';
+            dropdown.appendChild(hr);
+
+            var sair = document.createElement('a');
+            sair.href = '/index.html';
+            sair.style.cssText = 'display:block; padding:7px 16px; color:#dc3545; text-decoration:none; font-size:.88rem; font-weight:600;';
+            sair.innerHTML = '<i class="bi bi-box-arrow-right me-2"></i>Sair';
+            sair.addEventListener('click', function () { DB.remove('usuarioLogado'); });
+            dropdown.appendChild(sair);
+
+            span.appendChild(toggle);
+            span.appendChild(dropdown);
+        }
+
+        // Marca como inicializado para evitar duplo bind
+        toggle.dataset.eventoBound = '1';
 
         // Sprint 6 — sininho de mensagens não lidas na navbar do prestador
         _atualizarAvisoNavbarMsgsPrestador(usu.email);
@@ -759,13 +784,14 @@ document.addEventListener('DOMContentLoaded', function () {
         toggle.addEventListener('click', function (e) {
             e.preventDefault(); e.stopPropagation();
             aberto = !aberto;
-            dropdown.style.display = aberto ? 'block' : 'none';
+            if (dropdown) dropdown.style.display = aberto ? 'block' : 'none';
             var ch = document.getElementById('prest-chevron');
             if (ch) ch.className = 'bi ' + (aberto ? 'bi-chevron-up' : 'bi-chevron-down');
         });
         document.addEventListener('click', function (e) {
             if (!span.contains(e.target)) {
-                aberto = false; dropdown.style.display = 'none';
+                aberto = false;
+                if (dropdown) dropdown.style.display = 'none';
                 var ch = document.getElementById('prest-chevron');
                 if (ch) ch.className = 'bi bi-chevron-down';
             }
@@ -944,37 +970,58 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 var li = document.createElement('li');
                 li.className = 'prest-historico-item';
-                li.dataset.pedidoId = ag.id;
-                li.dataset.cliente  = ag.cliente  || '—';
-                li.dataset.servico  = ag.servico  || '—';
+                li.dataset.pedidoId    = ag.id;
+                li.dataset.cliente     = ag.cliente  || '—';
+                li.dataset.servico     = ag.servico  || '—';
+                li.dataset.clienteEmail = ag.clienteEmail || '';
+                li.dataset.data        = ag.data     || '';
+                li.dataset.horario     = ag.horario  || '';
 
-                // Data legível
-                var dataLabel = ag.data
-                    ? ag.data.split('-').reverse().join('/')
-                    : '—';
+                // Horário de início (ex: "08:00 - 09:00" → "08:00")
+                var horIni = (ag.horario || '').split(' - ')[0] || '—';
 
-                // Data de conclusão legível
-                var concluidoLabel = '—';
-                if (ag.concluidoEm) {
-                    var dConc = new Date(ag.concluidoEm);
-                    concluidoLabel = String(dConc.getDate()).padStart(2, '0') + '/' +
-                        String(dConc.getMonth() + 1).padStart(2, '0') + '/' + dConc.getFullYear();
-                } else if (ag.data) {
-                    concluidoLabel = ag.data.split('-').reverse().join('/');
+                // Subcategorias
+                var subcatHtml = (ag.subcategoriasCliente && ag.subcategoriasCliente.length > 0)
+                    ? '<br><small class="text-muted"><i class="bi bi-list-check me-1"></i>' +
+                      ag.subcategoriasCliente.map(function (sc) { return _escaparHtml(sc); }).join(', ') + '</small>'
+                    : '';
+
+                // Valor e forma de pagamento
+                var valorHtml = '';
+                var valor = parseFloat(ag.valor) || 0;
+                if (valor > 0) {
+                    var pgto = ag.formaPagamento || ag.pagamento || '';
+                    valorHtml = '<br><small class="text-muted"><i class="bi bi-cash-coin me-1"></i>R$ ' +
+                        valor.toFixed(2).replace('.', ',') +
+                        (pgto ? ' &mdash; ' + _escaparHtml(pgto) : '') + '</small>';
                 }
 
+                // Verifica se o prestador já avaliou este agendamento
+                var AVAL_KEY_CHK = 'avaliacoesFeitasPrestAdm_' + emailPrest;
+                var jaAvaliou = (DB.get(AVAL_KEY_CHK) || []).some(function (a) { return a.pedidoId === ag.id || a.id === ag.id; });
+
+                // Botão de avaliação ou badge "Avaliado"
+                var avalBtnHtml = jaAvaliou
+                    ? ' <span class="badge ms-1" style="background:#198754;color:#fff;font-size:.75rem;"><i class="bi bi-check-circle me-1"></i>Avaliado</span>'
+                    : ' <button type="button" class="btn btn-sm btn-prest-avaliar ms-1" data-ag-id="' + _escaparHtml(ag.id) + '" ' +
+                      'style="background:#FFC300;border-color:#e6b000;color:#000;font-weight:600;">' +
+                      '<i class="bi bi-star me-1"></i>Avaliar</button>';
+
                 li.innerHTML =
-                    '<span class="prest-info-label">' +
-                        '<strong>Serviço:</strong> ' + _escaparHtml(ag.servico || '—') +
-                        ' &nbsp;|&nbsp; <strong>Cliente:</strong> ' + _escaparHtml(ag.cliente || '—') +
-                        (ag.subcategoriasCliente && ag.subcategoriasCliente.length > 0 
-                            ? ' &nbsp;|&nbsp; <strong>Serviços:</strong> ' + _formatarSubcategorias(ag.subcategoriasCliente)
-                            : '') +
-                        ' &nbsp;|&nbsp; <strong>Concluído em:</strong> ' + concluidoLabel +
-                    '</span>' +
+                    '<div>' +
+                        '<strong>' + _escaparHtml(ag.servico || '—') + '</strong>' +
+                        subcatHtml +
+                        '<br><span style="font-size:.82rem;color:#6c757d;">' + _escaparHtml(ag.cliente || '—') + '</span>' +
+                        '<br><small class="text-muted"><i class="bi bi-calendar3 me-1"></i>' +
+                            _escaparHtml(ag.data || '—') + ' às ' + _escaparHtml(horIni) + '</small>' +
+                        valorHtml +
+                    '</div>' +
                     '<div class="prest-historico-acoes">' +
-                        '<button type="button" class="btn btn-primary btn-prest-avaliar">Avaliar</button>' +
-                        '<button type="button" class="btn btn-danger btn-prest-excluir">Excluir</button>' +
+                        '<span class="badge" style="background:#146ADB;color:#fff;font-size:.75rem;">Concluído</span>' +
+                        ' <button type="button" class="btn btn-sm btn-prest-historico-chat ms-1" data-ag-id="' + _escaparHtml(ag.id) + '" ' +
+                        'style="background:#6c757d;border-color:#6c757d;color:#fff;font-weight:600;">' +
+                        '<i class="bi bi-clock-history me-1"></i>Ver Histórico de Mensagens</button>' +
+                        avalBtnHtml +
                     '</div>';
 
                 listaHistorico.appendChild(li);
@@ -1137,16 +1184,33 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var pedidoAtual = null;
 
-        // Avaliar
+        // Avaliar / Chat histórico
         lista.addEventListener('click', function (e) {
-            var btnAv = e.target.closest('.btn-prest-avaliar');
-            var btnEx = e.target.closest('.btn-prest-excluir');
+            var btnAv   = e.target.closest('.btn-prest-avaliar');
+            var btnEx   = e.target.closest('.btn-prest-excluir');
+            var btnChat = e.target.closest('.btn-prest-historico-chat');
+
+            if (btnChat) {
+                var agId = btnChat.dataset.agId;
+                var li   = btnChat.closest('.prest-historico-item');
+                // Reconstrói objeto ag mínimo para abrir o chat em modo leitura
+                var agObj = {
+                    id:       agId,
+                    cliente:  li ? li.dataset.cliente  : '—',
+                    servico:  li ? li.dataset.servico  : '—',
+                    data:     li ? li.dataset.data     : '—',
+                    horario:  li ? li.dataset.horario  : ''
+                };
+                _abrirChatPrestador(agObj, emailPrest, true);
+                return;
+            }
 
             if (btnAv) {
+                // Suporta tanto data-ag-id (novo) como li pai (legado)
                 var li = btnAv.closest('.prest-historico-item');
-                pedidoAtual = li.dataset.pedidoId;
+                pedidoAtual = btnAv.dataset.agId || (li ? li.dataset.pedidoId : null);
                 var infoEl = document.getElementById('modal-prest-avaliar-info');
-                if (infoEl) infoEl.innerHTML = '<strong>Serviço:</strong> ' + li.dataset.servico + ' | <strong>Cliente:</strong> ' + li.dataset.cliente;
+                if (infoEl) infoEl.innerHTML = '<strong>Serviço:</strong> ' + (li ? li.dataset.servico : '—') + ' | <strong>Cliente:</strong> ' + (li ? li.dataset.cliente : '—');
                 renderEstrelas(starsAv, notaAv, 0);
                 document.getElementById('modal-prest-comentario').value = '';
                 if (modalAv) bootstrap.Modal.getOrCreateInstance(modalAv).show();
@@ -1204,6 +1268,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Disponibiliza a avaliação na página de Avaliações Recebidas do cliente
                 _sincronizarAvaliacaoNaClienteRecebidas(pedidoAtual, nota, coment);
                 bootstrap.Modal.getInstance(modalAv).hide();
+
+                // Troca o botão "Avaliar" pelo badge "Avaliado" no item do histórico
+                var liAvalBadge = lista.querySelector('[data-pedido-id="' + pedidoAtual + '"]');
+                if (liAvalBadge) {
+                    var btnAvalEl = liAvalBadge.querySelector('.btn-prest-avaliar');
+                    if (btnAvalEl) {
+                        var badge = document.createElement('span');
+                        badge.className = 'badge ms-1';
+                        badge.style.cssText = 'background:#198754;color:#fff;font-size:.75rem;';
+                        badge.innerHTML = '<i class="bi bi-check-circle me-1"></i>Avaliado';
+                        btnAvalEl.replaceWith(badge);
+                    }
+                }
+
                 exibirToast('Avaliação salva e enviada ao cliente!');
             });
         }
@@ -2053,22 +2131,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     '<div class="rating">' + stars +
                         '<h6 class="text-muted ms-2">Nota: ' + av.nota + '.0</h6>' +
                     '</div>' +
-                    '<p class="review-text">“' + _escaparHtml(av.comentario || '') + '”</p>' +
-                    '<div class="d-flex gap-2 mt-2">' +
-                        '<button type="button" class="btn btn-warning btn-prest-feita-editar" data-id="' + av.id + '">' +
-                            '<i class="bi bi-pencil-square me-1"></i>Editar Avaliação' +
-                        '</button>' +
-                        '<button type="button" class="btn btn-danger btn-prest-feita-excluir" data-id="' + av.id + '">' +
-                            '<i class="bi bi-trash me-1"></i>Excluir Avaliação' +
-                        '</button>' +
-                    '</div>';
+                    '<p class="review-text">“' + _escaparHtml(av.comentario || '') + '”</p>';
                 container.insertBefore(card, botaoBloco || null);
             });
         }
 
         container.addEventListener('click', function (e) {
             var btnEd = e.target.closest('.btn-prest-feita-editar');
-            var btnEx = e.target.closest('.btn-prest-feita-excluir');
 
             if (btnEd) {
                 var id = btnEd.dataset.id;
@@ -2081,28 +2150,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderEstrelas(starsEl, notaEl, av.nota);
                 if (comentEl) comentEl.value = av.comentario;
                 if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
-            }
-
-            if (btnEx) {
-                var idEx = btnEx.dataset.id;
-                var avEx = obterAvs().find(function (a) { return a.id === idEx; });
-                if (!confirm('Excluir a avaliação de "' + ((avEx && avEx.cliente) || 'cliente') + '"? Esta ação não pode ser desfeita.')) return;
-
-                // Remove de AVAL_FEITAS_PREST_KEY
-                salvarAvs(obterAvs().filter(function (a) { return a.id !== idEx; }));
-
-                // Sprint 3 — remove também da chave legada (area exclusiva)
-                var LEGACY_KEY = 'avaliacoesFeitasPrestAdm_' + emailPrest;
-                var legacy = (DB.get(LEGACY_KEY) || []).filter(function (a) { return (a.pedidoId || a.id) !== idEx; });
-                DB.set(LEGACY_KEY, legacy);
-
-                // Remove do lado do cliente (avaliações recebidas)
-                var KEY_CLI = 'avaliacoesRecebidasDoCliente';
-                var avsCliente = (DB.get(KEY_CLI) || []).filter(function (a) { return a.id !== ('rec-prest-' + idEx); });
-                DB.set(KEY_CLI, avsCliente);
-
-                renderizarLista();
-                exibirToast('Avaliação excluída com sucesso.');
             }
         });
 
@@ -3823,7 +3870,7 @@ document.addEventListener('DOMContentLoaded', function () {
             avs.slice().reverse().forEach(function (av) {
                 var stars = Array.from({ length: 5 }, function (_, i) { return i < av.nota ? '<i class="bi bi-star-fill" style="color:#ffc107;"></i>' : '<i class="bi bi-star" style="color:#ccc;"></i>'; }).join('');
                 var card = document.createElement('div'); card.className = 'review-card-reverse'; card.dataset.pedidoId = av.pedidoId;
-                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Prestador: ' + (av.profissional || av.profissional || '—') + ' (' + (av.servico || '') + ')</h5><span class="text-muted"><small>' + av.data + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + av.comentario + '"</p><div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-warning btn-editar-feita" data-pedido-id="' + av.pedidoId + '"><i class="bi bi-pencil-square me-1"></i>Editar</button></div>';
+                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Prestador: ' + (av.profissional || av.profissional || '—') + ' (' + (av.servico || '') + ')</h5><span class="text-muted"><small>' + av.data + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + av.comentario + '"</p>';
                 container.insertBefore(card, botao || null);
             });
         }
@@ -5428,6 +5475,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (idx >= 0) avs[idx] = registro; else avs.push(registro);
                 salvarAvaliacoesRecebidasPrestador(_avalConfAtual.prestEmail, avs);
 
+                // Sprint 1 — também registra em avaliacoesSalvas para aparecer
+                // em clienteAvaliacoesFeitas.html (lista "Minhas Avaliações Realizadas")
+                var AVALIACOES_KEY = 'avaliacoesSalvas';
+                var avsFeitas = DB.get(AVALIACOES_KEY) || [];
+                var registroFeita = {
+                    pedidoId:     avId,
+                    profissional: _avalConfAtual.prestNome,
+                    servico:      _avalConfAtual.servico,
+                    nota:         nota,
+                    comentario:   coment,
+                    data:         new Date().toLocaleDateString('pt-BR')
+                };
+                var idxFeita = avsFeitas.findIndex(function (a) { return a.pedidoId === avId; });
+                if (idxFeita >= 0) avsFeitas[idxFeita] = registroFeita; else avsFeitas.push(registroFeita);
+                DB.set(AVALIACOES_KEY, avsFeitas);
+
                 var modalEl = document.getElementById('modalAvaliarPrestConfirmado');
                 if (modalEl) { var inst = bootstrap.Modal.getInstance(modalEl); if (inst) inst.hide(); }
                 exibirToast('Avaliação enviada ao prestador com sucesso!');
@@ -5666,11 +5729,31 @@ document.addEventListener('DOMContentLoaded', function () {
     // CHAT PRESTADOR → CLIENTE (Sprint 3)
     // Botão Chat na lista de agendamentos confirmados/próximos
     // =========================================================
-    function _abrirChatPrestador(ag, emailPrest) {
+    function _abrirChatPrestador(ag, emailPrest, somenteLeitura) {
         var CHAT_KEY = 'agendaChat_' + ag.id;
-        var modalId = 'modalChatPrestador_' + ag.id;
+        var modalId = (somenteLeitura ? 'modalChatPrestHist_' : 'modalChatPrestador_') + ag.id;
         var ex = document.getElementById(modalId);
         if (ex) { bootstrap.Modal.getOrCreateInstance(ex).show(); return; }
+
+        var tituloModal = somenteLeitura
+            ? '<i class="bi bi-clock-history me-2"></i>Histórico de Mensagens — ' + _escaparHtml(ag.cliente || 'Cliente')
+            : '<i class="bi bi-chat-dots me-2"></i>Chat com ' + _escaparHtml(ag.cliente || 'Cliente');
+
+        var composerHtml = somenteLeitura
+            ? '<div class="agenda-chat-composer" style="background:#f8f9fa;border-top:1px solid #dee2e6;padding:10px 16px;">' +
+              '<p class="text-muted mb-0" style="font-size:.83rem;"><i class="bi bi-lock me-1"></i>Serviço concluído — chat em modo somente leitura.</p>' +
+              '</div>' +
+              '<div class="agenda-chat-rodape">' +
+              '<button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><i class="bi bi-x-circle me-1"></i>Fechar</button>' +
+              '</div>'
+            : '<div class="agenda-chat-composer">' +
+              '<textarea class="form-control agenda-chat-textarea" id="chat-prest-input-' + ag.id + '" maxlength="500" placeholder="Digite uma mensagem para o cliente..."></textarea>' +
+              '<div class="agenda-chat-contador"><span id="chat-prest-cont-' + ag.id + '">0</span>/500</div>' +
+              '</div>' +
+              '<div class="agenda-chat-rodape">' +
+              '<button type="button" class="btn btn-secondary btn-sm" id="chat-prest-limpar-' + ag.id + '"><i class="bi bi-x-circle me-1"></i>Limpar</button>' +
+              '<button type="button" class="btn btn-sm" id="chat-prest-enviar-' + ag.id + '" style="background:var(--azul-principal);border-color:var(--azul-principal);color:#fff;font-weight:600;"><i class="bi bi-send me-1"></i>Enviar</button>' +
+              '</div>';
 
         var modal = document.createElement('div');
         modal.className = 'modal fade';
@@ -5680,7 +5763,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '<div class="modal-dialog modal-dialog-centered modal-lg">' +
             '<div class="modal-content agenda-chat-modal">' +
             '<div class="modal-header" style="background:#2B2B2B;color:#fff;">' +
-            '<h5 class="modal-title"><i class="bi bi-chat-dots me-2"></i>Chat com ' + _escaparHtml(ag.cliente || 'Cliente') + '</h5>' +
+            '<h5 class="modal-title">' + tituloModal + '</h5>' +
             '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>' +
             '</div>' +
             '<div class="agenda-chat-info">' +
@@ -5689,14 +5772,7 @@ document.addEventListener('DOMContentLoaded', function () {
             '<span class="agenda-chat-info-item"><i class="bi bi-calendar3"></i> <strong>' + _escaparHtml(ag.data || '—') + '</strong></span>' +
             '</div>' +
             '<div class="agenda-chat-historico" id="chat-prest-hist-' + ag.id + '" aria-live="polite"></div>' +
-            '<div class="agenda-chat-composer">' +
-            '<textarea class="form-control agenda-chat-textarea" id="chat-prest-input-' + ag.id + '" maxlength="500" placeholder="Digite uma mensagem para o cliente..."></textarea>' +
-            '<div class="agenda-chat-contador"><span id="chat-prest-cont-' + ag.id + '">0</span>/500</div>' +
-            '</div>' +
-            '<div class="agenda-chat-rodape">' +
-            '<button type="button" class="btn btn-secondary btn-sm" id="chat-prest-limpar-' + ag.id + '"><i class="bi bi-x-circle me-1"></i>Limpar</button>' +
-            '<button type="button" class="btn btn-sm" id="chat-prest-enviar-' + ag.id + '" style="background:var(--azul-principal);border-color:var(--azul-principal);color:#fff;font-weight:600;"><i class="bi bi-send me-1"></i>Enviar</button>' +
-            '</div>' +
+            composerHtml +
             '</div></div>';
         document.body.appendChild(modal);
 
@@ -5729,6 +5805,13 @@ document.addEventListener('DOMContentLoaded', function () {
         var bsModal = new bootstrap.Modal(modal);
         bsModal.show();
         modal.addEventListener('hidden.bs.modal', function () { modal.remove(); });
+
+        // Modo somente leitura — não conecta o composer
+        if (somenteLeitura) {
+            var pollingRO = setInterval(carregarMsgsPrest, 5000);
+            modal.addEventListener('hidden.bs.modal', function () { clearInterval(pollingRO); });
+            return;
+        }
 
         var inputEl = document.getElementById('chat-prest-input-' + ag.id);
         var contEl = document.getElementById('chat-prest-cont-' + ag.id);
