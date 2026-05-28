@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServGo! — Gerenciamento Administrativo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/css/estiloServGo.css">
+    <style>
+        /* ── Sidebar badge de seção ── */
+        .prest-sidebar li a .adm-badge {
+            margin-left: auto;
+            background: #dc3545;
+            color: #fff;
+            font-size: .65rem;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 20px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        /* ── Título de seção admin ── */
+        .adm-secao-titulo {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid var(--amarelo, #FFC300);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .adm-secao-subtitulo {
+            font-size: .88rem;
+            color: var(--texto-muted, #6c757d);
+            margin-bottom: 22px;
+        }
+
+        /* ── KPI cards (Visão Geral) ── */
+        .adm-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        .adm-kpi {
+            background: #fff;
+            border-radius: 10px;
+            padding: 18px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.07);
+            border-left: 5px solid var(--borda, #dee2e6);
+            cursor: default;
+        }
+        .adm-kpi.azul   { border-left-color: var(--azul-principal, #146ADB); }
+        .adm-kpi.amarelo{ border-left-color: var(--amarelo, #FFC300); }
+        .adm-kpi.verde  { border-left-color: #198754; }
+        .adm-kpi.vermelho{border-left-color: #dc3545; }
+        .adm-kpi.roxo   { border-left-color: #6f42c1; }
+        .adm-kpi-titulo { font-size: .75rem; font-weight: 700; color: var(--texto-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+        .adm-kpi-valor  { font-size: 2rem; font-weight: 800; color: #1a1a1a; line-height: 1; margin-bottom: 4px; }
+        .adm-kpi-detalhe{ font-size: .78rem; color: var(--texto-muted); display: flex; align-items: center; gap: 4px; }
+
+        /* ── Barra de ferramentas da seção ── */
+        .adm-toolbar {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .adm-toolbar-search {
+            flex: 1;
+            min-width: 200px;
+            max-width: 320px;
+        }
+        .adm-filtro-tabs {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+        .adm-filtro-tab {
+            padding: 5px 14px;
+            border-radius: 20px;
+            border: 1.5px solid var(--borda);
+            background: #fff;
+            color: #555;
+            font-size: .82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .15s, color .15s, border-color .15s;
+        }
+        .adm-filtro-tab:hover      { border-color: var(--azul-principal); color: var(--azul-principal); }
+        .adm-filtro-tab.ativo      { background: var(--azul-principal); border-color: var(--azul-principal); color: #fff; }
+        .adm-filtro-tab.ativo-amarelo { background: var(--amarelo); border-color: #e6b000; color: #000; }
+
+        /* ── Tabela admin ── */
+        .adm-tabela { width: 100%; border-collapse: collapse; font-size: .875rem; }
+        .adm-tabela thead tr { background: #f8f9fa; border-bottom: 2px solid var(--borda); }
+        .adm-tabela th { padding: 10px 14px; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #555; text-align: left; white-space: nowrap; }
+        .adm-tabela td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; color: #222; vertical-align: middle; }
+        .adm-tabela tbody tr:last-child td { border-bottom: none; }
+        .adm-tabela tbody tr:hover { background: #f5f8ff; }
+
+        /* ── Botões de ação inline ── */
+        .adm-acoes { display: flex; gap: 5px; flex-wrap: wrap; }
+        .adm-btn-acao {
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: .78rem;
+            font-weight: 600;
+            border: 1.5px solid;
+            cursor: pointer;
+            background: transparent;
+            transition: background .15s, color .15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            white-space: nowrap;
+        }
+        .adm-btn-acao.ver    { border-color: #146ADB; color: #146ADB; }
+        .adm-btn-acao.ver:hover { background: #146ADB; color: #fff; }
+        .adm-btn-acao.editar { border-color: #b8870c; color: #b8870c; }
+        .adm-btn-acao.editar:hover { background: #FFC300; color: #000; border-color: #FFC300; }
+        .adm-btn-acao.senha  { border-color: #6f42c1; color: #6f42c1; }
+        .adm-btn-acao.senha:hover { background: #6f42c1; color: #fff; }
+        .adm-btn-acao.excluir{ border-color: #dc3545; color: #dc3545; }
+        .adm-btn-acao.excluir:hover { background: #dc3545; color: #fff; }
+        .adm-btn-acao.publicar { border-color: #198754; color: #198754; }
+        .adm-btn-acao.publicar:hover { background: #198754; color: #fff; }
+        .adm-btn-acao.responder{ border-color: #0dcaf0; color: #0a8fa3; }
+        .adm-btn-acao.responder:hover{ background: #0dcaf0; color: #fff; border-color: #0dcaf0; }
+
+        /* ── Badges de status ── */
+        .adm-badge-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: .72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            white-space: nowrap;
+        }
+        .adm-badge-status.ativo    { background: #d1fae5; color: #065f46; }
+        .adm-badge-status.inativo  { background: #fee2e2; color: #991b1b; }
+        .adm-badge-status.admin    { background: #ede9fe; color: #4c1d95; }
+        .adm-badge-status.cliente  { background: #dbeafe; color: #1e40af; }
+        .adm-badge-status.prestador{ background: #fef3c7; color: #92400e; }
+        .adm-badge-status.publicado{ background: #d1fae5; color: #065f46; }
+        .adm-badge-status.rascunho { background: #f3f4f6; color: #374151; }
+        .adm-badge-status.aberto   { background: #fee2e2; color: #991b1b; }
+        .adm-badge-status.em_andamento { background: #fef3c7; color: #92400e; }
+        .adm-badge-status.resolvido{ background: #d1fae5; color: #065f46; }
+        .adm-badge-status.destaque { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
+
+        /* ── Card de grupo (prest-card reutilizado) ── */
+        .adm-card {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.07);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .adm-card-hdr {
+            background: #f8f9fa;
+            border-bottom: 1px solid var(--borda);
+            padding: 12px 18px;
+            font-weight: 700;
+            font-size: .9rem;
+            color: #333;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .adm-card-corpo { padding: 16px 18px; }
+
+        /* ── Formulário de notícia ── */
+        .adm-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .adm-form-grid .col-full { grid-column: 1 / -1; }
+        @media (max-width: 640px) { .adm-form-grid { grid-template-columns: 1fr; } }
+
+        /* ── Barra de progresso de storage ── */
+        .adm-storage-item { margin-bottom: 10px; }
+        .adm-storage-nome { font-size: .82rem; font-weight: 600; color: #333; margin-bottom: 3px; display: flex; justify-content: space-between; }
+        .adm-storage-barra { height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden; }
+        .adm-storage-fill  { height: 100%; border-radius: 4px; transition: width .4s; }
+
+        /* ── Lista vazia ── */
+        .adm-vazio {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--texto-muted);
+            font-size: .9rem;
+        }
+        .adm-vazio i { font-size: 2.5rem; display: block; margin-bottom: 10px; color: #ccc; }
+
+        /* ── Card de atividade recente ── */
+        .adm-ativ-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 9px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: .85rem;
+        }
+        .adm-ativ-item:last-child { border-bottom: none; }
+        .adm-ativ-avatar {
+            width: 34px; height: 34px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: .85rem; color: #fff; flex-shrink: 0;
+        }
+        .adm-ativ-info { flex: 1; min-width: 0; }
+        .adm-ativ-nome  { font-weight: 700; color: #1a1a1a; }
+        .adm-ativ-meta  { font-size: .75rem; color: #888; }
+
+        /* ── Barra de pesquisa de usuários ── */
+        .adm-busca-input {
+            width: 100%; padding: 8px 14px;
+            border: 1.5px solid var(--borda); border-radius: 8px;
+            font-size: .88rem; color: #222;
+            transition: border-color .2s;
+        }
+        .adm-busca-input:focus { outline: none; border-color: var(--azul-principal); box-shadow: 0 0 0 3px rgba(20,106,219,.1); }
+
+        /* ── Distribuição de categorias ── */
+        .adm-cat-item { margin-bottom: 8px; }
+        .adm-cat-label { font-size: .82rem; display: flex; justify-content: space-between; color: #444; margin-bottom: 3px; }
+        .adm-cat-barra { height: 10px; background: #e9ecef; border-radius: 5px; overflow: hidden; }
+        .adm-cat-fill  { height: 100%; background: linear-gradient(90deg, #146ADB, #0dcaf0); border-radius: 5px; transition: width .5s; }
+
+        /* ── Ticket item ── */
+        .adm-ticket-item {
+            border-left: 4px solid #dee2e6;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            background: #fff;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        }
+        .adm-ticket-item.aberto { border-left-color: #dc3545; }
+        .adm-ticket-item.em_andamento { border-left-color: #FFC300; }
+        .adm-ticket-item.resolvido { border-left-color: #198754; }
+
+        /* ── Manutenção — card de ferramenta ── */
+        .adm-tool-card {
+            background: #fff;
+            border: 1.5px solid var(--borda);
+            border-radius: 10px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            margin-bottom: 12px;
+            transition: border-color .2s;
+        }
+        .adm-tool-card:hover { border-color: var(--azul-principal); }
+        .adm-tool-icone {
+            width: 40px; height: 40px; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; color: #fff; flex-shrink: 0;
+        }
+        .adm-tool-texto { flex: 1; }
+        .adm-tool-titulo { font-weight: 700; font-size: .9rem; color: #1a1a1a; margin-bottom: 3px; }
+        .adm-tool-desc   { font-size: .8rem; color: #666; }
+        .adm-tool-acao   { flex-shrink: 0; align-self: center; }
+    </style>
+</head>
+<body>
+
+<!-- ── NAVBAR ── -->
+<header>
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid" style="max-width:1400px;margin:0 auto;padding:0 16px;">
+            <a class="navbar-brand" href="/index.html">
+                <span class="serv-part">Serv</span><span class="go-part">Go!</span>
+            </a>
+            <span class="navbar-logada-info" id="adm-saudacao-navbar">Admin</span>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto align-items-lg-center">
+                    <li class="nav-item me-2">
+                        <a href="/paginasSite/dashboardAdmin.html" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-danger btn-sm" href="/paginasSite/adminLogin.html" id="adm-btn-sair">
+                            <i class="bi bi-box-arrow-right me-1"></i>Sair
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<!-- ── WRAPPER ── -->
+<div class="prest-wrapper">
+
+    <!-- ── SIDEBAR ── -->
+    <nav class="prest-sidebar" id="admin-ger-sidebar">
+        <ul>
+            <li>
+                <a href="#" class="prest-nav-ativo" data-sec="visao-geral">
+                    <i class="bi bi-grid-1x2-fill"></i> Visão Geral
+                </a>
+            </li>
+            <li>
+                <a href="#" data-sec="usuarios">
+                    <i class="bi bi-people-fill"></i> Usuários
+                    <span class="adm-badge" id="adm-badge-usuarios"></span>
+                </a>
+            </li>
+            <li>
+                <a href="#" data-sec="prestadores">
+                    <i class="bi bi-briefcase-fill"></i> Prestadores
+                    <span class="adm-badge" id="adm-badge-prestadores"></span>
+                </a>
+            </li>
+            <li>
+                <a href="#" data-sec="noticias">
+                    <i class="bi bi-newspaper"></i> Notícias & Conteúdo
+                    <span class="adm-badge" id="adm-badge-noticias"></span>
+                </a>
+            </li>
+            <li>
+                <a href="#" data-sec="suporte">
+                    <i class="bi bi-headset"></i> Suporte / Tickets
+                    <span class="adm-badge" id="adm-badge-suporte"></span>
+                </a>
+            </li>
+            <li>
+                <a href="#" data-sec="manutencao">
+                    <i class="bi bi-tools"></i> Manutenção
+                </a>
+            </li>
+            <li class="sidebar-sair">
+                <a href="/paginasSite/adminLogin.html" id="sidebar-btn-sair">
+                    <i class="bi bi-box-arrow-right"></i> Sair
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- ── MAIN ── -->
+    <main class="prest-main" id="admin-ger-main">
+
+        <!-- Seção: Visão Geral -->
+        <div class="admin-secao" id="sec-visao-geral"></div>
+
+        <!-- Seção: Usuários -->
+        <div class="admin-secao" id="sec-usuarios" style="display:none;"></div>
+
+        <!-- Seção: Prestadores -->
+        <div class="admin-secao" id="sec-prestadores" style="display:none;"></div>
+
+        <!-- Seção: Notícias & Conteúdo -->
+        <div class="admin-secao" id="sec-noticias" style="display:none;"></div>
+
+        <!-- Seção: Suporte / Tickets -->
+        <div class="admin-secao" id="sec-suporte" style="display:none;"></div>
+
+        <!-- Seção: Manutenção -->
+        <div class="admin-secao" id="sec-manutencao" style="display:none;"></div>
+
+    </main>
+</div>
+
+<!-- ======================================================
+     MODAIS ADMINISTRATIVOS
+     ====================================================== -->
+
+<!-- Modal: Ver Perfil do Usuário -->
+<div class="modal fade" id="modalAdmVerPerfil" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#146ADB;color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-person-circle me-2"></i>Perfil do Usuário</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="adm-modal-perfil-corpo"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Resetar Senha -->
+<div class="modal fade" id="modalAdmResetSenha" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#6f42c1;color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-key-fill me-2"></i>Resetar Senha</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="adm-reset-info" class="mb-3 p-2 bg-light rounded"></div>
+                <input type="hidden" id="adm-reset-email">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nova Senha Temporária <span style="color:red;">*</span></label>
+                    <input type="text" class="form-control" id="adm-reset-nova-senha"
+                           placeholder="Mínimo 6 caracteres">
+                    <small class="text-muted">O usuário deverá alterar no primeiro acesso.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" id="adm-btn-confirmar-reset">
+                    <i class="bi bi-key me-1"></i>Confirmar Reset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Novo Usuário Admin -->
+<div class="modal fade" id="modalAdmNovoAdmin" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#2B2B2B;color:#fff;">
+                <h5 class="modal-title"><i class="bi bi-shield-fill-plus me-2"></i>Novo Usuário Administrador</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nome Completo <span style="color:red;">*</span></label>
+                    <input type="text" class="form-control" id="adm-novo-nome" placeholder="Nome do administrador">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">E-mail <span style="color:red;">*</span></label>
+                    <input type="email" class="form-control" id="adm-novo-email" placeholder="email@exemplo.com">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Senha <span style="color:red;">*</span></label>
+                    <input type="password" class="form-control" id="adm-novo-senha" placeholder="Mínimo 8 caracteres">
+                    <small class="text-muted">Mín. 8 caracteres com letras, números e especiais.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-dark" id="adm-btn-criar-admin">
+                    <i class="bi bi-person-plus-fill me-1"></i>Criar Admin
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Editor de Notícia -->
+<div class="modal fade" id="modalAdmNoticia" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#146ADB;color:#fff;">
+                <h5 class="modal-title" id="adm-noticia-modal-titulo">
+                    <i class="bi bi-newspaper me-2"></i>Nova Notícia / Matéria
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="adm-noticia-id">
+                <div class="adm-form-grid">
+                    <div class="col-full">
+                        <label class="form-label fw-bold">Título <span style="color:red;">*</span></label>
+                        <input type="text" class="form-control" id="adm-noticia-titulo"
+                               placeholder="Título da matéria" maxlength="120">
+                    </div>
+                    <div>
+                        <label class="form-label fw-bold">Categoria</label>
+                        <select class="form-select" id="adm-noticia-categoria">
+                            <option value="Inovação & Tecnologia">Inovação & Tecnologia</option>
+                            <option value="Dicas para Clientes">Dicas para Clientes</option>
+                            <option value="Dicas para Prestadores">Dicas para Prestadores</option>
+                            <option value="Novidades da Plataforma">Novidades da Plataforma</option>
+                            <option value="Mercado de Serviços">Mercado de Serviços</option>
+                            <option value="Cases de Sucesso">Cases de Sucesso</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label fw-bold">Status</label>
+                        <select class="form-select" id="adm-noticia-status">
+                            <option value="publicado">Publicado</option>
+                            <option value="rascunho">Rascunho</option>
+                        </select>
+                    </div>
+                    <div class="col-full">
+                        <label class="form-label fw-bold">Resumo <span style="color:red;">*</span></label>
+                        <textarea class="form-control" id="adm-noticia-resumo" rows="2"
+                                  placeholder="Breve descrição exibida nos cards de artigos" maxlength="240"
+                                  style="resize:none;"></textarea>
+                    </div>
+                    <div class="col-full">
+                        <label class="form-label fw-bold">Conteúdo Completo</label>
+                        <textarea class="form-control" id="adm-noticia-conteudo" rows="7"
+                                  placeholder="Texto completo da matéria..." maxlength="5000"
+                                  style="resize:vertical;"></textarea>
+                        <small class="text-muted"><span id="adm-noticia-cont-chars">0</span> / 5000 caracteres</small>
+                    </div>
+                    <div>
+                        <label class="form-label fw-bold">URL da Imagem (opcional)</label>
+                        <input type="url" class="form-control" id="adm-noticia-imagem"
+                               placeholder="https://... ou deixe em branco">
+                    </div>
+                    <div>
+                        <label class="form-label fw-bold">Autor</label>
+                        <input type="text" class="form-control" id="adm-noticia-autor"
+                               placeholder="Ex.: Equipe ServGo!">
+                    </div>
+                    <div class="col-full d-flex align-items-center gap-3 pt-1">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="adm-noticia-destaque" role="switch">
+                            <label class="form-check-label fw-bold" for="adm-noticia-destaque">
+                                <i class="bi bi-star-fill text-warning me-1"></i>Exibir como Post em Destaque
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="adm-btn-salvar-noticia">
+                    <i class="bi bi-floppy me-1"></i>Salvar Matéria
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Responder Ticket -->
+<div class="modal fade" id="modalAdmTicket" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#0dcaf0;color:#000;">
+                <h5 class="modal-title"><i class="bi bi-headset me-2"></i>Ticket de Suporte</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="adm-ticket-id">
+                <div id="adm-ticket-detalhes" class="mb-3"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Status</label>
+                    <select class="form-select form-select-sm" id="adm-ticket-status" style="max-width:200px;">
+                        <option value="aberto">Aberto</option>
+                        <option value="em_andamento">Em Andamento</option>
+                        <option value="resolvido">Resolvido</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Resposta do Admin</label>
+                    <textarea class="form-control" id="adm-ticket-resposta" rows="4"
+                              placeholder="Escreva a resposta para o usuário..." maxlength="1000"
+                              style="resize:vertical;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                <button type="button" class="btn btn-info fw-bold" id="adm-btn-salvar-ticket"
+                        style="background:#0dcaf0;border-color:#0dcaf0;color:#000;">
+                    <i class="bi bi-send me-1"></i>Salvar Resposta
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Confirmação genérica -->
+<div class="modal fade" id="modalAdmConfirmar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background:#dc3545;color:#fff;">
+                <h5 class="modal-title" id="adm-conf-titulo"><i class="bi bi-exclamation-triangle me-2"></i>Confirmar Ação</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="adm-conf-corpo"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="adm-btn-confirmar-acao">
+                    <i class="bi bi-check-circle me-1"></i>Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+    <div class="container" style="padding-top:30px;padding-bottom:24px;">
+        <div class="row">
+            <div class="col-md-6">
+                <a class="navbar-footer" href="#">
+                    <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
+                </a>
+                <p class="small text-muted mt-2">Painel de Gerenciamento Administrativo</p>
+            </div>
+            <div class="col-md-6 text-md-end d-flex align-items-center justify-content-md-end">
+                <small class="text-white-50">© 2026 ServGo! — Acesso Restrito</small>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Toast -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:1090;">
+    <div id="toastNotificacao" class="toast align-items-center text-white bg-dark border-0"
+         role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="toast-mensagem">Ação realizada com sucesso!</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast" aria-label="Fechar"></button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/script.js" defer></script>
+</body>
+</html>

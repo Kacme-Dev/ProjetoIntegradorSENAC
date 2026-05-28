@@ -146,8 +146,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (tiposPermitidos) {
                 var tipos = Array.isArray(tiposPermitidos) ? tiposPermitidos : [tiposPermitidos];
                 if (tipos.indexOf(usu.tipo) < 0) {
-                    // Logado mas com tipo incorreto — redireciona para home
-                    window.location.replace('/index.html');
+                    // Logado mas com tipo incorreto
+                    // Se a página exige admin, vai para adminLogin; senão, vai para home
+                    if (tipos.length === 1 && tipos[0] === 'admin') {
+                        window.location.replace(loginBase + '?acesso=restrito');
+                    } else {
+                        window.location.replace('/index.html');
+                    }
                     return false;
                 }
             }
@@ -236,9 +241,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         /* Regras de proteção: padrão de caminho → tipos de usuário permitidos */
         var regras = [
-            { padrao: '/paginasCliente/',   tipos: ['cliente', 'admin'] },
-            { padrao: '/paginasPrestador/', tipos: ['prestador', 'admin'] },
-            { padrao: 'dashboardAdmin',     tipos: ['admin'] }
+            { padrao: '/paginasCliente/',    tipos: ['cliente', 'admin'] },
+            { padrao: '/paginasPrestador/',  tipos: ['prestador', 'admin'] },
+            { padrao: 'dashboardAdmin',      tipos: ['admin'],  loginUrl: '/paginasAdministrador/adminLogin.html' },
+            { padrao: 'adminGerenciamento',  tipos: ['admin'],  loginUrl: '/paginasAdministrador/adminLogin.html' }
         ];
 
         /* Verifica se a rota atual corresponde a alguma regra */
@@ -259,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (isExcecao) return; // é uma página pública, libera acesso
 
         /* Executa o guard — redireciona se não autenticado ou tipo incorreto */
-        SG_Auth.guardPagina(regraAtiva.tipos);
+        SG_Auth.guardPagina(regraAtiva.tipos, regraAtiva.loginUrl || null);
     }
 
     // =========================================================
@@ -628,7 +634,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         switch (tipo) {
-            case 'admin': window.location.href = '../paginasSite/dashboardAdmin.html'; break;
+            case 'admin': window.location.href = '../paginasAdministrador/dashboardAdmin.html'; break;
             case 'prestador': window.location.href = '../paginasPrestador/indexPrestador.html'; break;
             case 'cliente': window.location.href = '../paginasCliente/indexCliente.html'; break;
             default: window.location.href = '../index.html';
@@ -7008,6 +7014,161 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // =========================================================
+    // SPRINT 1 — NOTÍCIAS DINÂMICAS NA HOME (index.html)
+    // Lê sgNoticias do localStorage, filtra publicadas, ordena
+    // da mais recente para a mais antiga e renderiza até 24 cards.
+    // Um botão "Carregar Matérias Mais Antigas" pagina as demais.
+    // Cada card abre um modal de leitura (somente leitura).
+    // =========================================================
+    function inicializarNoticiasIndexHome() {
+        var grid = document.getElementById('noticias-grid');
+        if (!grid) return; // não está na index
+
+        var LIMITE_POR_PAGINA = 24;
+        var paginaAtual       = 0;
+        var noticiasPublicadas = [];
+
+        /* ── helpers locais ─────────────────────────────── */
+        function _escN(s) {
+            return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+        function _fmtDataN(iso) {
+            if (!iso) return '';
+            try { return new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}); }
+            catch(e) { return iso; }
+        }
+        function _calcLeitura(texto) {
+            var palavras = (texto || '').split(/\s+/).filter(Boolean).length;
+            return Math.max(1, Math.round(palavras / 200)) + ' min de leitura';
+        }
+
+        /* ── modal de leitura ───────────────────────────── */
+        function _abrirModalMateria(n) {
+            var modalEl = document.getElementById('modalVerMateria');
+            if (!modalEl) return;
+            var tituloEl = document.getElementById('modal-materia-titulo');
+            var corpoEl  = document.getElementById('modal-materia-corpo');
+            if (tituloEl) tituloEl.innerHTML = '<i class="bi bi-newspaper me-2"></i>' + _escN(n.titulo);
+            if (corpoEl) {
+                var imgHtml = n.imagemUrl
+                    ? '<img src="' + _escN(n.imagemUrl) + '" class="img-fluid rounded mb-3 w-100" alt="' + _escN(n.titulo) + '" onerror="this.style.display=\'none\'">'
+                    : '';
+                corpoEl.innerHTML =
+                    imgHtml +
+                    '<div class="mb-2">' +
+                        '<span class="badge bg-primary me-2">' + _escN(n.categoria || 'Geral') + '</span>' +
+                        (n.destaque ? '<span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fcd34d;"><i class="bi bi-star-fill text-warning me-1"></i>Destaque</span>' : '') +
+                    '</div>' +
+                    '<h4 class="fw-bold mb-2">' + _escN(n.titulo) + '</h4>' +
+                    '<p class="text-muted small mb-3">' +
+                        '<i class="bi bi-person me-1"></i>' + _escN(n.autor || 'Equipe ServGo!') +
+                        ' &nbsp;&middot;&nbsp; <i class="bi bi-calendar me-1"></i>' + _fmtDataN(n.dataCriacao) +
+                        ' &nbsp;&middot;&nbsp; <i class="bi bi-clock me-1"></i>' + _calcLeitura(n.conteudo) +
+                    '</p>' +
+                    (n.resumo
+                        ? '<p class="lead mb-3" style="font-size:.95rem;color:#444;">' + _escN(n.resumo) + '</p>'
+                        : '') +
+                    '<div class="border-top pt-3" style="white-space:pre-wrap;line-height:1.75;color:#333;">' +
+                        _escN(n.conteudo || '') +
+                    '</div>';
+            }
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+
+        /* ── renderiza fatia de cards no grid ───────────── */
+        function _renderCards(inicio, fim) {
+            var frag = document.createDocumentFragment();
+            noticiasPublicadas.slice(inicio, fim).forEach(function(n) {
+                var col     = document.createElement('div');
+                col.className = 'col-lg-4 col-md-6';
+                var imgSrc  = n.imagemUrl || 'placeholder_card.png';
+                col.innerHTML =
+                    '<div class="card h-100 shadow-sm">' +
+                        '<img src="' + _escN(imgSrc) + '" class="card-img-top" alt="' + _escN(n.titulo) + '" ' +
+                            'onerror="this.src=\'placeholder_card.png\'">' +
+                        '<div class="card-body">' +
+                            '<span class="badge bg-primary">' + _escN(n.categoria || 'Geral') + '</span>' +
+                            (n.destaque ? ' <span class="badge bg-warning text-dark"><i class="bi bi-star-fill"></i></span>' : '') +
+                            '<h5 class="card-title mt-2">' + _escN(n.titulo) + '</h5>' +
+                            '<p class="card-text small text-muted">' +
+                                '<i class="bi bi-clock"></i> ' + _calcLeitura(n.conteudo) +
+                            '</p>' +
+                            '<button class="btn btn-sm btn-outline-secondary btn-ler-materia" ' +
+                                'data-noticia-id="' + _escN(n.id) + '">Ler</button>' +
+                        '</div>' +
+                    '</div>';
+                frag.appendChild(col);
+            });
+            grid.appendChild(frag);
+            // Bind nos novos botões "Ler"
+            grid.querySelectorAll('.btn-ler-materia:not([data-bound])').forEach(function(btn) {
+                btn.dataset.bound = '1';
+                btn.addEventListener('click', function() {
+                    var id = btn.dataset.noticiaId;
+                    var n  = noticiasPublicadas.find(function(x) { return x.id === id; });
+                    if (n) _abrirModalMateria(n);
+                });
+            });
+        }
+
+        /* ── atualiza / remove o botão "carregar mais" ── */
+        function _atualizarBotaoMais() {
+            var cont = document.getElementById('noticias-carregar-mais-container');
+            if (!cont) return;
+            var totalMostradas = (paginaAtual + 1) * LIMITE_POR_PAGINA;
+            if (totalMostradas < noticiasPublicadas.length) {
+                cont.innerHTML =
+                    '<button class="btn btn-outline-dark px-4 py-2 rounded-pill" id="btn-carregar-mais-noticias">' +
+                        '<i class="bi bi-clock-history me-2"></i>Carregar Matérias Mais Antigas' +
+                    '</button>';
+                document.getElementById('btn-carregar-mais-noticias').addEventListener('click', function() {
+                    paginaAtual++;
+                    var ini = paginaAtual * LIMITE_POR_PAGINA;
+                    var fim = Math.min(ini + LIMITE_POR_PAGINA, noticiasPublicadas.length);
+                    _renderCards(ini, fim);
+                    _atualizarBotaoMais();
+                });
+            } else {
+                cont.innerHTML = '';
+            }
+        }
+
+        /* ── inicialização ────────────────────────────── */
+        function _inicializar() {
+            var todas = (function() {
+                try { return JSON.parse(localStorage.getItem('sgNoticias')) || []; }
+                catch(e) { return []; }
+            })();
+
+            noticiasPublicadas = todas
+                .filter(function(n) { return n.status === 'publicado'; })
+                .sort(function(a, b) {
+                    return new Date(b.dataCriacao || 0).getTime() -
+                           new Date(a.dataCriacao || 0).getTime();
+                });
+
+            // Limpa cards estáticos (se restarem)
+            grid.innerHTML = '';
+
+            if (noticiasPublicadas.length === 0) {
+                grid.innerHTML =
+                    '<div class="col-12 text-center text-muted py-5">' +
+                        '<i class="bi bi-newspaper" style="font-size:2.5rem;display:block;margin-bottom:12px;color:#ccc;"></i>' +
+                        'Nenhuma matéria publicada no momento.' +
+                    '</div>';
+                return;
+            }
+
+            paginaAtual = 0;
+            _renderCards(0, Math.min(LIMITE_POR_PAGINA, noticiasPublicadas.length));
+            _atualizarBotaoMais();
+        }
+
+        // Aguarda possível seed do admin (pode ser chamado logo antes)
+        setTimeout(_inicializar, 50);
+    }
+
+    // =========================================================
     // INICIALIZAÇÃO GERAL
     // =========================================================
     inicializarGuardPaginasRestritas();     // Sprint 1 — guard de acesso a rotas protegidas
@@ -7018,8 +7179,11 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarNavbarCliente();         // Sprint 3 — novo
     inicializarHome();
     inicializarIndexHome();             // Sprint 2 — roteamento de categorias (logado/guest)
+    inicializarNoticiasIndexHome();     // Sprint 1 — cards dinâmicos de notícias na home
     inicializarCadastro();
     inicializarLogin();
+    inicializarAdminLogin();     // Sprint 4 — login exclusivo para administradores
+    inicializarAdminCadastro();  // Sprint 4 — cadastro seguro de administradores
     inicializarClienteAreaExclusiva();
     inicializarClienteConfirmados();    // Sprint 3 — novo
     inicializarPrestadorAreaExclusiva();
@@ -7042,4 +7206,2194 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarConfigurarAgenda();
     inicializarDashboardPrestador();
     inicializarContatoPrestador();
+    inicializarAdminGerenciamento(); // Sprint 2
+    inicializarFaqSite();            // Sprint 3
+
+    // =========================================================
+    // SPRINT 4 — LOGIN ADMINISTRATIVO SEGURO
+    // (adminLogin.html)
+    //
+    // Funcionalidades:
+    //  • Formulário dedicado para admins (não acessível pelo login público)
+    //  • Bloqueio progressivo: após 5 tentativas erradas, trava 15 min
+    //  • Barra visual de tentativas restantes
+    //  • Countdown de desbloqueio em tempo real
+    //  • Sessão admin com expiração por inatividade (60 min)
+    //  • Toggle de visibilidade da senha
+    //  • Redireciona para adminGerenciamento.html após login
+    //  • Usuário já logado como admin é redirecionado imediatamente
+    // =========================================================
+    function inicializarAdminLogin() {
+        var form = document.getElementById('form-admin-login');
+        if (!form) return;
+
+        // ── MODO TESTE — seed automático ─────────────────────────
+        // Remove para produção. Garante que sempre existe um admin
+        // de teste acessível sem configuração prévia.
+        var TESTE_EMAIL = 'admin@servgo.com.br';
+        var TESTE_SENHA = 'Admin@2026';
+        (function _seedAdminTeste() {
+            var usu = obterUsuariosCadastrados();
+            var temAdmin = Object.keys(usu).some(function(e){ return usu[e].tipo === 'admin'; });
+            if (!temAdmin) {
+                usu[TESTE_EMAIL] = {
+                    nome: 'Admin Teste',
+                    senha: TESTE_SENHA,
+                    tipo: 'admin',
+                    dataCadastro: new Date().toISOString(),
+                    criadoPor: 'seed-teste'
+                };
+                salvarUsuariosCadastrados(usu);
+            }
+        })();
+
+        // Exibe banner de modo teste na página
+        (function _exibirBannerTeste() {
+            var card = document.querySelector('.adm-login-card');
+            if (!card) return;
+            var banner = document.createElement('div');
+            banner.id = 'adm-teste-banner';
+            banner.style.cssText = [
+                'background:rgba(255,195,0,.12)',
+                'border:1.5px solid rgba(255,195,0,.35)',
+                'border-radius:10px',
+                'padding:14px 16px',
+                'margin-bottom:20px',
+                'font-size:.82rem',
+                'color:#fde68a'
+            ].join(';');
+            banner.innerHTML =
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">' +
+                    '<i class="bi bi-cone-striped" style="font-size:1rem;color:#FFC300;"></i>' +
+                    '<strong style="color:#FFC300;font-size:.85rem;letter-spacing:.03em;">MODO TESTE ATIVO</strong>' +
+                '</div>' +
+                '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin-bottom:12px;font-size:.8rem;">' +
+                    '<span style="opacity:.65;">E-mail:</span>' +
+                    '<code style="color:#fff;background:rgba(255,255,255,.08);padding:1px 7px;border-radius:4px;">' + TESTE_EMAIL + '</code>' +
+                    '<span style="opacity:.65;">Senha:</span>' +
+                    '<code style="color:#fff;background:rgba(255,255,255,.08);padding:1px 7px;border-radius:4px;">' + TESTE_SENHA + '</code>' +
+                '</div>' +
+                '<button type="button" id="adm-btn-preencher-teste" style="' +
+                    'width:100%;padding:7px;border-radius:6px;border:1.5px solid rgba(255,195,0,.5);' +
+                    'background:rgba(255,195,0,.15);color:#FFC300;font-size:.82rem;font-weight:700;' +
+                    'cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;' +
+                '">' +
+                    '<i class="bi bi-lightning-charge-fill"></i> Preencher e Entrar Automaticamente' +
+                '</button>';
+            // Insere antes do alerta dinâmico
+            var alertaEl2 = document.getElementById('adm-login-alerta');
+            if (alertaEl2) card.insertBefore(banner, alertaEl2);
+            else card.insertBefore(banner, card.firstChild);
+
+            // Botão de auto-preenchimento e submit
+            document.getElementById('adm-btn-preencher-teste').addEventListener('click', function () {
+                var eEl = document.getElementById('adm-email-input');
+                var sEl = document.getElementById('adm-senha-input');
+                if (eEl) eEl.value = TESTE_EMAIL;
+                if (sEl) sEl.value = TESTE_SENHA;
+                form.dispatchEvent(new Event('submit'));
+            });
+        })();
+
+        // ── Chaves ──────────────────────────────────────────────
+        var LOCK_KEY    = 'sg_adm_lockout';     // { tentativas, bloqueadoAte }
+        var SESSION_KEY = 'sg_adm_session_ts';  // timestamp da última atividade
+        var MAX_TENT    = 5;
+        var LOCK_MS     = 15 * 60 * 1000;       // 15 minutos em ms
+        var SESSION_MS  = 60 * 60 * 1000;       // 60 minutos de inatividade
+
+        // ── Elementos ───────────────────────────────────────────
+        var emailEl     = document.getElementById('adm-email-input');
+        var senhaEl     = document.getElementById('adm-senha-input');
+        var alertaEl    = document.getElementById('adm-login-alerta');
+        var btnEntrar   = document.getElementById('adm-btn-entrar');
+        var spinner     = document.getElementById('adm-spinner');
+        var btnIco      = document.getElementById('adm-btn-ico');
+        var btnTexto    = document.getElementById('adm-btn-texto');
+        var barraWrap   = document.getElementById('adm-tentativas-barra');
+        var barraTxt    = document.getElementById('adm-tentativas-texto');
+        var barraFill   = document.getElementById('adm-tentativas-fill');
+        var lockMsg     = document.getElementById('adm-lockout-msg');
+        var lockCnt     = document.getElementById('adm-lockout-countdown');
+        var toggleBtn   = document.getElementById('adm-toggle-senha');
+        var toggleIco   = document.getElementById('adm-toggle-ico');
+
+        // ── Se já está logado como admin, redireciona direto ────
+        var sessaoAtual = obterUsuarioLogado();
+        if (sessaoAtual && sessaoAtual.tipo === 'admin') {
+            _refreshAdminSession();
+            window.location.replace('/paginasAdministrador/adminGerenciamento.html');
+            return;
+        }
+
+        // ── Toggle senha ─────────────────────────────────────────
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function () {
+                var tipo = senhaEl.type === 'password' ? 'text' : 'password';
+                senhaEl.type = tipo;
+                toggleIco.className = tipo === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+            });
+        }
+
+        // ── helpers ──────────────────────────────────────────────
+        function _getLock()  { try { return JSON.parse(localStorage.getItem(LOCK_KEY)) || {}; } catch(e) { return {}; } }
+        function _setLock(v) { localStorage.setItem(LOCK_KEY, JSON.stringify(v)); }
+
+        function _mostrarAlerta(tipo, msg) {
+            if (!alertaEl) return;
+            var icones = { erro: 'bi-shield-exclamation', aviso: 'bi-exclamation-triangle-fill', sucesso: 'bi-check-circle-fill' };
+            alertaEl.innerHTML =
+                '<div class="adm-alerta ' + tipo + '">' +
+                '<i class="bi ' + (icones[tipo]||'bi-info-circle') + '" style="flex-shrink:0;margin-top:1px;"></i>' +
+                '<span>' + msg + '</span></div>';
+            alertaEl.style.display = 'block';
+        }
+
+        function _limparAlerta() {
+            if (alertaEl) { alertaEl.innerHTML = ''; alertaEl.style.display = 'none'; }
+        }
+
+        function _setCarregando(ativo) {
+            btnEntrar.disabled = ativo;
+            if (spinner) spinner.style.display = ativo ? 'inline-block' : 'none';
+            if (btnIco)  btnIco.style.display  = ativo ? 'none' : 'inline-block';
+            if (btnTexto) btnTexto.textContent  = ativo ? 'Verificando…' : 'Acessar Painel';
+        }
+
+        function _atualizarBarra(tentativas) {
+            if (!barraWrap) return;
+            var restantes = Math.max(0, MAX_TENT - tentativas);
+            barraWrap.style.display = tentativas > 0 ? 'block' : 'none';
+            if (barraTxt)  barraTxt.textContent = restantes + ' de ' + MAX_TENT;
+            if (barraFill) {
+                var pct = (restantes / MAX_TENT) * 100;
+                barraFill.style.width = pct + '%';
+                barraFill.style.background = pct > 60 ? '#22c55e' : pct > 20 ? '#FFC300' : '#ef4444';
+            }
+        }
+
+        function _fmtTempo(ms) {
+            var s = Math.ceil(ms / 1000);
+            var m = Math.floor(s / 60); s = s % 60;
+            return (m > 0 ? m + 'min ' : '') + s + 's';
+        }
+
+        // Contador regressivo de desbloqueio
+        var _lockTimer = null;
+        function _iniciarCountdown(ate) {
+            if (!lockMsg || !lockCnt) return;
+            lockMsg.style.display  = 'block';
+            btnEntrar.disabled     = true;
+
+            function _tick() {
+                var resto = ate - Date.now();
+                if (resto <= 0) {
+                    lockMsg.style.display = 'none';
+                    btnEntrar.disabled    = false;
+                    if (barraWrap) barraWrap.style.display = 'none';
+                    _limparAlerta();
+                    clearInterval(_lockTimer);
+                    return;
+                }
+                lockCnt.textContent = _fmtTempo(resto);
+            }
+            _tick();
+            clearInterval(_lockTimer);
+            _lockTimer = setInterval(_tick, 1000);
+        }
+
+        // ── Verifica estado de bloqueio ao carregar ──────────────
+        (function _verificarBloqueioInicial() {
+            var lock = _getLock();
+            if (lock.bloqueadoAte && Date.now() < lock.bloqueadoAte) {
+                _mostrarAlerta('aviso',
+                    'Muitas tentativas incorretas. Aguarde o desbloqueio automático.');
+                _atualizarBarra(MAX_TENT);
+                _iniciarCountdown(lock.bloqueadoAte);
+            } else if (lock.tentativas > 0) {
+                _atualizarBarra(lock.tentativas);
+            }
+        })();
+
+        // Verifica expiração de sessão admin ao carregar
+        (function _verificarExpiracaoSessao() {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('expirado') === '1') {
+                _mostrarAlerta('aviso', 'Sua sessão administrativa expirou por inatividade. Faça login novamente.');
+            }
+            if (params.get('acesso') === 'restrito') {
+                _mostrarAlerta('aviso', 'Acesso restrito. Faça login como administrador para continuar.');
+            }
+        })();
+
+        // ── Submit ────────────────────────────────────────────────
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            _limparAlerta();
+
+            var lock = _getLock();
+
+            // Verifica bloqueio ativo
+            if (lock.bloqueadoAte && Date.now() < lock.bloqueadoAte) {
+                _iniciarCountdown(lock.bloqueadoAte);
+                return;
+            }
+
+            var email = (emailEl ? emailEl.value.trim().toLowerCase() : '');
+            var senha = (senhaEl ? senhaEl.value : '');
+
+            if (!email || !senha) {
+                _mostrarAlerta('erro', 'Preencha e-mail e senha.');
+                return;
+            }
+
+            // Simula delay de verificação (UX + anti-brute-force)
+            _setCarregando(true);
+            setTimeout(function () {
+                _setCarregando(false);
+
+                var usuarios = obterUsuariosCadastrados();
+                var usu      = usuarios[email];
+
+                // Verificação: usuário existe, senha correta e é admin
+                if (usu && usu.senha === senha && usu.tipo === 'admin') {
+                    // Sucesso — limpa lockout e inicia sessão
+                    _setLock({ tentativas: 0, bloqueadoAte: null });
+                    _refreshAdminSession();
+                    salvarUsuarioLogado(email, usu.nome, usu.tipo);
+
+                    _mostrarAlerta('sucesso', 'Acesso autorizado. Redirecionando…');
+                    btnEntrar.disabled = true;
+
+                    // Redireciona após breve feedback visual
+                    var destino = '/paginasAdministrador/adminGerenciamento.html';
+                    try {
+                        var sg = sessionStorage.getItem('sg_redirect_apos_login') || '';
+                        if (sg && sg.includes('admin')) { destino = sg; sessionStorage.removeItem('sg_redirect_apos_login'); }
+                    } catch(ex) {}
+
+                    setTimeout(function () { window.location.replace(destino); }, 900);
+                    return;
+                }
+
+                // Falha — registra tentativa
+                var novasTentativas = (lock.tentativas || 0) + 1;
+                var novoLock = { tentativas: novasTentativas, bloqueadoAte: null };
+
+                if (novasTentativas >= MAX_TENT) {
+                    novoLock.bloqueadoAte = Date.now() + LOCK_MS;
+                    _setLock(novoLock);
+                    _atualizarBarra(novasTentativas);
+                    _mostrarAlerta('erro',
+                        'Número máximo de tentativas atingido. ' +
+                        'Acesso bloqueado por <strong>15 minutos</strong>.');
+                    _iniciarCountdown(novoLock.bloqueadoAte);
+                    if (senhaEl) senhaEl.value = '';
+                    return;
+                }
+
+                _setLock(novoLock);
+                _atualizarBarra(novasTentativas);
+
+                var restantes = MAX_TENT - novasTentativas;
+                _mostrarAlerta('erro',
+                    'E-mail ou senha incorretos, ou usuário sem permissão de administrador. ' +
+                    'Você tem <strong>' + restantes + ' tentativa' + (restantes !== 1 ? 's' : '') + '</strong> restante' + (restantes !== 1 ? 's' : '') + '.');
+                if (senhaEl) senhaEl.value = '';
+                if (emailEl) emailEl.classList.add('erro');
+            }, 800);
+        });
+
+        // Remove classe de erro ao digitar
+        if (emailEl) emailEl.addEventListener('input', function () { emailEl.classList.remove('erro'); });
+        if (senhaEl) senhaEl.addEventListener('input', function () { senhaEl.classList.remove('erro'); });
+
+        // ── Expira sessão admin por inatividade ──────────────────
+        function _refreshAdminSession() {
+            try { localStorage.setItem(SESSION_KEY, String(Date.now())); } catch(e) {}
+        }
+        // Monitora atividade a cada 5 min para expirar sessão
+        (function _monitorarSessao() {
+            var _u = obterUsuarioLogado();
+            if (!_u || _u.tipo !== 'admin') return;
+            setInterval(function () {
+                var ts = parseInt(localStorage.getItem(SESSION_KEY) || '0', 10);
+                if (ts && Date.now() - ts > SESSION_MS) {
+                    DB.remove('usuarioLogado');
+                    window.location.replace('/paginasAdministrador/adminLogin.html?expirado=1');
+                }
+            }, 5 * 60 * 1000);
+        })();
+    }
+
+    // =========================================================
+    // SPRINT 4 — CADASTRO ADMINISTRATIVO SEGURO
+    // (adminCadastro.html)
+    //
+    // Modos de operação:
+    //   1. MODO SESSÃO  — usuário admin já logado pode criar novos admins
+    //   2. MODO SETUP   — nenhum admin existe → requer token de configuração
+    //   3. BLOQUEADO    — existe admin e não há sessão → acesso negado
+    //
+    // Token de configuração padrão: SERVGO-ADMIN-2026
+    //   (deve ser alterado após o primeiro uso nas configurações do sistema)
+    //
+    // Validações:
+    //   • Nome (3–100 chars)
+    //   • E-mail único, não cadastrado
+    //   • Senha forte: 8+ chars, maiúscula, número, especial
+    //   • Confirmação de senha
+    //   • Indicador de força com checklist em tempo real
+    // =========================================================
+    function inicializarAdminCadastro() {
+        var form = document.getElementById('form-admin-cadastro');
+        if (!form) return;
+
+        var SETUP_TOKEN  = 'SERVGO-ADMIN-2026';
+        var SETUP_USED   = 'sg_setup_token_usado';
+
+        // ── Elementos ────────────────────────────────────────────
+        var nomeEl     = document.getElementById('adm-cad-nome');
+        var emailEl    = document.getElementById('adm-cad-email');
+        var senhaEl    = document.getElementById('adm-cad-senha');
+        var senha2El   = document.getElementById('adm-cad-senha2');
+        var tokenWrap  = document.getElementById('adm-cad-token-wrap');
+        var tokenEl    = document.getElementById('adm-cad-token');
+        var alertaEl   = document.getElementById('adm-cad-alerta');
+        var avisoEl    = document.getElementById('adm-cad-aviso');
+        var btnCad     = document.getElementById('adm-btn-cadastrar');
+        var matchMsg   = document.getElementById('adm-match-msg');
+
+        // ── MODO TESTE — exibe banner com token e dados de exemplo ─
+        (function _bannerTesteCadastro() {
+            var card = document.querySelector('.adm-cad-card');
+            if (!card) return;
+            var banner = document.createElement('div');
+            banner.style.cssText = [
+                'background:rgba(255,195,0,.12)',
+                'border:1.5px solid rgba(255,195,0,.35)',
+                'border-radius:10px',
+                'padding:14px 16px',
+                'margin-bottom:18px',
+                'font-size:.82rem',
+                'color:#fde68a'
+            ].join(';');
+            banner.innerHTML =
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">' +
+                    '<i class="bi bi-cone-striped" style="font-size:1rem;color:#FFC300;"></i>' +
+                    '<strong style="color:#FFC300;font-size:.85rem;letter-spacing:.03em;">MODO TESTE ATIVO</strong>' +
+                '</div>' +
+                '<div style="display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin-bottom:12px;font-size:.8rem;">' +
+                    '<span style="opacity:.65;">Token:</span>' +
+                    '<code style="color:#fff;background:rgba(255,255,255,.08);padding:1px 7px;border-radius:4px;">' + SETUP_TOKEN + '</code>' +
+                '</div>' +
+                '<button type="button" id="adm-cad-btn-preencher" style="' +
+                    'width:100%;padding:7px;border-radius:6px;border:1.5px solid rgba(255,195,0,.5);' +
+                    'background:rgba(255,195,0,.15);color:#FFC300;font-size:.82rem;font-weight:700;' +
+                    'cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;' +
+                '">' +
+                    '<i class="bi bi-lightning-charge-fill"></i> Preencher com Dados de Exemplo' +
+                '</button>';
+            var alertaRef = document.getElementById('adm-cad-alerta');
+            if (alertaRef) card.insertBefore(banner, alertaRef);
+            else card.insertBefore(banner, card.firstChild);
+
+            document.getElementById('adm-cad-btn-preencher').addEventListener('click', function () {
+                if (tokenEl)  tokenEl.value  = SETUP_TOKEN;
+                if (nomeEl)   nomeEl.value   = 'Admin Teste';
+                if (emailEl)  emailEl.value  = 'admin@servgo.com.br';
+                // Preenche senha forte de exemplo
+                var senhaEx = 'Admin@2026';
+                if (senhaEl)  { senhaEl.value  = senhaEx; senhaEl.dispatchEvent(new Event('input')); }
+                if (senha2El) { senha2El.value = senhaEx; senha2El.dispatchEvent(new Event('input')); }
+            });
+        })();
+
+        // ── helpers ──────────────────────────────────────────────
+        function _mostrarAlerta(tipo, msg) {
+            if (!alertaEl) return;
+            var icones = { erro: 'bi-shield-exclamation', aviso: 'bi-exclamation-triangle-fill', sucesso: 'bi-check-circle-fill' };
+            alertaEl.innerHTML =
+                '<div class="adm-alerta ' + tipo + '">' +
+                '<i class="bi ' + (icones[tipo]||'bi-info-circle') + '" style="flex-shrink:0;margin-top:1px;"></i>' +
+                '<span>' + msg + '</span></div>';
+            alertaEl.style.display = 'block';
+        }
+
+        // ── Determina o modo ─────────────────────────────────────
+        var usuarios  = obterUsuariosCadastrados();
+        var admins    = Object.keys(usuarios).filter(function(e){ return usuarios[e].tipo === 'admin'; });
+        var temAdmin  = admins.length > 0;
+        var sessao    = obterUsuarioLogado();
+        var eSessAdm  = sessao && sessao.tipo === 'admin';
+
+        if (!temAdmin) {
+            // MODO SETUP — nenhum admin existe
+            if (tokenWrap) tokenWrap.style.display = 'block';
+            if (avisoEl)   avisoEl.style.display   = 'none';
+        } else if (eSessAdm) {
+            // MODO SESSÃO — admin logado criando outro admin
+            if (tokenWrap) tokenWrap.style.display = 'none';
+            if (avisoEl) {
+                avisoEl.innerHTML =
+                    '<i class="bi bi-shield-fill-check" style="color:#86efac;"></i>' +
+                    '<div><strong style="color:#86efac;">Sessão administrativa ativa.</strong>' +
+                    ' Você pode cadastrar um novo administrador.' +
+                    ' <a href="/paginasAdministrador/adminGerenciamento.html" style="color:#86efac;">Ir para o painel</a></div>';
+            }
+        } else {
+            // BLOQUEADO — admin existe mas não há sessão admin
+            if (tokenWrap) tokenWrap.style.display = 'none';
+            if (avisoEl) {
+                avisoEl.innerHTML =
+                    '<i class="bi bi-lock-fill" style="color:#fca5a5;flex-shrink:0;"></i>' +
+                    '<div><strong style="color:#fca5a5;">Acesso negado.</strong>' +
+                    ' Já existe pelo menos um administrador cadastrado. Para criar um novo,' +
+                    ' faça <a href="/paginasAdministrador/adminLogin.html" style="color:#fca5a5;">login como administrador</a> primeiro.</div>';
+            }
+            if (btnCad) btnCad.disabled = true;
+            // Bloqueia todos os campos
+            [nomeEl, emailEl, senhaEl, senha2El].forEach(function(el){ if (el) el.disabled = true; });
+            return;
+        }
+
+        // ── Toggle visibilidade de senhas ─────────────────────────
+        function _bindToggle(btnId, icoId, inputEl) {
+            var btn = document.getElementById(btnId);
+            var ico = document.getElementById(icoId);
+            if (!btn || !ico || !inputEl) return;
+            btn.addEventListener('click', function () {
+                var tipo = inputEl.type === 'password' ? 'text' : 'password';
+                inputEl.type = tipo;
+                ico.className = tipo === 'password' ? 'bi bi-eye' : 'bi bi-eye-slash';
+            });
+        }
+        _bindToggle('toggle-senha-1', 'ico-senha-1', senhaEl);
+        _bindToggle('toggle-senha-2', 'ico-senha-2', senha2El);
+
+        // ── Indicador de força da senha ───────────────────────────
+        var sbEls = [
+            document.getElementById('sb1'), document.getElementById('sb2'),
+            document.getElementById('sb3'), document.getElementById('sb4')
+        ];
+        var strengthLabel = document.getElementById('adm-strength-label');
+        var strengthWrap  = document.getElementById('adm-strength-wrap');
+        var reqLen  = document.getElementById('req-len');
+        var reqUpp  = document.getElementById('req-upp');
+        var reqNum  = document.getElementById('req-num');
+        var reqEsp  = document.getElementById('req-esp');
+
+        function _avaliarSenha(s) {
+            var score = 0;
+            var ok = {
+                len: s.length >= 8,
+                upp: /[A-Z]/.test(s),
+                num: /[0-9]/.test(s),
+                esp: /[^a-zA-Z0-9]/.test(s)
+            };
+            if (ok.len) score++;
+            if (ok.upp) score++;
+            if (ok.num) score++;
+            if (ok.esp) score++;
+            if (s.length >= 12) score = Math.min(4, score + 0.5);
+            return { score: Math.round(score), ok: ok };
+        }
+
+        function _renderReq(el, ok) {
+            if (!el) return;
+            el.classList.toggle('ok', ok);
+            el.querySelector('i').className = ok ? 'bi bi-check-circle-fill' : 'bi bi-circle';
+        }
+
+        function _renderStrength(score) {
+            var cores  = ['#ef4444','#f97316','#FFC300','#22c55e'];
+            var labels = ['Fraca','Razoável','Boa','Forte'];
+            sbEls.forEach(function(b, i) {
+                if (!b) return;
+                b.style.background = i < score ? cores[Math.min(score-1, 3)] : 'rgba(255,255,255,.1)';
+            });
+            if (strengthLabel) {
+                strengthLabel.textContent = score > 0 ? labels[Math.min(score-1,3)] : '';
+                strengthLabel.style.color = score > 0 ? cores[Math.min(score-1,3)] : 'rgba(255,255,255,.4)';
+            }
+        }
+
+        if (senhaEl) {
+            senhaEl.addEventListener('input', function () {
+                var s = senhaEl.value;
+                if (strengthWrap) strengthWrap.style.display = s.length > 0 ? 'block' : 'none';
+                var res = _avaliarSenha(s);
+                _renderStrength(res.score);
+                _renderReq(reqLen, res.ok.len);
+                _renderReq(reqUpp, res.ok.upp);
+                _renderReq(reqNum, res.ok.num);
+                _renderReq(reqEsp, res.ok.esp);
+                if (senha2El && senha2El.value) _verificarMatch();
+            });
+        }
+
+        // ── Verificação de correspondência de senhas ──────────────
+        function _verificarMatch() {
+            if (!matchMsg || !senha2El) return;
+            var match = senhaEl && senhaEl.value === senha2El.value;
+            matchMsg.style.display = senha2El.value.length > 0 ? 'block' : 'none';
+            matchMsg.innerHTML     = match
+                ? '<i class="bi bi-check-circle-fill" style="color:#86efac;"></i> <span style="color:#86efac;">Senhas coincidem</span>'
+                : '<i class="bi bi-x-circle-fill" style="color:#fca5a5;"></i> <span style="color:#fca5a5;">Senhas não coincidem</span>';
+            if (senha2El) { senha2El.classList.toggle('ok', match); senha2El.classList.toggle('erro', !match && senha2El.value.length > 0); }
+        }
+        if (senha2El) senha2El.addEventListener('input', _verificarMatch);
+
+        // ── Submit ────────────────────────────────────────────────
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (alertaEl) { alertaEl.innerHTML = ''; alertaEl.style.display = 'none'; }
+
+            var nome   = (nomeEl   ? nomeEl.value.trim()   : '');
+            var email  = (emailEl  ? emailEl.value.trim().toLowerCase() : '');
+            var senha  = (senhaEl  ? senhaEl.value         : '');
+            var senha2 = (senha2El ? senha2El.value        : '');
+            var token  = (tokenEl  ? tokenEl.value.trim()  : '');
+
+            // ── Validações ──────────────────────────────────────
+            if (!nome || nome.length < 3) {
+                _mostrarAlerta('erro', 'Informe o nome completo (mínimo 3 caracteres).');
+                if (nomeEl) nomeEl.focus(); return;
+            }
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                _mostrarAlerta('erro', 'Informe um e-mail válido.');
+                if (emailEl) emailEl.focus(); return;
+            }
+
+            var rx = /^(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/;
+            if (!rx.test(senha)) {
+                _mostrarAlerta('erro', 'A senha não atende aos requisitos de segurança: mínimo 8 caracteres com maiúscula, número e especial.');
+                if (senhaEl) senhaEl.focus(); return;
+            }
+            if (senha !== senha2) {
+                _mostrarAlerta('erro', 'As senhas não coincidem.');
+                if (senha2El) senha2El.focus(); return;
+            }
+
+            var usuariosAtuais = obterUsuariosCadastrados();
+
+            // E-mail já existe
+            if (usuariosAtuais[email]) {
+                _mostrarAlerta('erro', 'Este e-mail já está cadastrado no sistema.');
+                if (emailEl) emailEl.focus(); return;
+            }
+
+            // ── Verificação de autorização ──────────────────────
+            var adminsAtuais = Object.keys(usuariosAtuais).filter(function(e){ return usuariosAtuais[e].tipo === 'admin'; });
+            var temAdmAtual  = adminsAtuais.length > 0;
+            var sessaoAtual2 = obterUsuarioLogado();
+            var eSessAdm2    = sessaoAtual2 && sessaoAtual2.tipo === 'admin';
+
+            if (temAdmAtual && !eSessAdm2) {
+                _mostrarAlerta('erro', 'Acesso negado. Faça login como administrador para cadastrar novos admins.');
+                return;
+            }
+
+            if (!temAdmAtual) {
+                // Modo setup: valida token
+                if (!token) {
+                    _mostrarAlerta('erro', 'Informe o Token de Configuração.');
+                    if (tokenEl) tokenEl.focus(); return;
+                }
+                if (token !== SETUP_TOKEN) {
+                    _mostrarAlerta('erro', 'Token de configuração inválido.');
+                    if (tokenEl) tokenEl.value = ''; tokenEl && tokenEl.focus();
+                    return;
+                }
+                // Marca token como usado (informativo)
+                try { localStorage.setItem(SETUP_USED, new Date().toISOString()); } catch(ex) {}
+            }
+
+            // ── Cria o admin ────────────────────────────────────
+            usuariosAtuais[email] = {
+                nome:          nome,
+                senha:         senha,
+                tipo:          'admin',
+                dataCadastro:  new Date().toISOString(),
+                criadoPor:     eSessAdm2 ? (sessaoAtual2.email || 'admin') : 'setup'
+            };
+            salvarUsuariosCadastrados(usuariosAtuais);
+
+            if (btnCad) btnCad.disabled = true;
+            _mostrarAlerta('sucesso',
+                'Administrador <strong>' + nome.replace(/</g,'&lt;') + '</strong> cadastrado com sucesso! ' +
+                'Redirecionando para o login…');
+
+            setTimeout(function () {
+                window.location.replace('/paginasAdministrador/adminLogin.html?cadastro=sucesso');
+            }, 1800);
+        });
+    }
+
+    // =========================================================
+    // SPRINT 3 — FAQ DINÂMICO COM EDIÇÃO ADMINISTRATIVA
+    // (faqSite.html)
+    // Leitores veem o FAQ normal.
+    // Admins logados veem controles inline para:
+    //   • Editar / excluir seções (grupos h4)
+    //   • Reordenar seções (↑ ↓)
+    //   • Editar / excluir grupos de perguntas (details/summary)
+    //   • Adicionar novo grupo dentro de cada seção
+    //   • Editar / excluir / reordenar itens individuais (faq-content)
+    //   • Adicionar novo item dentro de cada grupo
+    //   • Adicionar nova seção no topo via barra admin
+    // Dados persistidos em localStorage: sgFaqDados
+    // =========================================================
+    function inicializarFaqSite() {
+        var container = document.getElementById('faq-container-dinamico');
+        if (!container) return;
+
+        var FAQ_KEY   = 'sgFaqDados';
+        var SEED_FLAG = 'sg_seed_faq_v1';
+
+        // ── helpers ────────────────────────────────────────────
+        function dbGet(k)   { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } }
+        function dbSet(k,v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
+        function _esc(s)    { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+        function _gid()     { return 'faq-' + Date.now() + '-' + Math.random().toString(36).slice(2,6); }
+
+        function obterFaq()  { return dbGet(FAQ_KEY) || []; }
+        function salvarFaq(d){ dbSet(FAQ_KEY, d); }
+
+        // ── verifica se o usuário atual é admin ────────────────
+        var usu    = null;
+        var isAdm  = false;
+        try { usu = JSON.parse(localStorage.getItem('usuarioLogado')); isAdm = usu && usu.tipo === 'admin'; } catch(e) {}
+
+        // ── seed com o conteúdo original do FAQ ───────────────
+        function _seedFaq() {
+            if (localStorage.getItem(SEED_FLAG) === '1') return;
+            if ((dbGet(FAQ_KEY)||[]).length > 0) { localStorage.setItem(SEED_FLAG,'1'); return; }
+
+            var dados = [
+                {
+                    id: _gid(), titulo: 'Tópicos de Ajuda (FAQs Categorizadas)',
+                    publico: 'clientes', ordem: 0,
+                    grupos: [
+                        {
+                            id: _gid(), titulo: 'Segurança e Confiança', ordem: 0,
+                            itens: [
+                                { id: _gid(), pergunta: 'É seguro contratar pela plataforma?',              resposta: 'Sim. Todos os prestadores passam por verificação de identidade e são avaliados pelos clientes após cada serviço realizado.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 0 },
+                                { id: _gid(), pergunta: 'Como os profissionais são verificados?',           resposta: 'Os prestadores enviam documentos de identificação e comprovante de habilitação profissional, que são revisados pela nossa equipe.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 1 },
+                                { id: _gid(), pergunta: 'Como cancelo um serviço agendado?',               resposta: 'Acesse "Minha Área" → "Serviços Agendados" e clique em "Cancelar" no serviço desejado. Cancelamentos com mais de 24h de antecedência não geram cobrança.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 2 }
+                            ]
+                        },
+                        {
+                            id: _gid(), titulo: 'Orçamentos, Pagamentos e Agendamento', ordem: 1,
+                            itens: [
+                                { id: _gid(), pergunta: 'Como peço um orçamento?',                                        resposta: 'Encontre o prestador em "Agendar Serviços", escolha a subcategoria desejada e clique em "Solicitar Orçamento". O prestador responderá com valor e data disponível.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 0 },
+                                { id: _gid(), pergunta: 'O pagamento é feito pelo site ou direto para o profissional?',   resposta: 'O pagamento é combinado diretamente entre cliente e prestador na etapa de orçamento. A plataforma registra o acordo mas não processa pagamentos financeiros.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 1 },
+                                { id: _gid(), pergunta: 'Como e quando eu recebo pelos meus serviços?',                   resposta: 'O recebimento ocorre conforme a forma de pagamento acordada com o cliente no orçamento (PIX, dinheiro, cartão, etc.).', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 2 },
+                                { id: _gid(), pergunta: 'O que acontece se o cliente abrir uma disputa ou pedir reembolso?', resposta: 'Nossa equipe analisará o caso com base no histórico de mensagens e avaliações. Entre em contato pelo Suporte/Contato para abrir um chamado.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 3 },
+                                { id: _gid(), pergunta: 'Como cancelo um serviço agendado?',                              resposta: 'Acesse sua área exclusiva → "Serviços Agendados" → "Cancelar". Para cancelamentos com menos de 24h, políticas específicas podem se aplicar.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 4 },
+                                { id: _gid(), pergunta: 'O profissional pode alterar o valor do orçamento?',              resposta: 'Não após a confirmação. O valor só pode ser renegociado antes da confirmação pelo cliente. Após confirmado, qualquer alteração precisa ser comunicada e aceita pelo cliente.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 5 }
+                            ]
+                        },
+                        {
+                            id: _gid(), titulo: 'Resolvendo Problemas', ordem: 2,
+                            itens: [
+                                { id: _gid(), pergunta: 'O profissional não apareceu. O que eu faço?',                   resposta: 'Tente contato pelo chat da plataforma. Se não houver resposta em 30 minutos, acione nosso suporte pelo Contato. O serviço poderá ser cancelado sem custo.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 0 },
+                                { id: _gid(), pergunta: 'O serviço foi malfeito ou não foi concluído. O que faço?',      resposta: 'Não confirme a conclusão do serviço. Registre um ticket de suporte com fotos e a descrição do problema para que possamos mediar.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 1 },
+                                { id: _gid(), pergunta: 'O profissional cobrou um valor diferente do combinado.',        resposta: 'Não efetue o pagamento. Entre em contato com nosso suporte imediatamente com o registro do orçamento aprovado.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 2 },
+                                { id: _gid(), pergunta: 'O profissional quebrou ou danificou algo na minha casa.',       resposta: 'Documente com fotos e entre em contato com o suporte. Recomendamos registrar um boletim de ocorrência em casos de danos expressivos.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 3 }
+                            ]
+                        },
+                        {
+                            id: _gid(), titulo: 'Problemas Graves de Segurança ou Conduta', ordem: 3,
+                            itens: [
+                                { id: _gid(), pergunta: 'Tive um problema grave (suspeita de roubo, assédio, ameaça, racismo, perseguição).', resposta: 'Sua segurança é prioridade. Em situações de emergência ligue 190. Para denúncias na plataforma use os botões abaixo.', denuncia: true, denunciaPrest: true, denunciaCli: true, ordem: 0 }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: _gid(), titulo: 'Tópicos de Ajuda para Prestadores de Serviços',
+                    publico: 'prestadores', ordem: 1,
+                    grupos: [
+                        {
+                            id: _gid(), titulo: 'Suporte para Prestadores de Serviços', ordem: 0,
+                            itens: [
+                                { id: _gid(), pergunta: 'Como configuro meu perfil para atrair clientes?',        resposta: 'Preencha completamente o seu HotSite: foto de perfil, descrição detalhada, portfólio de fotos, subcategorias e formas de pagamento aceitas.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 0 },
+                                { id: _gid(), pergunta: 'Como funciona a verificação de perfil e documentos?',    resposta: 'Após o cadastro, você pode enviar documentos pelo seu perfil. A verificação ocorre em até 3 dias úteis e adiciona um selo de confiança ao seu HotSite.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 1 },
+                                { id: _gid(), pergunta: 'Como adiciono fotos ao meu portfólio?',                  resposta: 'Acesse "Meu Hot Site" → "Galeria de Fotos" e faça o upload de imagens dos seus trabalhos realizados.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 2 },
+                                { id: _gid(), pergunta: 'Como envio um orçamento?',                               resposta: 'Em "Meus Agendamentos" → aba "Pendentes", abra o detalhe da solicitação e preencha valor e forma de pagamento para enviar o orçamento ao cliente.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 3 },
+                                { id: _gid(), pergunta: 'O cliente não me pagou (calote). O que eu faço?',        resposta: 'Registre um ticket de suporte com o histórico do serviço. Você também pode denunciar o cliente pelo botão abaixo.', denuncia: true, denunciaPrest: false, denunciaCli: true, ordem: 4 },
+                                { id: _gid(), pergunta: 'O cliente me deu uma nota injusta. Posso recorrer?',     resposta: 'Sim. Acesse "Avaliações Recebidas" e use o botão de contestação. Nossa equipe analisará o caso em até 5 dias úteis.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 5 }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    id: _gid(), titulo: 'Acesso e Conta (Para todos os usuários)',
+                    publico: 'geral', ordem: 2,
+                    grupos: [
+                        {
+                            id: _gid(), titulo: 'Gerenciamento e Recuperação de Conta', ordem: 0,
+                            itens: [
+                                { id: _gid(), pergunta: 'Não consigo conectar a minha conta (e-mail ou senha incorreta).',  resposta: 'Verifique se o e-mail está correto. Se a senha estiver errada, use "Esqueci minha senha" na tela de login para redefini-la.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 0 },
+                                { id: _gid(), pergunta: 'Como recupero minha senha?',                                       resposta: 'Na tela de login, clique em "Esqueci minha senha", informe seu e-mail cadastrado e siga as instruções enviadas.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 1 },
+                                { id: _gid(), pergunta: 'Como altero meu e-mail ou telefone de cadastro?',                  resposta: 'Acesse "Meu Perfil" → "Editar Dados Pessoais" e atualize as informações desejadas.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 2 },
+                                { id: _gid(), pergunta: 'Minha conta está inválida ou suspensa. O que faço?',              resposta: 'Entre em contato com nosso suporte pelo Fale Conosco informando seu e-mail cadastrado. Responderemos em até 48h.', denuncia: false, denunciaPrest: false, denunciaCli: false, ordem: 3 }
+                            ]
+                        }
+                    ]
+                }
+            ];
+            salvarFaq(dados);
+            localStorage.setItem(SEED_FLAG, '1');
+        }
+        _seedFaq();
+
+        // ── renderização principal ─────────────────────────────
+        function _renderFaq() {
+            var dados = obterFaq();
+            dados.sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+
+            // Barra admin
+            var barraEl = document.getElementById('faq-admin-bar');
+            if (barraEl) {
+                if (isAdm) {
+                    barraEl.style.display = 'block';
+                    barraEl.innerHTML =
+                        '<div class="faq-admin-bar">' +
+                            '<span class="faq-admin-bar-badge"><i class="bi bi-shield-fill-check"></i>Modo Admin</span>' +
+                            '<span class="faq-admin-bar-info">Você pode editar, reordenar e excluir seções, grupos e itens do FAQ.</span>' +
+                            '<button class="btn-faq-adm btn-faq-nova-secao" id="faq-btn-nova-secao-top">' +
+                                '<i class="bi bi-folder-plus"></i> Nova Seção' +
+                            '</button>' +
+                        '</div>';
+                    document.getElementById('faq-btn-nova-secao-top').addEventListener('click', function(){
+                        _abrirModalSecao(null);
+                    });
+                } else {
+                    barraEl.style.display = 'none';
+                }
+            }
+
+            var html = '';
+            dados.forEach(function(sec, secIdx){
+                var classeModo = isAdm ? 'faq-secao-bloco adm-mode' : 'faq-secao-bloco';
+                html += '<div class="' + classeModo + '" data-sec-id="' + _esc(sec.id) + '">';
+
+                // Header da seção
+                html += '<hr class="titulo-divisor-faq">';
+                if (isAdm) {
+                    html +=
+                        '<div class="faq-grupo-header">' +
+                        '<h4>' + _esc(sec.titulo) + '</h4>' +
+                        '<div class="faq-adm-controls">' +
+                            (secIdx > 0
+                                ? '<button class="faq-btn-adm mover-cima" title="Mover seção para cima" data-acao="mover-sec-cima" data-sec-id="' + _esc(sec.id) + '"><i class="bi bi-arrow-up"></i></button>'
+                                : '') +
+                            (secIdx < dados.length-1
+                                ? '<button class="faq-btn-adm mover-baixo" title="Mover seção para baixo" data-acao="mover-sec-baixo" data-sec-id="' + _esc(sec.id) + '"><i class="bi bi-arrow-down"></i></button>'
+                                : '') +
+                            '<button class="faq-btn-adm editar-sec" data-acao="editar-sec" data-sec-id="' + _esc(sec.id) + '"><i class="bi bi-pencil"></i> Editar</button>' +
+                            '<button class="faq-btn-adm add-item" data-acao="novo-grupo" data-sec-id="' + _esc(sec.id) + '"><i class="bi bi-plus-circle"></i> Novo Grupo</button>' +
+                            '<button class="faq-btn-adm excluir-sec" data-acao="excluir-sec" data-sec-id="' + _esc(sec.id) + '" data-sec-titulo="' + _esc(sec.titulo) + '"><i class="bi bi-trash"></i></button>' +
+                        '</div></div>';
+                } else {
+                    html += '<h4>' + _esc(sec.titulo) + '</h4>';
+                }
+
+                // Grupos (details)
+                var grupos = (sec.grupos||[]).slice().sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+                grupos.forEach(function(grp, grpIdx){
+                    html += '<details data-grp-id="' + _esc(grp.id) + '">';
+
+                    // Summary com controles admin
+                    if (isAdm) {
+                        html +=
+                            '<summary style="list-style:none;">' +
+                            '<div class="faq-summary-row">' +
+                                '<span class="faq-summary-texto">' + _esc(grp.titulo) + '</span>' +
+                                '<div class="faq-adm-controls">' +
+                                    (grpIdx > 0
+                                        ? '<button class="faq-btn-adm mover-cima" title="Subir grupo" data-acao="mover-grp-cima" data-sec-id="' + _esc(sec.id) + '" data-grp-id="' + _esc(grp.id) + '"><i class="bi bi-arrow-up"></i></button>'
+                                        : '') +
+                                    (grpIdx < grupos.length-1
+                                        ? '<button class="faq-btn-adm mover-baixo" title="Descer grupo" data-acao="mover-grp-baixo" data-sec-id="' + _esc(sec.id) + '" data-grp-id="' + _esc(grp.id) + '"><i class="bi bi-arrow-down"></i></button>'
+                                        : '') +
+                                    '<button class="faq-btn-adm editar-sum" data-acao="editar-grp" data-sec-id="' + _esc(sec.id) + '" data-grp-id="' + _esc(grp.id) + '" data-grp-titulo="' + _esc(grp.titulo) + '"><i class="bi bi-pencil"></i> Editar</button>' +
+                                    '<button class="faq-btn-adm excluir-det" data-acao="excluir-grp" data-sec-id="' + _esc(sec.id) + '" data-grp-id="' + _esc(grp.id) + '" data-grp-titulo="' + _esc(grp.titulo) + '"><i class="bi bi-trash"></i></button>' +
+                                '</div>' +
+                            '</div></summary>';
+                    } else {
+                        html += '<summary>' + _esc(grp.titulo) + '</summary>';
+                    }
+
+                    // Itens (faq-content)
+                    var itens = (grp.itens||[]).slice().sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+                    itens.forEach(function(item, itIdx){
+                        html += '<div class="faq-content" data-item-id="' + _esc(item.id) + '">';
+                        if (isAdm) {
+                            html +=
+                                '<div class="faq-content-row">' +
+                                '<div class="faq-content-corpo">' +
+                                    '<p><strong>' + _esc(item.pergunta) + '</strong></p>' +
+                                    '<p style="color:#555;">' + _esc(item.resposta) + '</p>' +
+                                    (item.denuncia ? _renderBotoesDenuncia(item) : '') +
+                                '</div>' +
+                                '<div class="faq-adm-controls">' +
+                                    (itIdx > 0
+                                        ? '<button class="faq-btn-adm mover-cima" title="Subir item" data-acao="mover-item-cima" data-sec-id="' + _esc(sec.id) + '" data-grp-id="' + _esc(grp.id) + '" data-item-id="' + _esc(item.id) + '"><i class="bi bi-arrow-up"></i></button>'
+                                        : '') +
+                                    (itIdx < itens.length-1
+                                        ? '<button class="faq-btn-adm mover-baixo" title="Descer item" data-acao="mover-item-baixo" data-sec-id="' + _esc(sec.id) + '" data-grp-id="' + _esc(grp.id) + '" data-item-id="' + _esc(item.id) + '"><i class="bi bi-arrow-down"></i></button>'
+                                        : '') +
+                                    '<button class="faq-btn-adm editar-item" data-acao="editar-item" data-sec-id="' + _esc(sec.id) + '" data-grp-id="' + _esc(grp.id) + '" data-item-id="' + _esc(item.id) + '"><i class="bi bi-pencil"></i></button>' +
+                                    '<button class="faq-btn-adm excluir-item" data-acao="excluir-item" data-sec-id="' + _esc(sec.id) + '" data-grp-id="' + _esc(grp.id) + '" data-item-id="' + _esc(item.id) + '" data-pergunta="' + _esc(item.pergunta) + '"><i class="bi bi-trash"></i></button>' +
+                                '</div></div>';
+                        } else {
+                            html +=
+                                '<p><strong>' + _esc(item.pergunta) + '</strong></p>' +
+                                '<p style="color:#555;">' + _esc(item.resposta) + '</p>' +
+                                (item.denuncia ? _renderBotoesDenuncia(item) : '');
+                        }
+                        html += '</div>'; // faq-content
+                    });
+
+                    // Botão "Novo Item" ao final do grupo (só admin)
+                    if (isAdm) {
+                        html +=
+                            '<div class="faq-add-item-btn-wrap">' +
+                            '<button class="faq-btn-adm add-item" data-acao="novo-item" data-sec-id="' + _esc(sec.id) + '" data-grp-id="' + _esc(grp.id) + '">' +
+                                '<i class="bi bi-plus-circle"></i> Novo Item de FAQ' +
+                            '</button></div>';
+                    }
+
+                    html += '</details>';
+                });
+
+                html += '</div>'; // faq-secao-bloco
+            });
+
+            container.innerHTML = html;
+            _bindEventos();
+        }
+
+        // ── render botões de denúncia ──────────────────────────
+        function _renderBotoesDenuncia(item) {
+            var btns = '<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">';
+            if (item.denunciaPrest) btns += '<button class="btn btn-danger btn-sm" type="button">Denunciar Prestador de Serviço</button>';
+            if (item.denunciaCli)   btns += '<button class="btn btn-danger btn-sm" type="button">Denunciar Cliente</button>';
+            btns += '</div>';
+            return btns;
+        }
+
+        // ── bind de todos os eventos de edição ─────────────────
+        function _bindEventos() {
+            if (!isAdm) return;
+            container.querySelectorAll('[data-acao]').forEach(function(btn){
+                btn.addEventListener('click', function(e){
+                    e.stopPropagation(); // evita abrir/fechar o details ao clicar no botão
+                    var acao    = btn.dataset.acao;
+                    var secId   = btn.dataset.secId   || '';
+                    var grpId   = btn.dataset.grpId   || '';
+                    var itemId  = btn.dataset.itemId  || '';
+
+                    // ── Seções ───────────────────────────────────
+                    if (acao === 'editar-sec') {
+                        _abrirModalSecao(secId);
+                    }
+                    if (acao === 'excluir-sec') {
+                        _confirmarExcluir(
+                            'Excluir a seção <strong>' + _esc(btn.dataset.secTitulo) + '</strong> e todos os seus grupos e itens?',
+                            function(){ _excluirSecao(secId); }
+                        );
+                    }
+                    if (acao === 'mover-sec-cima')  { _moverSecao(secId, -1); }
+                    if (acao === 'mover-sec-baixo') { _moverSecao(secId, +1); }
+
+                    // ── Grupos ───────────────────────────────────
+                    if (acao === 'novo-grupo') {
+                        _abrirModalGrupo(secId, null);
+                    }
+                    if (acao === 'editar-grp') {
+                        _abrirModalGrupo(secId, grpId);
+                    }
+                    if (acao === 'excluir-grp') {
+                        _confirmarExcluir(
+                            'Excluir o grupo <strong>' + _esc(btn.dataset.grpTitulo) + '</strong> e todos os seus itens?',
+                            function(){ _excluirGrupo(secId, grpId); }
+                        );
+                    }
+                    if (acao === 'mover-grp-cima')  { _moverGrupo(secId, grpId, -1); }
+                    if (acao === 'mover-grp-baixo') { _moverGrupo(secId, grpId, +1); }
+
+                    // ── Itens ────────────────────────────────────
+                    if (acao === 'novo-item') {
+                        _abrirModalItem(secId, grpId, null);
+                    }
+                    if (acao === 'editar-item') {
+                        _abrirModalItem(secId, grpId, itemId);
+                    }
+                    if (acao === 'excluir-item') {
+                        _confirmarExcluir(
+                            'Excluir o item: <em>' + _esc(btn.dataset.pergunta) + '</em>?',
+                            function(){ _excluirItem(secId, grpId, itemId); }
+                        );
+                    }
+                    if (acao === 'mover-item-cima')  { _moverItem(secId, grpId, itemId, -1); }
+                    if (acao === 'mover-item-baixo') { _moverItem(secId, grpId, itemId, +1); }
+                });
+            });
+        }
+
+        // ── MODAL: Seção ───────────────────────────────────────
+        function _abrirModalSecao(secId) {
+            var titEl = document.getElementById('faq-modal-secao-titulo');
+            var idEl  = document.getElementById('faq-secao-id');
+            var tEd   = document.getElementById('faq-secao-titulo-input');
+            var pEd   = document.getElementById('faq-secao-publico');
+            if (!titEl || !idEl || !tEd || !pEd) return;
+
+            titEl.innerHTML = secId
+                ? '<i class="bi bi-pencil-square me-2"></i>Editar Seção'
+                : '<i class="bi bi-folder-plus me-2"></i>Nova Seção';
+            idEl.value  = secId || '';
+            tEd.value   = '';
+            pEd.value   = 'geral';
+
+            if (secId) {
+                var sec = obterFaq().find(function(s){ return s.id === secId; });
+                if (sec) { tEd.value = sec.titulo; pEd.value = sec.publico || 'geral'; }
+            }
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalFaqSecao')).show();
+        }
+
+        document.getElementById('faq-btn-salvar-secao').addEventListener('click', function(){
+            var secId  = document.getElementById('faq-secao-id').value.trim();
+            var titulo = document.getElementById('faq-secao-titulo-input').value.trim();
+            var publi  = document.getElementById('faq-secao-publico').value;
+            if (!titulo) { alert('Informe o título da seção.'); return; }
+
+            var dados = obterFaq();
+            if (secId) {
+                var idx = dados.findIndex(function(s){ return s.id === secId; });
+                if (idx >= 0) { dados[idx].titulo = titulo; dados[idx].publico = publi; }
+            } else {
+                var maxOrdem = dados.reduce(function(m,s){ return Math.max(m, s.ordem||0); }, -1);
+                dados.push({ id: _gid(), titulo: titulo, publico: publi, ordem: maxOrdem+1, grupos: [] });
+            }
+            salvarFaq(dados);
+            bootstrap.Modal.getInstance(document.getElementById('modalFaqSecao')).hide();
+            _renderFaq();
+            _exibirToastFaq(secId ? 'Seção atualizada!' : 'Nova seção criada!');
+        });
+
+        // ── MODAL: Grupo ───────────────────────────────────────
+        function _abrirModalGrupo(secId, grpId) {
+            var titEl = document.getElementById('faq-modal-grupo-titulo');
+            var sEl   = document.getElementById('faq-grupo-secao-id');
+            var gEl   = document.getElementById('faq-grupo-id');
+            var tEl   = document.getElementById('faq-grupo-titulo-input');
+            if (!titEl||!sEl||!gEl||!tEl) return;
+
+            titEl.innerHTML = grpId
+                ? '<i class="bi bi-pencil-square me-2"></i>Editar Grupo de Perguntas'
+                : '<i class="bi bi-collection me-2"></i>Novo Grupo de Perguntas';
+            sEl.value = secId;
+            gEl.value = grpId || '';
+            tEl.value = '';
+
+            if (grpId) {
+                var sec = obterFaq().find(function(s){ return s.id === secId; });
+                if (sec) {
+                    var grp = (sec.grupos||[]).find(function(g){ return g.id === grpId; });
+                    if (grp) tEl.value = grp.titulo;
+                }
+            }
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalFaqGrupo')).show();
+        }
+
+        document.getElementById('faq-btn-salvar-grupo').addEventListener('click', function(){
+            var secId  = document.getElementById('faq-grupo-secao-id').value;
+            var grpId  = document.getElementById('faq-grupo-id').value.trim();
+            var titulo = document.getElementById('faq-grupo-titulo-input').value.trim();
+            if (!titulo) { alert('Informe o título do grupo.'); return; }
+
+            var dados = obterFaq();
+            var sec   = dados.find(function(s){ return s.id === secId; });
+            if (!sec) return;
+            sec.grupos = sec.grupos || [];
+
+            if (grpId) {
+                var g = sec.grupos.find(function(x){ return x.id === grpId; });
+                if (g) g.titulo = titulo;
+            } else {
+                var maxO = sec.grupos.reduce(function(m,g){ return Math.max(m, g.ordem||0); }, -1);
+                sec.grupos.push({ id: _gid(), titulo: titulo, ordem: maxO+1, itens: [] });
+            }
+            salvarFaq(dados);
+            bootstrap.Modal.getInstance(document.getElementById('modalFaqGrupo')).hide();
+            _renderFaq();
+            _exibirToastFaq(grpId ? 'Grupo atualizado!' : 'Novo grupo criado!');
+        });
+
+        // ── MODAL: Item ────────────────────────────────────────
+        var _denunciaToggle = document.getElementById('faq-item-tem-denuncia');
+        var _denunciaOps    = document.getElementById('faq-item-denuncia-opcoes');
+        if (_denunciaToggle && _denunciaOps) {
+            _denunciaToggle.addEventListener('change', function(){
+                _denunciaOps.style.display = this.checked ? 'block' : 'none';
+            });
+        }
+
+        function _abrirModalItem(secId, grpId, itemId) {
+            var titEl  = document.getElementById('faq-modal-item-titulo');
+            var sEl    = document.getElementById('faq-item-secao-id');
+            var gEl    = document.getElementById('faq-item-grupo-id');
+            var iEl    = document.getElementById('faq-item-id');
+            var pEl    = document.getElementById('faq-item-pergunta');
+            var rEl    = document.getElementById('faq-item-resposta');
+            var dEl    = document.getElementById('faq-item-tem-denuncia');
+            var dpEl   = document.getElementById('faq-item-denuncia-prest');
+            var dcEl   = document.getElementById('faq-item-denuncia-cli');
+            var dopEl  = document.getElementById('faq-item-denuncia-opcoes');
+            if (!titEl||!sEl||!gEl||!iEl||!pEl||!rEl||!dEl) return;
+
+            titEl.innerHTML = itemId
+                ? '<i class="bi bi-pencil-square me-2"></i>Editar Item de FAQ'
+                : '<i class="bi bi-question-circle me-2"></i>Novo Item de FAQ';
+            sEl.value  = secId;
+            gEl.value  = grpId;
+            iEl.value  = itemId || '';
+            pEl.value  = '';
+            rEl.value  = '';
+            dEl.checked = false;
+            if (dpEl) dpEl.checked = true;
+            if (dcEl) dcEl.checked = true;
+            if (dopEl) dopEl.style.display = 'none';
+
+            if (itemId) {
+                var sec = obterFaq().find(function(s){ return s.id === secId; });
+                if (sec) {
+                    var grp = (sec.grupos||[]).find(function(g){ return g.id === grpId; });
+                    if (grp) {
+                        var item = (grp.itens||[]).find(function(it){ return it.id === itemId; });
+                        if (item) {
+                            pEl.value   = item.pergunta  || '';
+                            rEl.value   = item.resposta  || '';
+                            dEl.checked = !!item.denuncia;
+                            if (dpEl) dpEl.checked = !!item.denunciaPrest;
+                            if (dcEl) dcEl.checked = !!item.denunciaCli;
+                            if (dopEl) dopEl.style.display = item.denuncia ? 'block' : 'none';
+                        }
+                    }
+                }
+            }
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalFaqItem')).show();
+        }
+
+        document.getElementById('faq-btn-salvar-item').addEventListener('click', function(){
+            var secId    = document.getElementById('faq-item-secao-id').value;
+            var grpId    = document.getElementById('faq-item-grupo-id').value;
+            var itemId   = document.getElementById('faq-item-id').value.trim();
+            var pergunta = document.getElementById('faq-item-pergunta').value.trim();
+            var resposta = document.getElementById('faq-item-resposta').value.trim();
+            var denuncia = document.getElementById('faq-item-tem-denuncia').checked;
+            var denPrest = denuncia && document.getElementById('faq-item-denuncia-prest').checked;
+            var denCli   = denuncia && document.getElementById('faq-item-denuncia-cli').checked;
+
+            if (!pergunta || !resposta) { alert('Pergunta e resposta são obrigatórias.'); return; }
+
+            var dados = obterFaq();
+            var sec   = dados.find(function(s){ return s.id === secId; });
+            if (!sec) return;
+            var grp = (sec.grupos||[]).find(function(g){ return g.id === grpId; });
+            if (!grp) return;
+            grp.itens = grp.itens || [];
+
+            if (itemId) {
+                var it = grp.itens.find(function(x){ return x.id === itemId; });
+                if (it) {
+                    it.pergunta = pergunta; it.resposta = resposta;
+                    it.denuncia = denuncia; it.denunciaPrest = denPrest; it.denunciaCli = denCli;
+                }
+            } else {
+                var maxO2 = grp.itens.reduce(function(m,x){ return Math.max(m, x.ordem||0); }, -1);
+                grp.itens.push({ id: _gid(), pergunta: pergunta, resposta: resposta, denuncia: denuncia, denunciaPrest: denPrest, denunciaCli: denCli, ordem: maxO2+1 });
+            }
+            salvarFaq(dados);
+            bootstrap.Modal.getInstance(document.getElementById('modalFaqItem')).hide();
+            _renderFaq();
+            _exibirToastFaq(itemId ? 'Item atualizado!' : 'Novo item adicionado!');
+        });
+
+        // ── exclusões ──────────────────────────────────────────
+        function _excluirSecao(secId) {
+            salvarFaq(obterFaq().filter(function(s){ return s.id !== secId; }));
+            _renderFaq();
+            _exibirToastFaq('Seção excluída.');
+        }
+
+        function _excluirGrupo(secId, grpId) {
+            var dados = obterFaq();
+            var sec   = dados.find(function(s){ return s.id === secId; });
+            if (sec) sec.grupos = (sec.grupos||[]).filter(function(g){ return g.id !== grpId; });
+            salvarFaq(dados);
+            _renderFaq();
+            _exibirToastFaq('Grupo excluído.');
+        }
+
+        function _excluirItem(secId, grpId, itemId) {
+            var dados = obterFaq();
+            var sec   = dados.find(function(s){ return s.id === secId; });
+            if (sec) {
+                var grp = (sec.grupos||[]).find(function(g){ return g.id === grpId; });
+                if (grp) grp.itens = (grp.itens||[]).filter(function(i){ return i.id !== itemId; });
+            }
+            salvarFaq(dados);
+            _renderFaq();
+            _exibirToastFaq('Item excluído.');
+        }
+
+        // ── movimentação de ordem ──────────────────────────────
+        function _moverSecao(secId, dir) {
+            var dados = obterFaq().slice().sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+            var idx   = dados.findIndex(function(s){ return s.id === secId; });
+            var novo  = idx + dir;
+            if (novo < 0 || novo >= dados.length) return;
+            var tmp = dados[idx].ordem; dados[idx].ordem = dados[novo].ordem; dados[novo].ordem = tmp;
+            salvarFaq(dados);
+            _renderFaq();
+        }
+
+        function _moverGrupo(secId, grpId, dir) {
+            var dados = obterFaq();
+            var sec   = dados.find(function(s){ return s.id === secId; });
+            if (!sec) return;
+            var grupos = (sec.grupos||[]).slice().sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+            var idx    = grupos.findIndex(function(g){ return g.id === grpId; });
+            var novo   = idx + dir;
+            if (novo < 0 || novo >= grupos.length) return;
+            var tmp = grupos[idx].ordem; grupos[idx].ordem = grupos[novo].ordem; grupos[novo].ordem = tmp;
+            sec.grupos = grupos;
+            salvarFaq(dados);
+            _renderFaq();
+        }
+
+        function _moverItem(secId, grpId, itemId, dir) {
+            var dados = obterFaq();
+            var sec   = dados.find(function(s){ return s.id === secId; });
+            if (!sec) return;
+            var grp   = (sec.grupos||[]).find(function(g){ return g.id === grpId; });
+            if (!grp) return;
+            var itens = (grp.itens||[]).slice().sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+            var idx   = itens.findIndex(function(i){ return i.id === itemId; });
+            var novo  = idx + dir;
+            if (novo < 0 || novo >= itens.length) return;
+            var tmp = itens[idx].ordem; itens[idx].ordem = itens[novo].ordem; itens[novo].ordem = tmp;
+            grp.itens = itens;
+            salvarFaq(dados);
+            _renderFaq();
+        }
+
+        // ── modal de confirmação de exclusão ───────────────────
+        function _confirmarExcluir(msg, cb) {
+            var corpoEl = document.getElementById('faq-conf-corpo');
+            if (corpoEl) corpoEl.innerHTML = '<p>' + msg + '</p>';
+            var btnConf = document.getElementById('faq-btn-conf-excluir');
+            var novo = btnConf.cloneNode(true);
+            btnConf.parentNode.replaceChild(novo, btnConf);
+            novo.addEventListener('click', function(){
+                bootstrap.Modal.getInstance(document.getElementById('modalFaqConfirmar')).hide();
+                cb();
+            });
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalFaqConfirmar')).show();
+        }
+
+        // ── toast ──────────────────────────────────────────────
+        function _exibirToastFaq(msg) {
+            // reutiliza o toast existente no script.js, se disponível, senão cria um simples
+            var toastEl = document.getElementById('toastNotificacao');
+            var toastMsg = document.getElementById('toast-mensagem');
+            if (toastEl && toastMsg && window.bootstrap && bootstrap.Toast) {
+                toastMsg.textContent = msg;
+                bootstrap.Toast.getOrCreateInstance(toastEl).show();
+            }
+        }
+
+        // ── render inicial ─────────────────────────────────────
+        _renderFaq();
+    }
+
+    // =========================================================
+    // SPRINT 2 — GERENCIAMENTO ADMINISTRATIVO
+    // (adminGerenciamento.html)
+    // Oferece: gestão de usuários, prestadores, notícias,
+    // tickets de suporte e ferramentas de manutenção do sistema.
+    // =========================================================
+    function inicializarAdminGerenciamento() {
+        var mainEl = document.getElementById('admin-ger-main');
+        if (!mainEl) return;
+
+        var usu = obterUsuarioLogado();
+        if (!usu || usu.tipo !== 'admin') {
+            SG_Auth.guardPagina(['admin'], '/paginasAdministrador/adminLogin.html');
+            return;
+        }
+
+        // ── Atualiza saudação ──────────────────────────────────
+        var saudEl = document.getElementById('adm-saudacao-navbar');
+        if (saudEl) saudEl.textContent = 'Admin: ' + (usu.nome || usu.email);
+
+        // Seed de notícias iniciais (1 vez por device)
+        _adminSeedNoticias();
+
+        // ── Chaves de armazenamento ────────────────────────────
+        var NOTICIAS_KEY = 'sgNoticias';
+        var TICKETS_KEY  = 'sgTickets';
+
+        function dbGet(k) { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } }
+        function dbSet(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e) { return false; } }
+
+        function obterNoticias() { return dbGet(NOTICIAS_KEY) || []; }
+        function salvarNoticias(arr) { dbSet(NOTICIAS_KEY, arr); }
+        function obterTickets()  { return dbGet(TICKETS_KEY)  || []; }
+        function salvarTickets(arr)  { dbSet(TICKETS_KEY,  arr); }
+
+        function _esc(s) {
+            return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+        function _fmtData(iso) {
+            if (!iso) return '—';
+            try { return new Date(iso).toLocaleDateString('pt-BR'); } catch(e) { return iso; }
+        }
+        function _gerarId(prefix) {
+            return (prefix||'id') + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,6);
+        }
+        function _avatarCor(nome) {
+            var cores = ['#146ADB','#198754','#6f42c1','#0dcaf0','#fd7e14','#dc3545','#b8870c'];
+            var idx = 0;
+            for (var i=0; i<(nome||'').length; i++) idx += nome.charCodeAt(i);
+            return cores[idx % cores.length];
+        }
+
+        // ── Atualiza badges da sidebar ─────────────────────────
+        function _atualizarBadges() {
+            var usuarios    = obterUsuariosCadastrados();
+            var qtdUsu      = Object.keys(usuarios).length;
+            var qtdPrest    = Object.keys(dbGet('hotsitePrestadorDados') || {}).length;
+            var qtdNot      = obterNoticias().filter(function(n){ return n.status === 'rascunho'; }).length;
+            var qtdTickets  = obterTickets().filter(function(t){ return t.status === 'aberto'; }).length;
+
+            function _setBadge(id, val) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                if (val > 0) { el.textContent = val; el.style.display = 'inline-block'; }
+                else { el.style.display = 'none'; }
+            }
+            _setBadge('adm-badge-usuarios',    qtdUsu);
+            _setBadge('adm-badge-prestadores', qtdPrest);
+            _setBadge('adm-badge-noticias',    qtdNot);
+            _setBadge('adm-badge-suporte',     qtdTickets);
+        }
+        _atualizarBadges();
+
+        // ── Navegação entre seções (SPA) ───────────────────────
+        var secAtiva = 'visao-geral';
+        var loaders  = {
+            'visao-geral': _carregarVisaoGeral,
+            'usuarios':    _carregarUsuarios,
+            'prestadores': _carregarPrestadores,
+            'noticias':    _carregarNoticias,
+            'suporte':     _carregarSupporte,
+            'manutencao':  _carregarManutencao
+        };
+
+        function _navegarPara(sec) {
+            secAtiva = sec;
+            // Oculta todas
+            mainEl.querySelectorAll('.admin-secao').forEach(function(el){
+                el.style.display = 'none';
+            });
+            var alvo = document.getElementById('sec-' + sec);
+            if (alvo) alvo.style.display = '';
+            // Atualiza sidebar
+            document.querySelectorAll('#admin-ger-sidebar li a[data-sec]').forEach(function(a){
+                if (a.dataset.sec === sec) a.classList.add('prest-nav-ativo');
+                else                       a.classList.remove('prest-nav-ativo');
+            });
+            // Carrega conteúdo
+            if (loaders[sec]) loaders[sec]();
+        }
+
+        document.querySelectorAll('#admin-ger-sidebar li a[data-sec]').forEach(function(a){
+            a.addEventListener('click', function(e){
+                e.preventDefault();
+                _navegarPara(a.dataset.sec);
+            });
+        });
+
+        // Sair limpa sessão
+        var btnSair = document.getElementById('adm-btn-sair');
+        if (btnSair) btnSair.addEventListener('click', function(){ DB.remove('usuarioLogado'); });
+        var sidebarSair = document.getElementById('sidebar-btn-sair');
+        if (sidebarSair) sidebarSair.addEventListener('click', function(){ DB.remove('usuarioLogado'); });
+
+        // ── SEÇÃO: VISÃO GERAL ─────────────────────────────────
+        function _carregarVisaoGeral() {
+            var sec = document.getElementById('sec-visao-geral');
+            if (!sec) return;
+
+            var usuarios  = obterUsuariosCadastrados();
+            var listaUsu  = Object.keys(usuarios).map(function(e){ return Object.assign({}, usuarios[e], {email:e}); });
+            var qtdTotal  = listaUsu.length;
+            var qtdCli    = listaUsu.filter(function(u){ return u.tipo==='cliente'; }).length;
+            var qtdPrest  = listaUsu.filter(function(u){ return u.tipo==='prestador'; }).length;
+            var qtdAdmin  = listaUsu.filter(function(u){ return u.tipo==='admin'; }).length;
+
+            var hotsiteStore = dbGet('hotsitePrestadorDados') || {};
+            var qtdHotsite   = Object.keys(hotsiteStore).length;
+
+            var qtdAgs = 0;
+            Object.keys(hotsiteStore).forEach(function(email){
+                var ags = dbGet('agendamentos_' + email) || [];
+                qtdAgs += ags.length;
+            });
+
+            var qtdAvsPrest = 0;
+            var avsStore = dbGet('avaliacoesRecebidasPrestador') || {};
+            Object.keys(avsStore).forEach(function(e){ qtdAvsPrest += (avsStore[e]||[]).length; });
+            var qtdAvsCli = (dbGet('avaliacoesRecebidasDoCliente')||[]).length;
+
+            var qtdNot  = obterNoticias().filter(function(n){ return n.status==='publicado'; }).length;
+
+            // Distribuição de categorias
+            var catCount = {};
+            Object.keys(hotsiteStore).forEach(function(email){
+                var cat = (hotsiteStore[email]||{}).categoria || 'Outros';
+                catCount[cat] = (catCount[cat]||0) + 1;
+            });
+            var catSorted = Object.keys(catCount).sort(function(a,b){ return catCount[b]-catCount[a]; });
+            var catMax    = catSorted.length > 0 ? catCount[catSorted[0]] : 1;
+
+            var catsHtml = catSorted.slice(0,8).map(function(cat){
+                var pct = Math.round((catCount[cat]/catMax)*100);
+                return '<div class="adm-cat-item">' +
+                    '<div class="adm-cat-label"><span>' + _esc(cat) + '</span><span>' + catCount[cat] + '</span></div>' +
+                    '<div class="adm-cat-barra"><div class="adm-cat-fill" style="width:' + pct + '%;"></div></div>' +
+                    '</div>';
+            }).join('');
+
+            // Atividade recente (últimos 5 cadastros)
+            var recentes = listaUsu
+                .filter(function(u){ return u.dataCadastro; })
+                .sort(function(a,b){ return b.dataCadastro > a.dataCadastro ? 1 : -1; })
+                .slice(0,5);
+            var recentesHtml = recentes.length === 0
+                ? '<p class="text-muted text-center py-3" style="font-size:.85rem;">Nenhum cadastro recente.</p>'
+                : recentes.map(function(u){
+                    var cor = u.tipo === 'prestador' ? '#b8870c' : u.tipo === 'admin' ? '#6f42c1' : '#146ADB';
+                    var ini = (u.nome||'U').substring(0,2).toUpperCase();
+                    return '<div class="adm-ativ-item">' +
+                        '<div class="adm-ativ-avatar" style="background:' + cor + ';">' + ini + '</div>' +
+                        '<div class="adm-ativ-info">' +
+                            '<div class="adm-ativ-nome">' + _esc(u.nome||u.email) + '</div>' +
+                            '<div class="adm-ativ-meta">' + _esc(u.email) + ' · ' + _fmtData(u.dataCadastro) + '</div>' +
+                        '</div>' +
+                        '<span class="adm-badge-status ' + u.tipo + '">' + u.tipo + '</span>' +
+                        '</div>';
+                }).join('');
+
+            sec.innerHTML =
+                '<div class="adm-secao-titulo"><i class="bi bi-grid-1x2-fill" style="color:#146ADB;"></i>Visão Geral</div>' +
+                '<p class="adm-secao-subtitulo">Resumo do estado atual da plataforma ServGo!</p>' +
+
+                '<div class="adm-kpi-grid">' +
+                    '<div class="adm-kpi azul"><div class="adm-kpi-titulo">Usuários Cadastrados</div><div class="adm-kpi-valor">' + qtdTotal + '</div><div class="adm-kpi-detalhe"><i class="bi bi-people-fill"></i>' + qtdAdmin + ' admin · ' + qtdCli + ' cli · ' + qtdPrest + ' prest</div></div>' +
+                    '<div class="adm-kpi amarelo"><div class="adm-kpi-titulo">Prestadores com HotSite</div><div class="adm-kpi-valor">' + qtdHotsite + '</div><div class="adm-kpi-detalhe"><i class="bi bi-briefcase-fill"></i>Perfis publicados</div></div>' +
+                    '<div class="adm-kpi verde"><div class="adm-kpi-titulo">Agendamentos Totais</div><div class="adm-kpi-valor">' + qtdAgs + '</div><div class="adm-kpi-detalhe"><i class="bi bi-calendar-check"></i>Em todos os prestadores</div></div>' +
+                    '<div class="adm-kpi vermelho"><div class="adm-kpi-titulo">Avaliações (Prest.)</div><div class="adm-kpi-valor">' + qtdAvsPrest + '</div><div class="adm-kpi-detalhe"><i class="bi bi-star-fill"></i>' + qtdAvsCli + ' avaliações de clientes</div></div>' +
+                    '<div class="adm-kpi roxo"><div class="adm-kpi-titulo">Notícias Publicadas</div><div class="adm-kpi-valor">' + qtdNot + '</div><div class="adm-kpi-detalhe"><i class="bi bi-newspaper"></i>' + obterNoticias().filter(function(n){return n.status==='rascunho';}).length + ' em rascunho</div></div>' +
+                    '<div class="adm-kpi"><div class="adm-kpi-titulo">Tickets Suporte</div><div class="adm-kpi-valor">' + obterTickets().length + '</div><div class="adm-kpi-detalhe"><i class="bi bi-headset"></i>' + obterTickets().filter(function(t){return t.status==='aberto';}).length + ' abertos</div></div>' +
+                '</div>' +
+
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">' +
+                    '<div class="adm-card">' +
+                        '<div class="adm-card-hdr"><span><i class="bi bi-clock-history me-2" style="color:#146ADB;"></i>Últimos Cadastros</span></div>' +
+                        '<div class="adm-card-corpo">' + recentesHtml + '</div>' +
+                    '</div>' +
+                    '<div class="adm-card">' +
+                        '<div class="adm-card-hdr"><span><i class="bi bi-bar-chart-fill me-2" style="color:#FFC300;"></i>Prestadores por Categoria</span></div>' +
+                        '<div class="adm-card-corpo">' + (catsHtml || '<p class="text-muted" style="font-size:.85rem;">Nenhum prestador cadastrado.</p>') + '</div>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        // ── SEÇÃO: USUÁRIOS ────────────────────────────────────
+        var _filtroUsuTipo = '';
+        var _filtroUsuBusca = '';
+
+        function _carregarUsuarios() {
+            var sec = document.getElementById('sec-usuarios');
+            if (!sec) return;
+
+            function _renderUsuarios() {
+                var usuarios = obterUsuariosCadastrados();
+                var lista = Object.keys(usuarios).map(function(e){
+                    return Object.assign({}, usuarios[e], {email:e});
+                });
+
+                // Aplica filtros
+                if (_filtroUsuTipo) lista = lista.filter(function(u){ return u.tipo === _filtroUsuTipo; });
+                if (_filtroUsuBusca) {
+                    var q = _filtroUsuBusca.toLowerCase();
+                    lista = lista.filter(function(u){
+                        return (u.nome||'').toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+                    });
+                }
+
+                var rows = lista.map(function(u){
+                    var cor = u.tipo === 'prestador' ? '#b8870c' : u.tipo === 'admin' ? '#6f42c1' : '#146ADB';
+                    var ini = (u.nome||u.email).substring(0,2).toUpperCase();
+                    return '<tr>' +
+                        '<td><div style="display:flex;align-items:center;gap:9px;">' +
+                            '<div style="width:30px;height:30px;border-radius:50%;background:' + cor + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">' + ini + '</div>' +
+                            '<div><div style="font-weight:600;">' + _esc(u.nome||'—') + '</div>' +
+                            '<div style="font-size:.75rem;color:#888;">' + _esc(u.email) + '</div></div></div></td>' +
+                        '<td><span class="adm-badge-status ' + u.tipo + '">' + u.tipo + '</span></td>' +
+                        '<td>' + _fmtData(u.dataCadastro) + '</td>' +
+                        '<td><div class="adm-acoes">' +
+                            '<button class="adm-btn-acao ver" data-email="' + _esc(u.email) + '" data-acao="ver-perfil"><i class="bi bi-eye"></i> Ver</button>' +
+                            '<button class="adm-btn-acao senha" data-email="' + _esc(u.email) + '" data-nome="' + _esc(u.nome||u.email) + '" data-acao="reset-senha"><i class="bi bi-key"></i> Senha</button>' +
+                            (u.email !== usu.email
+                                ? '<button class="adm-btn-acao excluir" data-email="' + _esc(u.email) + '" data-nome="' + _esc(u.nome||u.email) + '" data-acao="excluir-usuario"><i class="bi bi-trash"></i></button>'
+                                : '') +
+                        '</div></td>' +
+                    '</tr>';
+                }).join('');
+
+                var tabHtml = lista.length === 0
+                    ? '<div class="adm-vazio"><i class="bi bi-person-x"></i>Nenhum usuário encontrado.</div>'
+                    : '<table class="adm-tabela"><thead><tr><th>Usuário</th><th>Tipo</th><th>Cadastro</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table>';
+
+                var corpoEl = document.getElementById('adm-usuarios-corpo');
+                if (corpoEl) corpoEl.innerHTML = tabHtml;
+
+                // Bind ações
+                if (corpoEl) {
+                    corpoEl.querySelectorAll('[data-acao]').forEach(function(btn){
+                        btn.addEventListener('click', function(){
+                            var acao  = btn.dataset.acao;
+                            var email = btn.dataset.email;
+                            if (acao === 'ver-perfil')    _abrirPerfilUsuario(email);
+                            if (acao === 'reset-senha')   _abrirResetSenha(email, btn.dataset.nome);
+                            if (acao === 'excluir-usuario') _confirmarExcluirUsuario(email, btn.dataset.nome);
+                        });
+                    });
+                }
+            }
+
+            var totalUsu = Object.keys(obterUsuariosCadastrados()).length;
+            sec.innerHTML =
+                '<div class="adm-secao-titulo"><i class="bi bi-people-fill" style="color:#146ADB;"></i>Gerenciar Usuários</div>' +
+                '<p class="adm-secao-subtitulo">Visualize, edite e administre todos os usuários da plataforma.</p>' +
+                '<div class="adm-toolbar">' +
+                    '<div class="adm-toolbar-search"><input class="adm-busca-input" id="adm-usu-busca" type="text" placeholder="&#xF52D; Buscar por nome ou e-mail..." autocomplete="off"></div>' +
+                    '<div class="adm-filtro-tabs">' +
+                        '<button class="adm-filtro-tab ativo" data-tipo="">Todos (' + totalUsu + ')</button>' +
+                        '<button class="adm-filtro-tab" data-tipo="cliente">Clientes</button>' +
+                        '<button class="adm-filtro-tab" data-tipo="prestador">Prestadores</button>' +
+                        '<button class="adm-filtro-tab" data-tipo="admin">Admins</button>' +
+                    '</div>' +
+                    '<button class="btn btn-dark btn-sm ms-auto" id="adm-btn-novo-admin">' +
+                        '<i class="bi bi-shield-fill-plus me-1"></i>Novo Admin' +
+                    '</button>' +
+                '</div>' +
+                '<div class="adm-card"><div id="adm-usuarios-corpo"></div></div>';
+
+            _renderUsuarios();
+
+            // Busca em tempo real
+            document.getElementById('adm-usu-busca').addEventListener('input', function(){
+                _filtroUsuBusca = this.value.trim();
+                _renderUsuarios();
+            });
+            // Filtro de tipo
+            sec.querySelectorAll('.adm-filtro-tab[data-tipo]').forEach(function(tab){
+                tab.addEventListener('click', function(){
+                    _filtroUsuTipo = tab.dataset.tipo;
+                    sec.querySelectorAll('.adm-filtro-tab[data-tipo]').forEach(function(t){
+                        t.classList.toggle('ativo', t === tab);
+                    });
+                    _renderUsuarios();
+                });
+            });
+            // Novo admin
+            var btnNovoAdmin = document.getElementById('adm-btn-novo-admin');
+            if (btnNovoAdmin) {
+                btnNovoAdmin.addEventListener('click', function(){
+                    document.getElementById('adm-novo-nome').value = '';
+                    document.getElementById('adm-novo-email').value = '';
+                    document.getElementById('adm-novo-senha').value = '';
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdmNovoAdmin')).show();
+                });
+            }
+        }
+
+        // Abrir modal Ver Perfil
+        function _abrirPerfilUsuario(email) {
+            var usuarios  = obterUsuariosCadastrados();
+            var u         = usuarios[email] || {};
+            var hotsiteStore = dbGet('hotsitePrestadorDados') || {};
+            var hotsite   = hotsiteStore[email] || {};
+            var ags       = u.tipo === 'prestador' ? (dbGet('agendamentos_'+email)||[]).length : '—';
+            var avsRec    = u.tipo === 'prestador'
+                ? ((dbGet('avaliacoesRecebidasPrestador')||{})[email]||[]).length : '—';
+            var perfil    = u.perfil || {};
+            var cor       = u.tipo === 'prestador' ? '#b8870c' : u.tipo === 'admin' ? '#6f42c1' : '#146ADB';
+            var ini       = (u.nome||email).substring(0,2).toUpperCase();
+
+            var corpo =
+                '<div style="display:flex;gap:16px;align-items:center;margin-bottom:18px;flex-wrap:wrap;">' +
+                    '<div style="width:60px;height:60px;border-radius:50%;background:' + cor + ';color:#fff;font-size:1.4rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + ini + '</div>' +
+                    '<div><h5 style="margin:0;font-weight:700;">' + _esc(u.nome||'—') + '</h5>' +
+                    '<div style="font-size:.85rem;color:#666;">' + _esc(email) + '</div>' +
+                    '<span class="adm-badge-status ' + (u.tipo||'') + '">' + (u.tipo||'—') + '</span></div>' +
+                '</div>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">' +
+                    '<div><strong>Data de Cadastro:</strong><br><span style="color:#555;">' + _fmtData(u.dataCadastro) + '</span></div>' +
+                    '<div><strong>Cidade:</strong><br><span style="color:#555;">' + _esc(hotsite.cidade||perfil.cidade||'—') + '</span></div>' +
+                    '<div><strong>Telefone:</strong><br><span style="color:#555;">' + _esc(hotsite.tel||perfil.tel||'—') + '</span></div>' +
+                    '<div><strong>Endereço:</strong><br><span style="color:#555;">' + _esc(hotsite.endereco||perfil.endereco||'—') + '</span></div>' +
+                    (u.tipo==='prestador'
+                        ? '<div><strong>Categoria:</strong><br><span style="color:#555;">' + _esc(hotsite.categoria||'—') + '</span></div>' +
+                          '<div><strong>CPF/CNPJ:</strong><br><span style="color:#555;">' + _esc(hotsite.cnpj||'—') + '</span></div>' +
+                          '<div><strong>Agendamentos:</strong><br><span style="font-weight:700;color:#146ADB;">' + ags + '</span></div>' +
+                          '<div><strong>Avaliações Recebidas:</strong><br><span style="font-weight:700;color:#198754;">' + avsRec + '</span></div>'
+                        : '') +
+                '</div>';
+
+            var corpoEl = document.getElementById('adm-modal-perfil-corpo');
+            if (corpoEl) corpoEl.innerHTML = corpo;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdmVerPerfil')).show();
+        }
+
+        // Abrir modal Reset Senha
+        function _abrirResetSenha(email, nome) {
+            document.getElementById('adm-reset-email').value = email;
+            document.getElementById('adm-reset-nova-senha').value = '';
+            var infoEl = document.getElementById('adm-reset-info');
+            if (infoEl) infoEl.innerHTML = '<strong>Usuário:</strong> ' + _esc(nome||email) + '<br><small class="text-muted">' + _esc(email) + '</small>';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdmResetSenha')).show();
+        }
+
+        // Confirmar Reset Senha
+        var btnConfReset = document.getElementById('adm-btn-confirmar-reset');
+        if (btnConfReset) {
+            btnConfReset.addEventListener('click', function(){
+                var email    = (document.getElementById('adm-reset-email')||{}).value || '';
+                var novaSen  = (document.getElementById('adm-reset-nova-senha')||{}).value || '';
+                if (!novaSen || novaSen.length < 6) { alert('Informe uma senha com no mínimo 6 caracteres.'); return; }
+                var usuarios = obterUsuariosCadastrados();
+                if (!usuarios[email]) { alert('Usuário não encontrado.'); return; }
+                usuarios[email].senha = novaSen;
+                salvarUsuariosCadastrados(usuarios);
+                bootstrap.Modal.getInstance(document.getElementById('modalAdmResetSenha')).hide();
+                exibirToast('Senha de ' + _esc(usuarios[email].nome||email) + ' redefinida com sucesso!');
+            });
+        }
+
+        // Confirmar Excluir Usuário
+        function _confirmarExcluirUsuario(email, nome) {
+            var corpoEl = document.getElementById('adm-conf-corpo');
+            if (corpoEl) corpoEl.innerHTML =
+                '<p>Tem certeza que deseja <strong>excluir permanentemente</strong> o usuário:</p>' +
+                '<p><strong>' + _esc(nome) + '</strong> (' + _esc(email) + ')</p>' +
+                '<p class="text-danger small"><i class="bi bi-exclamation-triangle me-1"></i>Esta ação não pode ser desfeita. Todos os dados relacionados serão perdidos.</p>';
+            var btnConf = document.getElementById('adm-btn-confirmar-acao');
+            if (btnConf) {
+                var novo = btnConf.cloneNode(true);
+                btnConf.parentNode.replaceChild(novo, btnConf);
+                novo.addEventListener('click', function(){
+                    var usuarios = obterUsuariosCadastrados();
+                    delete usuarios[email];
+                    salvarUsuariosCadastrados(usuarios);
+                    bootstrap.Modal.getInstance(document.getElementById('modalAdmConfirmar')).hide();
+                    exibirToast('Usuário ' + _esc(nome) + ' excluído.');
+                    _atualizarBadges();
+                    _carregarUsuarios();
+                });
+            }
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdmConfirmar')).show();
+        }
+
+        // Criar Novo Admin
+        var btnCriarAdmin = document.getElementById('adm-btn-criar-admin');
+        if (btnCriarAdmin) {
+            btnCriarAdmin.addEventListener('click', function(){
+                var nome   = (document.getElementById('adm-novo-nome')||{}).value.trim();
+                var email  = (document.getElementById('adm-novo-email')||{}).value.trim().toLowerCase();
+                var senha  = (document.getElementById('adm-novo-senha')||{}).value;
+                if (!nome || !email || !senha) { alert('Preencha todos os campos.'); return; }
+                var rx = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,}$/;
+                if (!rx.test(senha)) { alert('A senha deve ter mínimo 8 caracteres com letras, números e especiais.'); return; }
+                var usuarios = obterUsuariosCadastrados();
+                if (usuarios[email]) { alert('E-mail já cadastrado.'); return; }
+                usuarios[email] = { nome: nome, senha: senha, tipo: 'admin', dataCadastro: new Date().toISOString() };
+                salvarUsuariosCadastrados(usuarios);
+                bootstrap.Modal.getInstance(document.getElementById('modalAdmNovoAdmin')).hide();
+                exibirToast('Administrador ' + _esc(nome) + ' criado com sucesso!');
+                _atualizarBadges();
+                _carregarUsuarios();
+            });
+        }
+
+        // ── SEÇÃO: PRESTADORES ─────────────────────────────────
+        function _carregarPrestadores() {
+            var sec = document.getElementById('sec-prestadores');
+            if (!sec) return;
+
+            var hotsiteStore = dbGet('hotsitePrestadorDados') || {};
+            var avsStore     = dbGet('avaliacoesRecebidasPrestador') || {};
+
+            var lista = Object.keys(hotsiteStore).map(function(email){
+                var h    = hotsiteStore[email] || {};
+                var avs  = (avsStore[email]||[]).filter(function(a){ return typeof a.nota === 'number'; });
+                var media = avs.length ? (avs.reduce(function(s,a){ return s+a.nota; },0)/avs.length).toFixed(1) : '—';
+                var ags  = (dbGet('agendamentos_'+email)||[]).length;
+                return { email:email, nome:h.nome||email, categoria:h.categoria||'—', cidade:h.cidade||'—', ags:ags, media:media, total:avs.length };
+            });
+
+            var rows = lista.map(function(p){
+                var estStr = p.media !== '—'
+                    ? '<span style="color:#FFC300;">★</span> ' + p.media + ' <span style="color:#888;font-size:.78rem;">(' + p.total + ')</span>'
+                    : '<span style="color:#aaa;">Sem avaliações</span>';
+                return '<tr>' +
+                    '<td style="font-weight:600;">' + _esc(p.nome) + '</td>' +
+                    '<td><span class="adm-badge-status prestador">' + _esc(p.categoria) + '</span></td>' +
+                    '<td>' + _esc(p.cidade) + '</td>' +
+                    '<td style="text-align:center;">' + p.ags + '</td>' +
+                    '<td>' + estStr + '</td>' +
+                    '<td><div class="adm-acoes">' +
+                        '<a class="adm-btn-acao ver" href="/paginasPrestador/prestadorHotsite.html?email=' + encodeURIComponent(p.email) + '" target="_blank">' +
+                            '<i class="bi bi-box-arrow-up-right"></i> HotSite' +
+                        '</a>' +
+                        '<button class="adm-btn-acao excluir" data-email="' + _esc(p.email) + '" data-nome="' + _esc(p.nome) + '" data-acao="remover-hotsite">' +
+                            '<i class="bi bi-trash"></i> Remover' +
+                        '</button>' +
+                    '</div></td>' +
+                '</tr>';
+            }).join('');
+
+            var tabHtml = lista.length === 0
+                ? '<div class="adm-vazio"><i class="bi bi-briefcase"></i>Nenhum prestador com HotSite cadastrado.</div>'
+                : '<table class="adm-tabela"><thead><tr><th>Nome</th><th>Categoria</th><th>Cidade</th><th style="text-align:center;">Agendamentos</th><th>Avaliações</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table>';
+
+            sec.innerHTML =
+                '<div class="adm-secao-titulo"><i class="bi bi-briefcase-fill" style="color:#FFC300;"></i>Gerenciar Prestadores</div>' +
+                '<p class="adm-secao-subtitulo">' + lista.length + ' prestador' + (lista.length !== 1 ? 'es' : '') + ' com HotSite publicado na plataforma.</p>' +
+                '<div class="adm-card"><div id="adm-prest-corpo">' + tabHtml + '</div></div>';
+
+            sec.querySelectorAll('[data-acao="remover-hotsite"]').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    var email = btn.dataset.email;
+                    var nome  = btn.dataset.nome;
+                    var corpoEl = document.getElementById('adm-conf-corpo');
+                    if (corpoEl) corpoEl.innerHTML =
+                        '<p>Remover os dados de HotSite do prestador:</p>' +
+                        '<p><strong>' + _esc(nome) + '</strong></p>' +
+                        '<p class="text-warning small"><i class="bi bi-exclamation-triangle me-1"></i>O usuário continuará cadastrado, mas seu HotSite será removido do catálogo.</p>';
+                    var btnConf = document.getElementById('adm-btn-confirmar-acao');
+                    var novo = btnConf.cloneNode(true);
+                    btnConf.parentNode.replaceChild(novo, btnConf);
+                    novo.addEventListener('click', function(){
+                        var hs = dbGet('hotsitePrestadorDados') || {};
+                        delete hs[email];
+                        dbSet('hotsitePrestadorDados', hs);
+                        bootstrap.Modal.getInstance(document.getElementById('modalAdmConfirmar')).hide();
+                        exibirToast('HotSite de ' + _esc(nome) + ' removido.');
+                        _atualizarBadges();
+                        _carregarPrestadores();
+                    });
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdmConfirmar')).show();
+                });
+            });
+        }
+
+        // ── SEÇÃO: NOTÍCIAS & CONTEÚDO ─────────────────────────
+        var _noticiaEditandoId = null;
+
+        function _carregarNoticias() {
+            var sec = document.getElementById('sec-noticias');
+            if (!sec) return;
+
+            function _renderNoticias() {
+                var noticias = obterNoticias();
+                var rows = noticias.slice().reverse().map(function(n){
+                    return '<tr>' +
+                        '<td style="max-width:260px;">' +
+                            '<div style="font-weight:700;font-size:.88rem;">' + _esc(n.titulo||'—') + '</div>' +
+                            (n.destaque ? '<span class="adm-badge-status destaque"><i class="bi bi-star-fill"></i> Destaque</span>' : '') +
+                        '</td>' +
+                        '<td>' + _esc(n.categoria||'—') + '</td>' +
+                        '<td>' + _esc(n.autor||'—') + '</td>' +
+                        '<td>' + _fmtData(n.dataCriacao) + '</td>' +
+                        '<td><span class="adm-badge-status ' + (n.status||'rascunho') + '">' + (n.status||'rascunho') + '</span></td>' +
+                        '<td><div class="adm-acoes">' +
+                            '<button class="adm-btn-acao editar" data-id="' + _esc(n.id) + '" data-acao="editar-noticia"><i class="bi bi-pencil"></i> Editar</button>' +
+                            '<button class="adm-btn-acao ' + (n.status==='publicado'?'excluir':'publicar') + '" data-id="' + _esc(n.id) + '" data-acao="toggle-status-noticia">' +
+                                (n.status==='publicado' ? '<i class="bi bi-eye-slash"></i> Despublicar' : '<i class="bi bi-check-circle"></i> Publicar') +
+                            '</button>' +
+                            '<button class="adm-btn-acao excluir" data-id="' + _esc(n.id) + '" data-titulo="' + _esc(n.titulo||'') + '" data-acao="excluir-noticia"><i class="bi bi-trash"></i></button>' +
+                        '</div></td>' +
+                    '</tr>';
+                }).join('');
+
+                var tabHtml = noticias.length === 0
+                    ? '<div class="adm-vazio"><i class="bi bi-newspaper"></i>Nenhuma notícia cadastrada. Crie a primeira!</div>'
+                    : '<table class="adm-tabela"><thead><tr><th>Título</th><th>Categoria</th><th>Autor</th><th>Criado em</th><th>Status</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table>';
+
+                var listaEl = document.getElementById('adm-noticias-lista');
+                if (listaEl) listaEl.innerHTML = tabHtml;
+
+                sec.querySelectorAll('[data-acao]').forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        var acao = btn.dataset.acao;
+                        if (acao === 'editar-noticia')         _abrirModalNoticia(btn.dataset.id);
+                        if (acao === 'toggle-status-noticia')  _toggleStatusNoticia(btn.dataset.id);
+                        if (acao === 'excluir-noticia')        _confirmarExcluirNoticia(btn.dataset.id, btn.dataset.titulo);
+                    });
+                });
+            }
+
+            sec.innerHTML =
+                '<div class="adm-secao-titulo"><i class="bi bi-newspaper" style="color:#146ADB;"></i>Notícias & Conteúdo</div>' +
+                '<p class="adm-secao-subtitulo">Crie, edite e publique matérias, artigos e posts em destaque para o site.</p>' +
+                '<div style="margin-bottom:14px;">' +
+                    '<button class="btn btn-primary btn-sm" id="adm-btn-nova-noticia">' +
+                        '<i class="bi bi-plus-circle me-1"></i>Nova Notícia / Matéria' +
+                    '</button>' +
+                '</div>' +
+                '<div class="adm-card"><div id="adm-noticias-lista"></div></div>';
+
+            _renderNoticias();
+
+            document.getElementById('adm-btn-nova-noticia').addEventListener('click', function(){
+                _abrirModalNoticia(null);
+            });
+        }
+
+        function _abrirModalNoticia(id) {
+            _noticiaEditandoId = id || null;
+            var titulo  = document.getElementById('adm-noticia-modal-titulo');
+            if (titulo) titulo.innerHTML = '<i class="bi bi-newspaper me-2"></i>' + (id ? 'Editar Notícia' : 'Nova Notícia / Matéria');
+            document.getElementById('adm-noticia-id').value = id || '';
+
+            var campos = { titulo:'', resumo:'', conteudo:'', categoria:'Inovação & Tecnologia', status:'publicado', imagemUrl:'', autor:'Equipe ServGo!', destaque:false };
+            if (id) {
+                var n = obterNoticias().find(function(x){ return x.id===id; });
+                if (n) { campos.titulo=n.titulo||''; campos.resumo=n.resumo||''; campos.conteudo=n.conteudo||''; campos.categoria=n.categoria||campos.categoria; campos.status=n.status||'publicado'; campos.imagemUrl=n.imagemUrl||''; campos.autor=n.autor||''; campos.destaque=!!n.destaque; }
+            }
+            document.getElementById('adm-noticia-titulo').value    = campos.titulo;
+            document.getElementById('adm-noticia-resumo').value    = campos.resumo;
+            document.getElementById('adm-noticia-conteudo').value  = campos.conteudo;
+            document.getElementById('adm-noticia-categoria').value = campos.categoria;
+            document.getElementById('adm-noticia-status').value    = campos.status;
+            document.getElementById('adm-noticia-imagem').value    = campos.imagemUrl;
+            document.getElementById('adm-noticia-autor').value     = campos.autor;
+            document.getElementById('adm-noticia-destaque').checked= campos.destaque;
+            document.getElementById('adm-noticia-cont-chars').textContent = campos.conteudo.length;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdmNoticia')).show();
+        }
+
+        // Contador de caracteres no conteúdo
+        var contArea = document.getElementById('adm-noticia-conteudo');
+        if (contArea) {
+            contArea.addEventListener('input', function(){
+                var el = document.getElementById('adm-noticia-cont-chars');
+                if (el) el.textContent = contArea.value.length;
+            });
+        }
+
+        // Salvar notícia
+        var btnSalvarNot = document.getElementById('adm-btn-salvar-noticia');
+        if (btnSalvarNot) {
+            btnSalvarNot.addEventListener('click', function(){
+                var titulo = (document.getElementById('adm-noticia-titulo')||{}).value.trim();
+                var resumo = (document.getElementById('adm-noticia-resumo')||{}).value.trim();
+                if (!titulo || !resumo) { alert('Título e resumo são obrigatórios.'); return; }
+
+                var registro = {
+                    id:          _noticiaEditandoId || _gerarId('noticia'),
+                    titulo:      titulo,
+                    resumo:      resumo,
+                    conteudo:    (document.getElementById('adm-noticia-conteudo')||{}).value,
+                    categoria:   (document.getElementById('adm-noticia-categoria')||{}).value,
+                    status:      (document.getElementById('adm-noticia-status')||{}).value,
+                    imagemUrl:   (document.getElementById('adm-noticia-imagem')||{}).value.trim(),
+                    autor:       (document.getElementById('adm-noticia-autor')||{}).value.trim() || 'Equipe ServGo!',
+                    destaque:    document.getElementById('adm-noticia-destaque').checked,
+                    dataCriacao: _noticiaEditandoId
+                        ? (obterNoticias().find(function(x){ return x.id===_noticiaEditandoId; })||{}).dataCriacao || new Date().toISOString()
+                        : new Date().toISOString(),
+                    dataPublicacao: new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'long', year:'numeric'})
+                };
+
+                var noticias = obterNoticias();
+                var idx = noticias.findIndex(function(x){ return x.id===registro.id; });
+                if (idx >= 0) noticias[idx] = registro; else noticias.push(registro);
+                salvarNoticias(noticias);
+
+                bootstrap.Modal.getInstance(document.getElementById('modalAdmNoticia')).hide();
+                exibirToast('Notícia "' + _esc(titulo) + '" salva com sucesso!');
+                _atualizarBadges();
+                _carregarNoticias();
+            });
+        }
+
+        function _toggleStatusNoticia(id) {
+            var noticias = obterNoticias();
+            var idx = noticias.findIndex(function(n){ return n.id===id; });
+            if (idx < 0) return;
+            noticias[idx].status = noticias[idx].status === 'publicado' ? 'rascunho' : 'publicado';
+            salvarNoticias(noticias);
+            _atualizarBadges();
+            _carregarNoticias();
+        }
+
+        function _confirmarExcluirNoticia(id, titulo) {
+            var corpoEl = document.getElementById('adm-conf-corpo');
+            if (corpoEl) corpoEl.innerHTML = '<p>Excluir a notícia: <strong>' + _esc(titulo) + '</strong>?</p>';
+            var btnConf = document.getElementById('adm-btn-confirmar-acao');
+            var novo = btnConf.cloneNode(true);
+            btnConf.parentNode.replaceChild(novo, btnConf);
+            novo.addEventListener('click', function(){
+                salvarNoticias(obterNoticias().filter(function(n){ return n.id!==id; }));
+                bootstrap.Modal.getInstance(document.getElementById('modalAdmConfirmar')).hide();
+                exibirToast('Notícia excluída.');
+                _atualizarBadges();
+                _carregarNoticias();
+            });
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdmConfirmar')).show();
+        }
+
+        // ── SEÇÃO: SUPORTE / TICKETS ───────────────────────────
+        function _carregarSupporte() {
+            var sec = document.getElementById('sec-suporte');
+            if (!sec) return;
+
+            function _renderTickets(filtro) {
+                var tickets = obterTickets();
+                if (filtro && filtro !== 'todos') tickets = tickets.filter(function(t){ return t.status===filtro; });
+                tickets = tickets.slice().reverse();
+
+                var html = tickets.length === 0
+                    ? '<div class="adm-vazio"><i class="bi bi-headset"></i>Nenhum ticket encontrado.</div>'
+                    : tickets.map(function(t){
+                        var cor = {aberto:'#dc3545', em_andamento:'#b8870c', resolvido:'#198754'}[t.status] || '#aaa';
+                        return '<div class="adm-ticket-item ' + t.status + '">' +
+                            '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:6px;">' +
+                                '<div>' +
+                                    '<span style="font-weight:700;color:#1a1a1a;">' + _esc(t.assunto||'Sem assunto') + '</span>' +
+                                    '&nbsp;<span class="adm-badge-status ' + t.status + '">' + t.status.replace('_',' ') + '</span>' +
+                                '</div>' +
+                                '<span style="font-size:.75rem;color:#888;">' + _fmtData(t.dataAbertura) + '</span>' +
+                            '</div>' +
+                            '<div style="font-size:.83rem;color:#555;margin-bottom:4px;"><i class="bi bi-person me-1"></i>' + _esc(t.nome||'—') + ' · <i class="bi bi-envelope me-1"></i>' + _esc(t.email||'—') + '</div>' +
+                            '<div style="font-size:.85rem;color:#333;padding:8px 12px;background:#f8f9fa;border-radius:6px;margin-bottom:8px;">' + _esc(t.mensagem||'') + '</div>' +
+                            (t.resposta ? '<div style="font-size:.83rem;color:#065f46;padding:8px 12px;background:#d1fae5;border-radius:6px;margin-bottom:8px;"><strong>Resposta Admin:</strong> ' + _esc(t.resposta) + '</div>' : '') +
+                            '<div class="adm-acoes">' +
+                                '<button class="adm-btn-acao responder" data-id="' + _esc(t.id) + '" data-acao="responder-ticket"><i class="bi bi-reply"></i> Responder</button>' +
+                                '<button class="adm-btn-acao excluir" data-id="' + _esc(t.id) + '" data-acao="excluir-ticket"><i class="bi bi-trash"></i></button>' +
+                            '</div>' +
+                        '</div>';
+                    }).join('');
+
+                var listaEl = document.getElementById('adm-tickets-lista');
+                if (listaEl) listaEl.innerHTML = html;
+
+                sec.querySelectorAll('[data-acao="responder-ticket"]').forEach(function(btn){
+                    btn.addEventListener('click', function(){ _abrirResponderTicket(btn.dataset.id); });
+                });
+                sec.querySelectorAll('[data-acao="excluir-ticket"]').forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        salvarTickets(obterTickets().filter(function(t){ return t.id!==btn.dataset.id; }));
+                        _atualizarBadges();
+                        _renderTickets(filtroAtivo);
+                        exibirToast('Ticket removido.');
+                    });
+                });
+            }
+
+            var filtroAtivo = 'todos';
+            var totais = { todos: obterTickets().length, aberto: obterTickets().filter(function(t){return t.status==='aberto';}).length, em_andamento: obterTickets().filter(function(t){return t.status==='em_andamento';}).length, resolvido: obterTickets().filter(function(t){return t.status==='resolvido';}).length };
+
+            sec.innerHTML =
+                '<div class="adm-secao-titulo"><i class="bi bi-headset" style="color:#0dcaf0;"></i>Suporte / Tickets</div>' +
+                '<p class="adm-secao-subtitulo">Gerencie as mensagens e solicitações de suporte enviadas pelos usuários.</p>' +
+                '<div class="adm-toolbar">' +
+                    '<div class="adm-filtro-tabs">' +
+                        '<button class="adm-filtro-tab ativo" data-filtro="todos">Todos (' + totais.todos + ')</button>' +
+                        '<button class="adm-filtro-tab" data-filtro="aberto" style="border-color:#dc3545;color:#dc3545;">Abertos (' + totais.aberto + ')</button>' +
+                        '<button class="adm-filtro-tab" data-filtro="em_andamento" style="border-color:#b8870c;color:#b8870c;">Em Andamento (' + totais.em_andamento + ')</button>' +
+                        '<button class="adm-filtro-tab" data-filtro="resolvido" style="border-color:#198754;color:#198754;">Resolvidos (' + totais.resolvido + ')</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div id="adm-tickets-lista"></div>';
+
+            _renderTickets('todos');
+
+            sec.querySelectorAll('.adm-filtro-tab[data-filtro]').forEach(function(tab){
+                tab.addEventListener('click', function(){
+                    filtroAtivo = tab.dataset.filtro;
+                    sec.querySelectorAll('.adm-filtro-tab[data-filtro]').forEach(function(t){
+                        t.classList.toggle('ativo', t===tab);
+                    });
+                    _renderTickets(filtroAtivo);
+                });
+            });
+        }
+
+        function _abrirResponderTicket(id) {
+            var t = obterTickets().find(function(x){ return x.id===id; });
+            if (!t) return;
+            document.getElementById('adm-ticket-id').value = id;
+            document.getElementById('adm-ticket-status').value  = t.status || 'aberto';
+            document.getElementById('adm-ticket-resposta').value = t.resposta || '';
+            var detEl = document.getElementById('adm-ticket-detalhes');
+            if (detEl) detEl.innerHTML =
+                '<div style="background:#f8f9fa;padding:12px;border-radius:6px;font-size:.88rem;">' +
+                '<strong>De:</strong> ' + _esc(t.nome||'—') + ' &lt;' + _esc(t.email||'') + '&gt;<br>' +
+                '<strong>Assunto:</strong> ' + _esc(t.assunto||'—') + '<br>' +
+                '<strong>Mensagem:</strong><br>' +
+                '<div style="margin-top:6px;padding:8px 12px;background:#fff;border:1px solid #dee2e6;border-radius:4px;">' + _esc(t.mensagem||'') + '</div>' +
+                '</div>';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdmTicket')).show();
+        }
+
+        var btnSalvarTicket = document.getElementById('adm-btn-salvar-ticket');
+        if (btnSalvarTicket) {
+            btnSalvarTicket.addEventListener('click', function(){
+                var id       = (document.getElementById('adm-ticket-id')||{}).value;
+                var status   = (document.getElementById('adm-ticket-status')||{}).value;
+                var resposta = (document.getElementById('adm-ticket-resposta')||{}).value.trim();
+                var tickets  = obterTickets();
+                var idx      = tickets.findIndex(function(t){ return t.id===id; });
+                if (idx < 0) return;
+                tickets[idx].status = status;
+                tickets[idx].resposta = resposta;
+                tickets[idx].dataResposta = new Date().toISOString();
+                tickets[idx].adminResponsavel = usu.nome || usu.email;
+                salvarTickets(tickets);
+                bootstrap.Modal.getInstance(document.getElementById('modalAdmTicket')).hide();
+                exibirToast('Ticket atualizado com sucesso!');
+                _atualizarBadges();
+                _carregarSupporte();
+            });
+        }
+
+        // ── SEÇÃO: MANUTENÇÃO ──────────────────────────────────
+        function _carregarManutencao() {
+            var sec = document.getElementById('sec-manutencao');
+            if (!sec) return;
+
+            // Calcula uso do localStorage por chave relevante
+            var chaves = [
+                'usuariosCadastrados', 'hotsitePrestadorDados',
+                'avaliacoesRecebidasPrestador', 'avaliacoesRecebidasDoCliente',
+                'avaliacoesSalvas', NOTICIAS_KEY, TICKETS_KEY, 'sg_seed_v1'
+            ];
+            var tamanhoTotal = 0;
+            var itensStorage = chaves.map(function(k){
+                try {
+                    var val = localStorage.getItem(k) || '';
+                    var tam = (new Blob([val])).size;
+                    tamanhoTotal += tam;
+                    return { chave: k, tam: tam, fmt: tam > 1024 ? (tam/1024).toFixed(1)+' KB' : tam+' B' };
+                } catch(e) { return {chave:k, tam:0, fmt:'—'}; }
+            });
+            var maxTam = Math.max.apply(null, itensStorage.map(function(i){ return i.tam; })) || 1;
+
+            var storageHtml = itensStorage.map(function(item){
+                var pct = Math.round((item.tam/maxTam)*100);
+                var cor = item.tam > 50000 ? '#dc3545' : item.tam > 10000 ? '#FFC300' : '#146ADB';
+                return '<div class="adm-storage-item">' +
+                    '<div class="adm-storage-nome"><span>' + item.chave + '</span><span>' + item.fmt + '</span></div>' +
+                    '<div class="adm-storage-barra"><div class="adm-storage-fill" style="width:' + pct + '%;background:' + cor + ';"></div></div>' +
+                    '</div>';
+            }).join('');
+
+            var ferramentas = [
+                {
+                    cor:'#146ADB', icone:'bi-download', titulo:'Exportar Todos os Dados',
+                    desc:'Baixa um arquivo JSON com todos os dados armazenados no sistema.',
+                    acao:'exportar-dados', rotulo:'<i class="bi bi-download me-1"></i>Exportar JSON'
+                },
+                {
+                    cor:'#6f42c1', icone:'bi-arrow-counterclockwise', titulo:'Recriar Seed de Prestadores',
+                    desc:'Remove a flag sg_seed_v1 e recria os prestadores de demonstração na próxima recarga.',
+                    acao:'reset-seed', rotulo:'<i class="bi bi-arrow-counterclockwise me-1"></i>Recriar Seed'
+                },
+                {
+                    cor:'#198754', icone:'bi-plus-circle', titulo:'Adicionar Ticket de Demonstração',
+                    desc:'Insere um ticket de suporte de exemplo para testar o painel de suporte.',
+                    acao:'demo-ticket', rotulo:'<i class="bi bi-plus-circle me-1"></i>Criar Demo'
+                },
+                {
+                    cor:'#dc3545', icone:'bi-trash3', titulo:'Limpar Notificações Antigas (>30 dias)',
+                    desc:'Remove notificações lidas com mais de 30 dias de todos os usuários.',
+                    acao:'limpar-notifs', rotulo:'<i class="bi bi-trash3 me-1"></i>Limpar'
+                },
+                {
+                    cor:'#dc3545', icone:'bi-exclamation-triangle', titulo:'Excluir TODOS os Dados do Sistema',
+                    desc:'Apaga todos os dados de localStorage do ServGo! (usuários, hotsite, agendamentos, etc). Use com extremo cuidado.',
+                    acao:'reset-total', rotulo:'<i class="bi bi-exclamation-triangle me-1"></i>Reset Total', estilo:'background:#dc3545;color:#fff;border-color:#dc3545;'
+                }
+            ];
+
+            var ferramentasHtml = ferramentas.map(function(f){
+                return '<div class="adm-tool-card">' +
+                    '<div class="adm-tool-icone" style="background:' + f.cor + ';">' +
+                        '<i class="bi ' + f.icone + '"></i>' +
+                    '</div>' +
+                    '<div class="adm-tool-texto">' +
+                        '<div class="adm-tool-titulo">' + f.titulo + '</div>' +
+                        '<div class="adm-tool-desc">' + f.desc + '</div>' +
+                    '</div>' +
+                    '<div class="adm-tool-acao">' +
+                        '<button class="adm-btn-acao ver" style="' + (f.estilo||'') + '" data-acao="' + f.acao + '">' + f.rotulo + '</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+
+            sec.innerHTML =
+                '<div class="adm-secao-titulo"><i class="bi bi-tools" style="color:#6f42c1;"></i>Manutenção do Sistema</div>' +
+                '<p class="adm-secao-subtitulo">Ferramentas avançadas para monitoramento, exportação e manutenção da plataforma.</p>' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">' +
+                    '<div>' +
+                        '<div class="adm-card">' +
+                            '<div class="adm-card-hdr"><span><i class="bi bi-hdd me-2" style="color:#146ADB;"></i>Uso do Armazenamento Local</span>' +
+                                '<span style="font-size:.78rem;color:#888;">Total: ~' + (tamanhoTotal/1024).toFixed(1) + ' KB</span>' +
+                            '</div>' +
+                            '<div class="adm-card-corpo">' + storageHtml + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div>' +
+                        '<div class="adm-card">' +
+                            '<div class="adm-card-hdr"><span><i class="bi bi-gear-fill me-2" style="color:#6f42c1;"></i>Ferramentas de Sistema</span></div>' +
+                            '<div class="adm-card-corpo" style="padding:12px 16px;">' + ferramentasHtml + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+
+            // Ações das ferramentas
+            sec.querySelectorAll('[data-acao]').forEach(function(btn){
+                btn.addEventListener('click', function(){
+                    var acao = btn.dataset.acao;
+                    if (acao === 'exportar-dados') {
+                        var dados = {};
+                        for (var i=0; i<localStorage.length; i++) {
+                            var k = localStorage.key(i);
+                            if (k.startsWith('sg') || ['usuariosCadastrados','hotsitePrestadorDados','avaliacoesRecebidasPrestador','avaliacoesRecebidasDoCliente','avaliacoesSalvas'].indexOf(k) >= 0) {
+                                try { dados[k] = JSON.parse(localStorage.getItem(k)); } catch(e) { dados[k] = localStorage.getItem(k); }
+                            }
+                        }
+                        var blob = new Blob([JSON.stringify(dados, null, 2)], {type:'application/json'});
+                        var url  = URL.createObjectURL(blob);
+                        var a    = document.createElement('a');
+                        a.href = url; a.download = 'servgo-backup-' + new Date().toISOString().slice(0,10) + '.json';
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        exibirToast('Dados exportados com sucesso!');
+                    }
+                    if (acao === 'reset-seed') {
+                        localStorage.removeItem('sg_seed_v1');
+                        exibirToast('Flag de seed removida. Recarregue a página para recriar os prestadores.');
+                    }
+                    if (acao === 'demo-ticket') {
+                        var nomes = ['Ana Lima','Carlos Souza','Fernanda Barros','Roberto Costa'];
+                        var nomeDemo = nomes[Math.floor(Math.random()*nomes.length)];
+                        var tickets = obterTickets();
+                        tickets.push({
+                            id: _gerarId('ticket'),
+                            assunto: 'Dúvida sobre agendamento',
+                            mensagem: 'Olá! Gostaria de saber como faço para cancelar um agendamento com mais de 24h de antecedência.',
+                            nome: nomeDemo,
+                            email: nomeDemo.toLowerCase().replace(' ','.') + '@exemplo.com',
+                            dataAbertura: new Date().toISOString(),
+                            status: 'aberto',
+                            resposta: '', dataResposta: '', adminResponsavel: ''
+                        });
+                        salvarTickets(tickets);
+                        _atualizarBadges();
+                        exibirToast('Ticket de demonstração criado!');
+                        _carregarManutencao();
+                    }
+                    if (acao === 'limpar-notifs') {
+                        var limite = new Date(); limite.setDate(limite.getDate()-30);
+                        var usuarios = obterUsuariosCadastrados();
+                        Object.keys(usuarios).forEach(function(email){
+                            var chave = 'sgNotificacoes_' + email;
+                            var notifs = DB.get(chave) || [];
+                            var filtradas = notifs.filter(function(n){
+                                if (!n.lida) return true;
+                                return n.timestamp ? new Date(n.timestamp) > limite : true;
+                            });
+                            DB.set(chave, filtradas);
+                        });
+                        exibirToast('Notificações antigas limpas!');
+                    }
+                    if (acao === 'reset-total') {
+                        if (!confirm('⚠️ ATENÇÃO: Isso apagará TODOS os dados do ServGo! (usuários, prestadores, agendamentos, etc).\n\nDigite CONFIRMAR para prosseguir.')) return;
+                        var keysParaRemover = [];
+                        for (var j=0; j<localStorage.length; j++) keysParaRemover.push(localStorage.key(j));
+                        keysParaRemover.forEach(function(k){ localStorage.removeItem(k); });
+                        alert('Todos os dados foram removidos. Redirecionando para o início...');
+                        window.location.href = '/index.html';
+                    }
+                });
+            });
+        }
+
+        // ── Seed Notícias iniciais ─────────────────────────────
+        function _adminSeedNoticias() {
+            var FLAG = 'sg_seed_noticias_v1';
+            if (localStorage.getItem(FLAG) === '1') return;
+            var noticias = dbGet('sgNoticias') || [];
+            if (noticias.length > 0) { localStorage.setItem(FLAG,'1'); return; }
+            var seed = [
+                {
+                    id: 'noticia-seed-1',
+                    titulo: 'Desvendando a Nova Era dos Serviços Digitais',
+                    resumo: 'Navegue pela mais recente atualização do ServGo! e descubra como a integração de inteligência artificial está transformando a busca e a oferta de serviços.',
+                    conteudo: 'A plataforma ServGo! passou por uma atualização completa que integra algoritmos de IA para recomendar prestadores com base no histórico de avaliações e preferências dos clientes. Com conexões mais rápidas, resultados mais precisos e uma experiência totalmente reinventada, o futuro da contratação de serviços chegou.',
+                    categoria: 'Inovação & Tecnologia', autor: 'Equipe ServGo!',
+                    dataCriacao: new Date('2025-11-07').toISOString(),
+                    dataPublicacao: '07 de Novembro, 2025', destaque: true, status: 'publicado', imagemUrl: ''
+                },
+                {
+                    id: 'noticia-seed-2',
+                    titulo: 'Como escolher o melhor prestador para o seu projeto',
+                    resumo: 'Dicas práticas para avaliar portfólios, ler avaliações e negociar orçamentos de forma inteligente.',
+                    conteudo: 'Contratar um prestador de serviços exige atenção a detalhes que vão além do preço. Analise o portfólio, leia avaliações de clientes anteriores, compare orçamentos e verifique a disponibilidade antes de fechar negócio.',
+                    categoria: 'Dicas para Clientes', autor: 'Redação ServGo!',
+                    dataCriacao: new Date('2026-01-15').toISOString(),
+                    dataPublicacao: '15 de Janeiro, 2026', destaque: false, status: 'publicado', imagemUrl: ''
+                },
+                {
+                    id: 'noticia-seed-3',
+                    titulo: 'Novas categorias de serviços agora disponíveis',
+                    resumo: 'ServGo! expande seu catálogo com prestadores nas áreas de Consultoria, Design e Logística.',
+                    conteudo: 'A partir desta semana, clientes podem encontrar profissionais especializados em Consultoria Empresarial, Design Gráfico e Web, e Logística & Entregas. Mais de 50 novos prestadores já estão disponíveis para agendamento imediato.',
+                    categoria: 'Novidades da Plataforma', autor: 'Equipe ServGo!',
+                    dataCriacao: new Date('2026-03-01').toISOString(),
+                    dataPublicacao: '01 de Março, 2026', destaque: false, status: 'publicado', imagemUrl: ''
+                }
+            ];
+            dbSet('sgNoticias', seed);
+            localStorage.setItem(FLAG, '1');
+        }
+
+        // ── Carrega seção inicial ──────────────────────────────
+        _navegarPara('visao-geral');
+    }
 });

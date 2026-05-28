@@ -226,106 +226,16 @@
                 <h2 class="container-ultimos-artigos text-center mb-4 mt-5 fw-light text-uppercase">Últimos Artigos</h2>
                 <p class="text-center text-muted mb-5">Mantenha-se atualizado com os resultados do setor</p>
 
-                <!--ARTIGO 01-->
+                <!--ARTIGOS - GERADOS DINAMICAMENTE PELO script.js (inicializarNoticiasIndexHome)-->
 
-                <div class="row g-4">
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card h-100 shadow-sm">
-                            <img src="placeholder_card.png" class="card-img-top" alt="Imagem do Artigo">
-                            <div class="card-body">
-                                <span class="badge">Tipo de Serviço</span>
-                                <h5 class="card-title mt-2">Texto sobre o serviço</h5>
-                                <p class="card-text small text-muted">
-                                    <i class="bi bi-clock"></i> 5 min de leitura
-                                </p>
-                                <a href="#" class="btn btn-sm btn-outline-secondary">Ler</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!--ARTIGO 02-->
-
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card h-100 shadow-sm">
-                            <img src="placeholder_card.png" class="card-img-top" alt="Imagem do Artigo">
-                            <div class="card-body">
-                                <span class="badge">Tipo de Serviço</span>
-                                <h5 class="card-title mt-2">Texto sobre o serviço</h5>
-                                <p class="card-text small text-muted">
-                                    <i class="bi bi-clock"></i> 5 min de leitura
-                                </p>
-                                <a href="#" class="btn btn-sm btn-outline-secondary">Ler</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!--ARTIGO 03-->
-
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card h-100 shadow-sm">
-                            <img src="placeholder_card.png" class="card-img-top" alt="Imagem do Artigo">
-                            <div class="card-body">
-                                <span class="badge">Tipo de Serviço</span>
-                                <h5 class="card-title mt-2">Texto sobre o serviço</h5>
-                                <p class="card-text small text-muted">
-                                    <i class="bi bi-clock"></i> 5 min de leitura
-                                </p>
-                                <a href="#" class="btn btn-sm btn-outline-secondary">Ler</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!--ARTIGO 04-->
-
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card h-100 shadow-sm">
-                            <img src="placeholder_card.png" class="card-img-top" alt="Imagem do Artigo">
-                            <div class="card-body">
-                                <span class="badge">Tipo de Serviço</span>
-                                <h5 class="card-title mt-2">Texto sobre o serviço</h5>
-                                <p class="card-text small text-muted">
-                                    <i class="bi bi-clock"></i> 5 min de leitura
-                                </p>
-                                <a href="#" class="btn btn-sm btn-outline-secondary">Ler</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!--ARTIGO 05-->
-
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card h-100 shadow-sm">
-                            <img src="placeholder_card.png" class="card-img-top" alt="Imagem do Artigo">
-                            <div class="card-body">
-                                <span class="badge">Tipo de Serviço</span>
-                                <h5 class="card-title mt-2">Texto sobre o serviço</h5>
-                                <p class="card-text small text-muted">
-                                    <i class="bi bi-clock"></i> 5 min de leitura
-                                </p>
-                                <a href="#" class="btn btn-sm btn-outline-secondary">Ler</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!--ARTIGO 06-->
-
-                    <div class="col-lg-4 col-md-6">
-                        <div class="card h-100 shadow-sm">
-                            <img src="placeholder_card.png" class="card-img-top" alt="Imagem do Artigo">
-                            <div class="card-body">
-                                <span class="badge">Tipo de Serviço</span>
-                                <h5 class="card-title mt-2">Texto sobre o serviço</h5>
-                                <p class="card-text small text-muted">
-                                    <i class="bi bi-clock"></i> 5 min de leitura
-                                </p>
-                                <a href="#" class="btn btn-sm btn-outline-secondary">Ler</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!--FIM - ÚLTIMOS ARTIGOS-->     
-                
+                <div class="row g-4" id="noticias-grid">
+                    <!-- Os cards são inseridos dinamicamente pelo script.js a partir de sgNoticias -->
                 </div>
+
+                <!--BOTÃO - CARREGAR MATÉRIAS MAIS ANTIGAS-->
+                <div id="noticias-carregar-mais-container" class="text-center mt-4"></div>
+
+                <!--FIM - ÚLTIMOS ARTIGOS-->
 
                 <!--BOTÃO - VER TODOS OS ARTIGOS-->
                 
@@ -416,6 +326,24 @@
         </footer>
 
         <!-------------------------------------------- FIM DO RODAPÉ ------------------------------------------------>
+
+        <!-- Modal: Ler Matéria (somente leitura — gerado/controlado pelo script.js) -->
+        <div class="modal fade" id="modalVerMateria" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header" style="background:#146ADB;color:#fff;">
+                        <h5 class="modal-title" id="modal-materia-titulo">
+                            <i class="bi bi-newspaper me-2"></i>Matéria
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="modal-materia-corpo"></div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
         <script src="/js/script.js" defer></script>
