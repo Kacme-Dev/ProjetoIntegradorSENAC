@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServGo! - Administração do Perfil do Cliente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/estiloServGo.css">
+    <style>
+        /* Responsividade padrão igual ao index.html: breakpoint lg (992px). */
+        @media (max-width: 991.98px) {
+            .cli-wrapper { flex-direction: column; }
+            .cli-sidebar {
+                width: 100%;
+                min-width: unset;
+                border-right: none;
+                border-bottom: 1px solid var(--borda);
+                padding: 12px 0;
+                display: none;
+            }
+            .cli-sidebar.cli-sidebar-show { display: block; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!--INÍCIO DO CABEÇALHO DA PÁGINA-->
+    <header>
+
+            <!--TOPO DA PÁGINA-->
+
+        <!--Trabalha sobre os Menus (links) — estrutura idêntica às páginas do prestador-->
+
+        <nav class="navbar navbar-expand-lg">
+
+            <div class="container menu">
+
+                <!--Logo — clicar volta para a página do cliente-->
+                <a class="navbar-brand" href="/paginasCliente/indexCliente.html">
+                    <span class="serv-part">Serv</span><span class="go-part">Go!</span>
+                </a>
+
+                <!--Botão Sanduíche-->
+                <div class="d-flex order-lg-3">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCliente"
+                        aria-controls="navbarCliente" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                </div>
+
+                <div class="collapse navbar-collapse" id="navbarCliente">
+
+                    <!--Itens da sidebar — visíveis somente no collapse mobile (d-lg-none)-->
+                    <ul class="navbar-nav mx-auto d-lg-none">
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasCliente/clienteAreaExclusiva.html"><i class="bi bi-house-door me-2"></i>Área Exclusiva</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasCliente/clientePerfilAdm.html"><i class="bi bi-person-circle me-2"></i>Meu Perfil</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasCliente/clienteAgendarServicos.html"><i class="bi bi-calendar-check me-2"></i>Agendar Serviços</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasCliente/clienteAvaliacoesFeitas.html"><i class="bi bi-star me-2"></i>Avaliações Realizadas</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasCliente/clienteAvaliacoesRecebidas.html"><i class="bi bi-star-half me-2"></i>Avaliações Recebidas</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasCliente/clienteContatoSite.html"><i class="bi bi-chat-text me-2"></i>Suporte/Contato</a></li>
+                        <li class="nav-item border-top mt-2 pt-2"><a class="nav-link fw-bold" href="/index.html" style="color: rgb(220, 53, 69);"><i class="bi bi-box-arrow-right me-2"></i>Sair</a></li>
+                    </ul>
+
+                    <!--Dropdown "Meu Perfil" — alinhado à direita-->
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+                        <li class="nav-item">
+                            <span class="navbar-logada-info" style="position: relative; display: inline-flex; flex-direction: column; align-items: center; cursor: default;">
+                                Olá, Cliente!
+                            </span>
+                        </li>
+                    </ul>
+
+                </div>
+
+            </div>
+        </nav>
+        </header>
+        <!--FIM DO CABEÇALHO DA PÁGINA-->
+
+    <div class="cli-wrapper">
+
+        <nav class="cli-sidebar">
+            <ul>
+                <li><a href="/paginasCliente/clienteAreaExclusiva.html"><i class="bi bi-house-door"></i> Área Exclusiva</a></li>
+                <li><a class="cli-nav-ativo" href="/paginasCliente/clientePerfilAdm.html"><i class="bi bi-person-circle"></i> Meu Perfil</a></li>
+                <li><a href="/paginasCliente/clienteAgendarServicos.html"><i class="bi bi-calendar-check"></i> Agendar Serviços</a></li>
+                <li><a href="/paginasCliente/clienteAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Realizadas</a></li>
+                <li><a href="/paginasCliente/clienteAvaliacoesRecebidas.html"><i class="bi bi-star"></i> Avaliações Recebidas</a></li>
+                <li><a href="/paginasCliente/clienteContatoSite.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+                    <li class="sidebar-sair"><a href="/index.html" id="cli-sidebar-btn-sair"><i class="bi bi-box-arrow-right"></i> Sair</a></li>
+            </ul>
+        </nav>
+
+        <main class="cli-main">
+            <div class="container">
+                <h1 class="hotsiteadm-titulo-pagina">Administração do Perfil — <span id="titulo-nome-cliente">Cliente</span></h1>
+
+                <!-- SPRINT 3 — Dados de Contato Administrativos -->
+                <div id="sec-dados-adm-contato" style="background:#fff;border:1px solid #dee2e6;border-radius:10px;padding:24px 28px;margin-bottom:28px;box-shadow:0 1px 6px rgba(0,0,0,.06);">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                        <i class="bi bi-headset" style="font-size:1.3rem;color:#146ADB;"></i>
+                        <h4 style="margin:0;font-size:1.1rem;font-weight:700;">Dados de Contato do Site</h4>
+                        <span style="background:#e8f0fe;color:#146ADB;font-size:.75rem;font-weight:700;padding:2px 10px;border-radius:20px;">Exibidos nas páginas de contato</span>
+                    </div>
+                    <p style="font-size:.85rem;color:#888;margin-bottom:18px;">Estas informações são exibidas dinamicamente nas páginas <strong>Contato</strong> do site (visitantes, clientes e prestadores). Altere e salve para atualizar em tempo real.</p>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                        <div>
+                            <label class="form-label fw-bold" style="font-size:.88rem;">Endereço <span style="color:red;">*</span></label>
+                            <input id="dadosadm-endereco" class="form-control form-control-sm" type="text" placeholder="Rua, número, cidade, UF">
+                        </div>
+                        <div>
+                            <label class="form-label fw-bold" style="font-size:.88rem;">Telefone <span style="color:red;">*</span></label>
+                            <input id="dadosadm-telefone" class="form-control form-control-sm" type="text" placeholder="(11) 91234-5678">
+                        </div>
+                        <div>
+                            <label class="form-label fw-bold" style="font-size:.88rem;">E-mail de Suporte <span style="color:red;">*</span></label>
+                            <input id="dadosadm-email" class="form-control form-control-sm" type="email" placeholder="suporte@servgo.com.br">
+                            <small class="text-muted" style="font-size:.77rem;">Este e-mail receberá todos os chamados de contato enviados pelos usuários.</small>
+                        </div>
+                        <div>
+                            <label class="form-label fw-bold" style="font-size:.88rem;">WhatsApp (opcional)</label>
+                            <input id="dadosadm-whatsapp" class="form-control form-control-sm" type="text" placeholder="(11) 91234-5678">
+                        </div>
+                        <div>
+                            <label class="form-label fw-bold" style="font-size:.88rem;">Horário de Atendimento</label>
+                            <input id="dadosadm-horario" class="form-control form-control-sm" type="text" placeholder="Segunda a Sexta, 08h–18h">
+                        </div>
+                        <div>
+                            <label class="form-label fw-bold" style="font-size:.88rem;">Site</label>
+                            <input id="dadosadm-site" class="form-control form-control-sm" type="text" placeholder="www.servgo.com.br">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:18px;">
+                        <button id="btn-salvar-dados-adm" class="btn btn-primary btn-sm px-4"><i class="bi bi-floppy me-1"></i>Salvar Dados de Contato</button>
+                        <button id="btn-restaurar-dados-adm" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-counterclockwise me-1"></i>Restaurar Padrão</button>
+                    </div>
+                </div>
+
+                <div class="hotsiteadm-layout">
+
+                    <aside class="hotsiteadm-controles">
+                        <h3><i class="bi bi-sliders me-2"></i>Dados do Cliente</h3>
+
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-nome">Nome Completo</label>
+                            <input class="hotsiteadm-input" type="text" id="adm-nome" value="">
+                        </div>
+
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-cpf">CPF <span style="color:red;" title="Campo obrigatório">*</span></label>
+                            <input class="hotsiteadm-input" type="text" id="adm-cpf" value="" maxlength="14" placeholder="000.000.000-00">
+                        </div>
+
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-cidade">Cidade <span style="color:red;" title="Campo obrigatório">*</span></label>
+                            <input class="hotsiteadm-input" type="text" id="adm-cidade" value="">
+                        </div>
+
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-endereco">Endereço <span style="color:red;" title="Campo obrigatório">*</span></label>
+                            <input class="hotsiteadm-input" type="text" id="adm-endereco" value="">
+                        </div>
+
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-email">Email</label>
+                            <input class="hotsiteadm-input" type="email" id="adm-email" value="">
+                        </div>
+
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-tel">Telefone <span style="color:red;" title="Campo obrigatório">*</span></label>
+                            <input class="hotsiteadm-input" type="text" id="adm-tel" value="">
+                        </div>
+
+                        <div class="hotsiteadm-grupo">
+                            <label for="adm-foto">Foto de Perfil</label>
+                            <input type="file" id="adm-foto" accept="image/*" class="hotsiteadm-input" style="padding: 5px;">
+                        </div>
+
+                        <div class="hotsiteadm-botoes" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <a href="/paginasCliente/clienteAreaExclusiva.html" id="btn-cancelar-perfil" class="conf-btn-salvar" style="background-color:#dc3545; color:#fff; border:none; border-radius:4px; font-weight:bold; padding:10px 15px; cursor:pointer; flex:1; text-align:center; text-decoration:none; display:inline-block;"><i class="bi bi-x-circle me-1"></i> Cancelar</a>
+                            <button type="button" id="btn-limpar-perfil" style="background-color: #6c757d; color: white; border: none; border-radius: 4px; font-weight: bold; padding: 10px 15px; cursor: pointer; flex: 1;">Limpar</button>
+                            <button type="button" class="conf-btn-salvar" id="btn-salvar-perfil" style="flex: 1 1 100%; margin-top: 8px;"><i class="bi bi-floppy me-1"></i> Salvar Perfil</button>
+                        </div>
+
+                        <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 16px;">
+                            <div style="font-size:0.88rem; font-weight:700; color:var(--texto-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom: 10px;">Segurança</div>
+                            <a class="cta" href="#" data-bs-toggle="modal" data-bs-target="#modalAlterarSenha" style="width: 100%; text-align: center; background-color: var(--rodape-fundo); cursor: pointer;">
+                                <i class="bi bi-lock me-1"></i> Alterar Senha
+                            </a>
+                        </div>
+                    </aside>
+
+                    <div class="hotsiteadm-preview">
+                        <div class="hotsiteadm-indicador-edicao">
+                            <i class="bi bi-pencil-square me-1"></i> Você está em Modo de Edição / Preview
+                        </div>
+
+                        <div class="hotsiteadm-preview-perfil">
+                            <div class="hotsite-avatar" style="margin-bottom: 12px; background-color: #ccc;">AS</div>
+                            <div class="hotsite-nome"></div>
+                            <div class="hotsite-meta-info">
+                                Cliente &nbsp;·&nbsp; Membro desde <span id="preview-membro-desde">—</span>
+                                <div id="preview-media-avaliacao" style="margin-top:5px; font-size:0.85rem;"></div>
+                            </div>
+                            <div class="hotsite-atende" style="margin-top: 8px;">
+                                <i class="bi bi-geo-alt-fill me-1"></i><span id="preview-cidade">—</span>
+                            </div>
+                            <a class="cta" href="/paginasCliente/clienteAgendarServicos.html" style="margin-top:12px; width:100%; text-align:center;">
+                                <i class="bi bi-search me-1"></i> Buscar Prestadores
+                            </a>
+                        </div>
+
+                        <div class="hotsiteadm-preview-conteudo">
+
+                            <div class="hotsite-cabecalho-bloco">
+                                <div>
+                                    <div class="hotsite-secao-titulo">Dados Pessoais</div>
+                                    <p class="hotsite-desc">
+                                        <i class="bi bi-envelope me-1"></i><span id="preview-email">—</span>
+                                        <br>
+                                        <i class="bi bi-telephone me-1"></i><span id="preview-tel">—</span>
+                                        <br>
+                                        <i class="bi bi-house me-1"></i><span id="preview-endereco">—</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer>
+        <div class="container" style="padding-top: 40px; padding-bottom: 32px;">
+            <div class="row">
+                <div class="col-md-3 mb-4">
+                    <a class="navbar-footer" href="#">
+                        <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
+                    </a>
+                    <p class="small text-muted mt-2">Análise, inovação e conteúdo de valor.</p>
+                    <div class="d-flex social-icons-custom mt-2">
+                        <a href="#" class="text-white me-3"><i class="bi bi-linkedin"></i></a>
+                        <a href="#" class="text-white me-3"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Links Rápidos</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50 text-decoration-none">Quem Somos</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Serviços</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Fale Conosco</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Nossos Serviços</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Contato</h5>
+                    <p class="small text-white-50"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</p>
+                    <p class="small text-white-50"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</p>
+                    <p class="small text-white-50"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</p>
+                    <a href="#" class="small text-decoration-none text-warning">Trabalhe Conosco</a>
+                </div>
+            </div>
+            <hr class="text-white-50">
+            <div class="text-center small text-white-50">
+                © 2025 ServGo! Todos os direitos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <div class="modal fade" id="modalAlterarSenha" tabindex="-1" aria-labelledby="modalAlterarSenhaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #2B2B2B; color: white;">
+                    <h5 class="modal-title" id="modalAlterarSenhaLabel"><i class="bi bi-lock me-2"></i>Alterar Senha</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="senha-atual" class="form-label fw-bold">Senha Atual:</label>
+                        <input type="password" class="form-control" id="senha-atual">
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label for="nova-senha" class="form-label fw-bold">Nova Senha:</label>
+                        <input type="password" class="form-control" id="nova-senha">
+                        <small class="text-muted d-block mt-1">Mínimo 8 caracteres, incluindo letras, números e caracteres especiais (Case Sensitive).</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="repita-nova-senha" class="form-label fw-bold">Repita a Nova Senha:</label>
+                        <input type="password" class="form-control" id="repita-nova-senha">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btn-salvar-senha"><i class="bi bi-floppy me-1"></i>Salvar Nova Senha</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <!-- TOAST DE NOTIFICAÇÃO -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:1090;">
+        <div id="toastNotificacao" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toast-mensagem">Ação realizada com sucesso!</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/script.js" defer></script>
+</body>
+</html>

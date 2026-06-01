@@ -3,10 +3,44 @@ disponibilize os arquivos atualizados após conluir todas as Sprints
 para saber qual é a íultima Sprint será dado o comando Sprints Concluídas. Após esse comando, você poderá concluir o projeto e entregar os arquivos ajustados e atualizados na íntgra, completos para serem utilizados imediatamente
 
 SPRINT 1
-na página clienteAvaliacoesFeitas.html
-em <div class="review-card-reverse" data-pedido-id="cli-aval-conf-orc-cli-1779673574342"><div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Prestador: Prestador Teste (TI)</h5><span class="text-muted"><small>25/05/2026</small></span></div><div class="rating"><i class="bi bi-star-fill" style="color:#ffc107;"></i><i class="bi bi-star-fill" style="color:#ffc107;"></i><i class="bi bi-star-fill" style="color:#ffc107;"></i><i class="bi bi-star-fill" style="color:#ffc107;"></i><i class="bi bi-star-fill" style="color:#ffc107;"></i><h6 class="text-muted ms-2">Avaliação: 5.0</h6></div><p class="review-text">"Teste"</p><div class="d-flex gap-2 mt-2"><button type="button" class="btn btn-warning btn-editar-feita" data-pedido-id="cli-aval-conf-orc-cli-1779673574342"><i class="bi bi-pencil-square me-1"></i>Editar</button><button type="button" class="btn btn-danger btn-excluir-feita" data-pedido-id="cli-aval-conf-orc-cli-1779673574342"><i class="bi bi-trash me-1"></i>Excluir</button></div></div>
-excluir o botão <button type="button" class="btn btn-danger btn-excluir-feita" data-pedido-id="cli-aval-conf-orc-cli-1779673574342"><i class="bi bi-trash me-1"></i>Excluir</button>
+na página indexCliente.html 
+em <div class="container">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Soluções em software e desenvolvimento." aria-label="Busca">
+                    <button class="btn btn-warning" type="button"><i class="bi bi-search"></i> Buscar</button>
+                </div>
+            </div>
+ajuste a lógica garantindo que sempre for digitado um texto para busca em <input type="text" class="form-control" placeholder="Onde se divertir neste fim de semana?" aria-label="Busca">
+e clicado em <button class="btn btn-warning" type="button"><i class="bi bi-search"></i> Buscar</button>
+seja realizada a busca no site
+se o ítem de busca não existir, avisar o usuário de que o conteúdo não éxiste e que ele deve refazer a busca
+alterar a cor do button class="btn btn-warning" type="button" para a cor #2B2B2B
 
+na página indexPrestador.html
+em <div class="container">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Apoio técnico para problemas de TI." aria-label="Busca">
+                    <button class="btn btn-warning" type="button"><i class="bi bi-search"></i> Buscar</button>
+                </div>
+            </div>
+ajuste a lógica garantindo que sempre for digitado um texto para busca em <input type="text" class="form-control" placeholder="Procure por manicure, cabelo ou estética." aria-label="Busca">
+e clicado em <button class="btn btn-warning" type="button"><i class="bi bi-search"></i> Buscar</button>
+seja realizada a busca no site
+se o ítem de busca não existir, avisar o usuário de que o conteúdo não éxiste e que ele deve refazer a busca
+alterar a cor do button class="btn btn-warning" type="button" para a cor #2B2B2B
+
+na página index.html
+em <div class="container">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Busque clínicas e exames disponíveis." aria-label="Busca">
+                    <button class="btn btn-warning" type="button"><i class="bi bi-search"></i> Buscar</button>
+                </div>
+            </div>
+ajuste a lógica garantindo que sempre for digitado um texto para busca em <input type="text" class="form-control" placeholder="Encontre o especialista de saúde ideal." aria-label="Busca">
+e clicado em <button class="btn btn-warning" type="button"><i class="bi bi-search"></i> Buscar</button>
+seja realizada a busca no site
+se o ítem de busca não existir, avisar o usuário de que o conteúdo não éxiste e que ele deve refazer a busca
+alterar a cor do button class="btn btn-warning" type="button" para a cor #2B2B2B
 
 SPRINT 2
 na página clienteAreaExclusiva.html

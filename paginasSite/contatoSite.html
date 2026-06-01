@@ -72,14 +72,14 @@
 
     <main class="contato-main">
 
-        <div class="contato-info">
+        <div class="contato-info" id="contato-info-dinamico">
             <h2>Contato</h2>
-            <h5><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</h5>
-            <h5><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</h5>
-            <h5><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</h5>
+            <h5 id="ci-endereco"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</h5>
+            <h5 id="ci-telefone"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</h5>
+            <h5 id="ci-email"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</h5>
         </div>
 
-        <div class="contato-form">
+        <div class="contato-form" id="contato-form-site">
             <div class="mb-3">
                 <label for="nome" class="form-label">Nome</label>
                 <input type="text" class="form-control" id="nome" required>
@@ -95,8 +95,13 @@
             </div>
 
             <div class="mb-3">
-                <label for="arquivo" class="form-label">Enviar arquivo</label>
-                <input class="form-control" type="file" id="arquivo">
+                <label for="assunto" class="form-label">Assunto</label>
+                <input type="text" class="form-control" id="assunto" placeholder="Resumo do motivo do contato">
+            </div>
+
+            <div class="mb-3">
+                <label for="arquivo" class="form-label">Enviar arquivo <small class="text-muted fw-normal ms-1">(opcional — máx. 20 MB)</small></label>
+                <input class="form-control" type="file" id="arquivo" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.zip,.txt">
             </div>
 
             <div class="mb-3">
@@ -105,28 +110,22 @@
                 <div class="invalid-feedback">Por favor, insira uma mensagem.</div>
             </div>
 
-            <button class="contato-enviar-btn" type="button">Enviar</button>
+            <button class="contato-enviar-btn" id="btn-enviar-contato-site" type="button">Enviar</button>
+            <div id="contato-site-feedback" style="display:none;" class="mt-3"></div>
         </div>
     </main>
 
-    <!--NEWSLATTER-->
-
-    <div class="container-footer">
-        <div class="container text-center">
-            <h2 class="fw-light">Receba Conteúdos Exclusivos</h2>
-            <p class="text-conteudo">Assine nossa newsletter e receba em primeira mão artigos, tendências e novidades
-                do mundo de prestação de serviços.
-            </p>
-            <form class="d-flex justify-content-center mt-4">
-                <input class="form-control me-2" type="email" placeholder="Digite seu e-mail"
-                    style="max-width: 300px;" aria-label="E-mail">
-                <button class="btn btn-warning" type="submit">Cadastrar</button>
-            </form>
+    <!-- TOAST DE NOTIFICAÇÃO -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:1090;">
+        <div id="toastNotificacao" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toast-mensagem">Ação realizada com sucesso!</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
+            </div>
         </div>
     </div>
 
-    <!--FIM - NEWSLATTER-->   
-
+    
     <!------------------------------------------ INÍCIO DO RODAPÉ ------------------------------------------------>
 
     <footer class="bg-dark text-white pt-5 pb-4" style="background-color: var(--rodape-fundo) !important;">

@@ -215,7 +215,167 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // =========================================================
-    // SPRINT 1 — Guard de páginas restritas
+    // SPRINT 2 — NEWSLETTER
+    // Armazena e-mails inscritos, registra disparos e processa
+    // descadastro via parâmetro ?unsubscribe= na URL.
+    // =========================================================
+    var SG_NEWSLETTER_KEY  = 'sgNewsletterInscritos';
+    var SG_NEWSLETTER_LOG  = 'sgNewsletterDisparos';
+
+    /** Retorna array de objetos { email, dataInscricao } */
+    function sgNewsletterObterInscritos() { return DB.get(SG_NEWSLETTER_KEY) || []; }
+    function sgNewsletterSalvarInscritos(arr) { DB.set(SG_NEWSLETTER_KEY, arr); }
+
+    /** Retorna log de disparos: array de { noticiaId, titulo, dataDisparo, destinatarios[] } */
+    function sgNewsletterObterDisparos() { return DB.get(SG_NEWSLETTER_LOG) || []; }
+    function sgNewsletterSalvarDisparos(arr) { DB.set(SG_NEWSLETTER_LOG, arr); }
+
+    /**
+     * Inscreve um e-mail na newsletter.
+     * @param {string} email
+     * @returns {'ok'|'duplicado'|'invalido'}
+     */
+    function sgNewsletterInscrever(email) {
+        email = (email || '').trim().toLowerCase();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'invalido';
+        var inscritos = sgNewsletterObterInscritos();
+        if (inscritos.some(function(i){ return i.email === email; })) return 'duplicado';
+        inscritos.push({ email: email, dataInscricao: new Date().toISOString() });
+        sgNewsletterSalvarInscritos(inscritos);
+        return 'ok';
+    }
+
+    /**
+     * Remove um e-mail da newsletter (descadastro).
+     * @param {string} email
+     */
+    function sgNewsletterDescadastrar(email) {
+        email = (email || '').trim().toLowerCase();
+        if (!email) return;
+        var inscritos = sgNewsletterObterInscritos().filter(function(i){ return i.email !== email; });
+        sgNewsletterSalvarInscritos(inscritos);
+    }
+
+    /**
+     * Gera o corpo HTML do e-mail de newsletter para uma notícia.
+     * Inclui link de descadastro com parâmetro ?unsubscribe=<email codificado>.
+     *
+     * NOTA: Como esta é uma aplicação front-end sem servidor de e-mail,
+     * o "envio" é simulado: registra o disparo no localStorage e exibe
+     * no painel admin o log de e-mails que seriam enviados.
+     * Para envio real, substitua _sgNewsletterDisparar() por uma chamada
+     * fetch() a um serviço como SendGrid, Mailchimp ou similar.
+     *
+     * @param {Object} noticia
+     * @param {string} emailDestino
+     * @returns {string} HTML do corpo do e-mail
+     */
+    function sgNewsletterGerarCorpoEmail(noticia, emailDestino) {
+        var baseUrl = window.location.origin;
+        var unsubUrl = baseUrl + '/index.html?unsubscribe=' + encodeURIComponent(emailDestino);
+        var imgHtml = noticia.imagemUrl
+            ? '<img src="' + noticia.imagemUrl + '" alt="Imagem da matéria" style="width:100%;max-height:220px;object-fit:cover;border-radius:6px;margin-bottom:16px;">'
+            : '';
+        return '<!DOCTYPE html><html lang="pt-br"><head><meta charset="UTF-8"><title>' + noticia.titulo + '</title></head>' +
+            '<body style="font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0;">' +
+            '<div style="max-width:600px;margin:32px auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.1);">' +
+            '<div style="background:#146ADB;padding:20px 28px;">' +
+                '<span style="font-size:1.5rem;font-weight:800;color:#fff;">Serv<span style="color:#FFC300;">Go!</span></span>' +
+                '<span style="color:#ffffffaa;font-size:.85rem;margin-left:12px;">Conteúdo Exclusivo</span>' +
+            '</div>' +
+            '<div style="padding:28px 32px;">' +
+                imgHtml +
+                '<span style="background:#e8f0fe;color:#146ADB;font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:20px;">' + (noticia.categoria||'Novidades') + '</span>' +
+                '<h2 style="font-size:1.35rem;color:#212529;margin:12px 0 8px;">' + noticia.titulo + '</h2>' +
+                '<p style="color:#555;line-height:1.6;margin:0 0 18px;">' + noticia.resumo + '</p>' +
+                (noticia.conteudo ? '<p style="color:#444;line-height:1.7;font-size:.95rem;">' + noticia.conteudo + '</p>' : '') +
+                '<p style="color:#888;font-size:.82rem;margin-top:20px;"><i>Por ' + (noticia.autor||'Equipe ServGo!') + ' · ' + (noticia.dataPublicacao||'') + '</i></p>' +
+            '</div>' +
+            '<div style="background:#f0f0f0;padding:16px 32px;text-align:center;border-top:1px solid #e0e0e0;">' +
+                '<p style="color:#888;font-size:.8rem;margin:0;">Você está recebendo este e-mail porque se inscreveu na newsletter do ServGo!</p>' +
+                '<p style="margin:8px 0 0;"><a href="' + unsubUrl + '" style="color:#dc3545;font-size:.8rem;text-decoration:underline;">Para não receber mais esse conteúdo, clique aqui</a></p>' +
+            '</div>' +
+            '</div></body></html>';
+    }
+
+    /**
+     * Registra o disparo da notícia para todos os inscritos no log do localStorage.
+     * Em produção: substituir pelo envio real via API de e-mail.
+     * @param {Object} noticia
+     * @returns {number} quantidade de destinatários
+     */
+    function _sgNewsletterDisparar(noticia) {
+        var inscritos = sgNewsletterObterInscritos();
+        if (inscritos.length === 0) return 0;
+        var disparos = sgNewsletterObterDisparos();
+        // Evita reenvio da mesma notícia
+        var jaDisparado = disparos.some(function(d){ return d.noticiaId === noticia.id; });
+        if (jaDisparado) return 0;
+        disparos.push({
+            noticiaId:    noticia.id,
+            titulo:       noticia.titulo,
+            dataDisparo:  new Date().toISOString(),
+            destinatarios: inscritos.map(function(i){ return i.email; })
+        });
+        sgNewsletterSalvarDisparos(disparos);
+        return inscritos.length;
+    }
+
+    /**
+     * Verifica se a URL contém ?unsubscribe= e processa o descadastro automaticamente.
+     * Chamado no DOMContentLoaded para todas as páginas.
+     */
+    function sgNewsletterProcessarDescadastroUrl() {
+        var params = new URLSearchParams(window.location.search);
+        var emailParam = params.get('unsubscribe');
+        if (!emailParam) return;
+        var email = decodeURIComponent(emailParam).trim().toLowerCase();
+        sgNewsletterDescadastrar(email);
+        // Remove o parâmetro da URL sem recarregar a página
+        history.replaceState(null, '', window.location.pathname);
+        // Exibe toast de confirmação
+        setTimeout(function(){
+            exibirToast('E-mail <strong>' + email + '</strong> removido da newsletter com sucesso.');
+        }, 600);
+    }
+
+    /**
+     * Inicializa os formulários de newsletter nas páginas Home / indexCliente / indexPrestador.
+     * Suporta os três IDs de formulário usados nas respectivas páginas.
+     */
+    function inicializarFormsNewsletter() {
+        // Processa descadastro via URL primeiro
+        sgNewsletterProcessarDescadastroUrl();
+
+        var pares = [
+            { formId: 'formNewsletterHome',      inputId: 'inputNewsletterHome',      alertaId: 'alertaNewsletterHome' },
+            { formId: 'formNewsletterCliente',   inputId: 'inputNewsletterCliente',   alertaId: 'alertaNewsletterCliente' },
+            { formId: 'formNewsletterPrestador', inputId: 'inputNewsletterPrestador', alertaId: 'alertaNewsletterPrestador' }
+        ];
+
+        pares.forEach(function(p) {
+            var form   = document.getElementById(p.formId);
+            var input  = document.getElementById(p.inputId);
+            var alerta = document.getElementById(p.alertaId);
+            if (!form || !input || !alerta) return;
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var email = input.value.trim();
+                var resultado = sgNewsletterInscrever(email);
+                alerta.style.display = 'block';
+                if (resultado === 'ok') {
+                    alerta.innerHTML = '<span class="badge bg-success px-3 py-2" style="font-size:.9rem;"><i class="bi bi-check-circle me-1"></i>E-mail cadastrado! Você receberá nossos conteúdos exclusivos.</span>';
+                    input.value = '';
+                } else if (resultado === 'duplicado') {
+                    alerta.innerHTML = '<span class="badge bg-warning text-dark px-3 py-2" style="font-size:.9rem;"><i class="bi bi-exclamation-circle me-1"></i>Este e-mail já está cadastrado na nossa newsletter.</span>';
+                } else {
+                    alerta.innerHTML = '<span class="badge bg-danger px-3 py-2" style="font-size:.9rem;"><i class="bi bi-x-circle me-1"></i>Por favor, informe um e-mail válido.</span>';
+                }
+                setTimeout(function(){ alerta.style.display = 'none'; }, 5000);
+            });
+        });
+    }
     // Verifica se a URL atual requer autenticação e redireciona
     // para o login caso o usuário não esteja logado.
     //
@@ -430,12 +590,132 @@ document.addEventListener('DOMContentLoaded', function () {
     // =========================================================
     // HOME (index.html)
     // =========================================================
+
+    /**
+     * Termos indexados para busca na Home (index.html).
+     * Cada entrada contém palavras-chave e a URL de destino correspondente.
+     */
+    var SG_BUSCA_HOME = [
+        { termos: ['saúde','saude','médico','medico','clínica','clinica','exame','consulta','hospital'], url: 'paginasSite/agendarServicos.html?tipo=Sa%C3%BAde' },
+        { termos: ['beleza','salão','salao','cabelo','manicure','estética','estetica','unhas','maquiagem'], url: 'paginasSite/agendarServicos.html?tipo=Beleza' },
+        { termos: ['manutenção','manutencao','predial','encanador','encanamento','pedreiro','pintor','obra','reforma','reparo'], url: 'paginasSite/agendarServicos.html?tipo=Manuten%C3%A7%C3%A3o%20Predial' },
+        { termos: ['ti','tecnologia','software','desenvolvimento','informática','informatica','computador','cibersegurança','ciberseguranca','rede','infraestrutura'], url: 'paginasSite/agendarServicos.html?tipo=TI' },
+        { termos: ['lazer','entretenimento','passeio','show','evento','diversão','diversao','atividade'], url: 'paginasSite/agendarServicos.html?tipo=Lazer' },
+        { termos: ['alimentação','alimentacao','restaurante','comida','delivery','marmita','cardápio','cardapio','refeição','refeicao'], url: 'paginasSite/agendarServicos.html?tipo=Alimenta%C3%A7%C3%A3o' },
+        { termos: ['design','gráfico','grafico','identidade visual','logo','logotipo','web design','arte'], url: 'paginasSite/agendarServicos.html?tipo=Design' },
+        { termos: ['segurança','seguranca','vigilância','vigilancia','câmera','camera','alarme','monitoramento'], url: 'paginasSite/agendarServicos.html?tipo=Seguran%C3%A7a' },
+        { termos: ['logística','logistica','entrega','frete','transporte','mudança','mudanca','motoboy'], url: 'paginasSite/agendarServicos.html?tipo=Log%C3%ADstica' },
+        { termos: ['consultoria','consultor','assessoria','estratégia','estrategia','gestão','gestao','mentoria'], url: 'paginasSite/agendarServicos.html?tipo=Consultoria' },
+        { termos: ['construção','construcao','obra civil','engenharia','arquitetura','projeto'], url: 'paginasSite/agendarServicos.html?tipo=Constru%C3%A7%C3%A3o' }
+    ];
+
+    /**
+     * Engine central de busca reutilizável pelas três páginas home.
+     * Normaliza acentos para comparação tolerante.
+     */
+    function _executarBuscaSite(query, indice, alertaId, prefixoRota) {
+        var alerta = document.getElementById(alertaId);
+        if (!alerta) return;
+        var q = (query || '').trim().toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (!q) {
+            alerta.style.display = 'block';
+            alerta.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Por favor, digite algo para buscar.';
+            return;
+        }
+        var destino = null;
+        for (var i = 0; i < indice.length; i++) {
+            var entrada = indice[i];
+            for (var j = 0; j < entrada.termos.length; j++) {
+                var termo = entrada.termos[j].toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                if (q.includes(termo) || termo.includes(q)) { destino = entrada.url; break; }
+            }
+            if (destino) break;
+        }
+        if (destino) {
+            alerta.style.display = 'none';
+            window.location.href = (prefixoRota || '') + destino;
+        } else {
+            alerta.style.display = 'block';
+            alerta.innerHTML =
+                '<i class="bi bi-search me-2"></i>' +
+                'O conteúdo "<strong>' + query.trim() + '</strong>" não foi encontrado. ' +
+                'Tente buscar por: <em>Saúde, Beleza, TI, Lazer, Alimentação, Manutenção, Design, Segurança, Logística, Consultoria ou Construção</em>.';
+        }
+    }
+
     function inicializarHome() {
         var frases = ["Agende sua consulta médica aqui.", "Encontre o especialista de saúde ideal.", "Busque clínicas e exames disponíveis.", "Descubra salões e serviços de beleza.", "Procure por manicure, cabelo ou estética.", "Confira as últimas tendências em beleza.", "Precisa de um eletricista ou encanador?", "Orçamento rápido para reformas e reparos.", "Serviços de manutenção predial e civil.", "Soluções em software e desenvolvimento.", "Apoio técnico para problemas de TI.", "Busque por cibersegurança e infraestrutura.", "Sugestões de passeios e entretenimento.", "Onde se divertir neste fim de semana?", "Encontre eventos, shows e atividades.", "Descubra restaurantes e deliverys.", "Cardápios, pratos e culinárias diversas.", "Onde comer hoje? Pesquise aqui!"];
-        var campo = document.getElementById('campoBusca') || document.querySelector('.input-group input.form-control[aria-label="Busca"]');
+        var campo = document.getElementById('campoBuscaHome') || document.getElementById('campoBusca') || document.querySelector('.input-group input.form-control[aria-label="Busca"]');
         if (!campo) return;
         campo.placeholder = frases[Math.floor(Math.random() * frases.length)];
         setInterval(function () { campo.placeholder = frases[Math.floor(Math.random() * frases.length)]; }, 3000);
+        // Busca funcional — Home
+        var btnBuscar = document.getElementById('btnBuscarHome');
+        if (btnBuscar) {
+            btnBuscar.addEventListener('click', function () {
+                _executarBuscaSite(campo.value, SG_BUSCA_HOME, 'alertaBuscaHome', '');
+            });
+        }
+        campo.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') _executarBuscaSite(campo.value, SG_BUSCA_HOME, 'alertaBuscaHome', '');
+        });
+    }
+
+    // =========================================================
+    // SPRINT 1 — Busca nas páginas indexCliente e indexPrestador
+    // =========================================================
+    var SG_BUSCA_CLIENTE = [
+        { termos: ['saúde','saude','médico','medico','clínica','clinica','exame','consulta','hospital'], url: '/paginasCliente/clienteAgendarServicos.html?tipo=Sa%C3%BAde' },
+        { termos: ['beleza','salão','salao','cabelo','manicure','estética','estetica','unhas','maquiagem'], url: '/paginasCliente/clienteAgendarServicos.html?tipo=Beleza' },
+        { termos: ['manutenção','manutencao','predial','encanador','encanamento','pedreiro','pintor','obra','reforma','reparo'], url: '/paginasCliente/clienteAgendarServicos.html?tipo=Manuten%C3%A7%C3%A3o%20Predial' },
+        { termos: ['ti','tecnologia','software','desenvolvimento','informática','informatica','computador','cibersegurança','ciberseguranca','rede','infraestrutura'], url: '/paginasCliente/clienteAgendarServicos.html?tipo=TI' },
+        { termos: ['lazer','entretenimento','passeio','show','evento','diversão','diversao','atividade'], url: '/paginasCliente/clienteAgendarServicos.html?tipo=Lazer' },
+        { termos: ['alimentação','alimentacao','restaurante','comida','delivery','marmita','cardápio','cardapio','refeição','refeicao'], url: '/paginasCliente/clienteAgendarServicos.html?tipo=Alimenta%C3%A7%C3%A3o' },
+        { termos: ['design','gráfico','grafico','identidade visual','logo','logotipo','web design','arte'], url: '/paginasCliente/clienteAgendarServicos.html?tipo=Design' },
+        { termos: ['segurança','seguranca','vigilância','vigilancia','câmera','camera','alarme','monitoramento'], url: '/paginasCliente/clienteAgendarServicos.html?tipo=Seguran%C3%A7a' },
+        { termos: ['logística','logistica','entrega','frete','transporte','mudança','mudanca','motoboy'], url: '/paginasCliente/clienteAgendarServicos.html?tipo=Log%C3%ADstica' },
+        { termos: ['consultoria','consultor','assessoria','estratégia','estrategia','gestão','gestao','mentoria'], url: '/paginasCliente/clienteAgendarServicos.html?tipo=Consultoria' },
+        { termos: ['construção','construcao','obra civil','engenharia','arquitetura','projeto'], url: '/paginasCliente/clienteAgendarServicos.html?tipo=Constru%C3%A7%C3%A3o' }
+    ];
+
+    var SG_BUSCA_PRESTADOR = [
+        { termos: ['saúde','saude','médico','medico','clínica','clinica','exame','consulta','hospital'], url: '/paginasSite/agendarServicos.html?tipo=Sa%C3%BAde' },
+        { termos: ['beleza','salão','salao','cabelo','manicure','estética','estetica','unhas','maquiagem'], url: '/paginasSite/agendarServicos.html?tipo=Beleza' },
+        { termos: ['manutenção','manutencao','predial','encanador','encanamento','pedreiro','pintor','obra','reforma','reparo'], url: '/paginasSite/agendarServicos.html?tipo=Manuten%C3%A7%C3%A3o%20Predial' },
+        { termos: ['ti','tecnologia','software','desenvolvimento','informática','informatica','computador','cibersegurança','ciberseguranca','rede','infraestrutura'], url: '/paginasSite/agendarServicos.html?tipo=TI' },
+        { termos: ['lazer','entretenimento','passeio','show','evento','diversão','diversao','atividade'], url: '/paginasSite/agendarServicos.html?tipo=Lazer' },
+        { termos: ['alimentação','alimentacao','restaurante','comida','delivery','marmita','cardápio','cardapio','refeição','refeicao'], url: '/paginasSite/agendarServicos.html?tipo=Alimenta%C3%A7%C3%A3o' },
+        { termos: ['design','gráfico','grafico','identidade visual','logo','logotipo','web design','arte'], url: '/paginasSite/agendarServicos.html?tipo=Design' },
+        { termos: ['segurança','seguranca','vigilância','vigilancia','câmera','camera','alarme','monitoramento'], url: '/paginasSite/agendarServicos.html?tipo=Seguran%C3%A7a' },
+        { termos: ['logística','logistica','entrega','frete','transporte','mudança','mudanca','motoboy'], url: '/paginasSite/agendarServicos.html?tipo=Log%C3%ADstica' },
+        { termos: ['consultoria','consultor','assessoria','estratégia','estrategia','gestão','gestao','mentoria'], url: '/paginasSite/agendarServicos.html?tipo=Consultoria' },
+        { termos: ['construção','construcao','obra civil','engenharia','arquitetura','projeto'], url: '/paginasSite/agendarServicos.html?tipo=Constru%C3%A7%C3%A3o' }
+    ];
+
+    function inicializarBuscaIndexCliente() {
+        var campo = document.getElementById('campoBuscaCliente');
+        var btn   = document.getElementById('btnBuscarCliente');
+        if (!campo || !btn) return;
+        btn.addEventListener('click', function () {
+            _executarBuscaSite(campo.value, SG_BUSCA_CLIENTE, 'alertaBuscaCliente', '');
+        });
+        campo.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') _executarBuscaSite(campo.value, SG_BUSCA_CLIENTE, 'alertaBuscaCliente', '');
+        });
+    }
+
+    function inicializarBuscaIndexPrestador() {
+        var campo = document.getElementById('campoBuscaPrestador');
+        var btn   = document.getElementById('btnBuscarPrestador');
+        if (!campo || !btn) return;
+        btn.addEventListener('click', function () {
+            _executarBuscaSite(campo.value, SG_BUSCA_PRESTADOR, 'alertaBuscaPrestador', '');
+        });
+        campo.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') _executarBuscaSite(campo.value, SG_BUSCA_PRESTADOR, 'alertaBuscaPrestador', '');
+        });
     }
 
     // =========================================================
@@ -1089,16 +1369,20 @@ document.addEventListener('DOMContentLoaded', function () {
             var notifs = sgObterNotificacoes(emailPrest).filter(function (n) { return !n.lida; });
             var qtdAg = notifs.filter(function (n) { return n.tipo === 'agendamento' || n.tipo === 'orcamento_solicitado'; }).length;
             var qtdOrcAceito = notifs.filter(function (n) { return n.tipo === 'orcamento_aceito'; }).length;
-            if (qtdAg === 0 && qtdOrcAceito === 0) { barraExistente.innerHTML = ''; return; }
+            var qtdOrcRecusado = notifs.filter(function (n) { return n.tipo === 'orcamento_recusado'; }).length;
+            if (qtdAg === 0 && qtdOrcAceito === 0 && qtdOrcRecusado === 0) { barraExistente.innerHTML = ''; return; }
             var html = '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;background:#fffbe6;border:1.5px solid #FFC300;border-radius:10px;"><i class="bi bi-bell-fill" style="color:#e6a800;font-size:1.2rem;"></i><strong style="color:#7a5800;">Novas notificações:</strong>';
             if (qtdAg > 0) html += '<button type="button" id="btn-notif-prest-ag" class="btn btn-warning btn-sm" style="font-size:.83rem;"><i class="bi bi-calendar-plus me-1"></i>' + qtdAg + ' nova(s) solicitação(ões)</button>';
             if (qtdOrcAceito > 0) html += '<button type="button" id="btn-notif-prest-orc-aceito" class="btn btn-success btn-sm" style="font-size:.83rem;"><i class="bi bi-check-circle me-1"></i>' + qtdOrcAceito + ' orçamento(s) aceito(s)</button>';
+            if (qtdOrcRecusado > 0) html += '<button type="button" id="btn-notif-prest-orc-recusado" class="btn btn-danger btn-sm" style="font-size:.83rem;"><i class="bi bi-x-circle me-1"></i>' + qtdOrcRecusado + ' proposta(s) recusada(s)</button>';
             html += '</div>';
             barraExistente.innerHTML = html;
             var btnAg = document.getElementById('btn-notif-prest-ag');
             if (btnAg) { btnAg.addEventListener('click', function () { window.location.href = '/paginasPrestador/prestadorServicosAgendados.html?aba=pendentes'; }); }
             var btnOrcAc = document.getElementById('btn-notif-prest-orc-aceito');
             if (btnOrcAc) { btnOrcAc.addEventListener('click', function () { window.location.href = '/paginasPrestador/prestadorServicosAgendados.html?aba=pendentes'; }); }
+            var btnOrcRec = document.getElementById('btn-notif-prest-orc-recusado');
+            if (btnOrcRec) { btnOrcRec.addEventListener('click', function () { window.location.href = '/paginasPrestador/prestadorServicosAgendados.html?aba=pendentes'; }); }
         }
         renderBarra();
         setInterval(renderBarra, 5000);
@@ -2261,6 +2545,10 @@ document.addEventListener('DOMContentLoaded', function () {
         var inputCidade = document.getElementById('adm-cidade');
         var inputDescricao = document.getElementById('adm-descricao');
         var inputEndereco = document.getElementById('adm-endereco');
+        var inputNumero = document.getElementById('adm-numero');
+        var inputBairro = document.getElementById('adm-bairro');
+        var inputComplemento = document.getElementById('adm-complemento');
+        var inputCep = document.getElementById('adm-cep');
         var inputEmail = document.getElementById('adm-email');
         var inputTel = document.getElementById('adm-tel');
         var inputAvatar = document.getElementById('adm-galeria');
@@ -2283,6 +2571,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (inputCidade) inputCidade.value = dadosSalvos.cidade || '';
         if (inputDescricao) inputDescricao.value = dadosSalvos.descricao || '';
         if (inputEndereco) inputEndereco.value = dadosSalvos.endereco || '';
+        if (inputNumero) inputNumero.value = dadosSalvos.numero || '';
+        if (inputBairro) inputBairro.value = dadosSalvos.bairro || '';
+        if (inputComplemento) inputComplemento.value = dadosSalvos.complemento || '';
+        if (inputCep) inputCep.value = dadosSalvos.cep || '';
         if (inputTel) inputTel.value = dadosSalvos.tel || '';
 
         // Injetar bloco de subcategorias abaixo do select de categoria (se ainda não existir)
@@ -2400,69 +2692,101 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         // Galeria de 10 slots (9 imagens + 1 vídeo)
-        var galeriaDados = (dadosSalvos.galeria && dadosSalvos.galeria.length >= 10) ? dadosSalvos.galeria : new Array(10).fill(null);
+        // galeriaDados é indexado por slot (0–9) e persiste em memória até Salvar & Publicar.
+        var galeriaSalva = dadosSalvos.galeria;
+        var galeriaDados = new Array(10).fill(null);
+        // Carrega dados salvos respeitando o índice de slot, independente do tamanho do array salvo
+        if (galeriaSalva && Array.isArray(galeriaSalva)) {
+            for (var gi = 0; gi < galeriaSalva.length && gi < 10; gi++) {
+                galeriaDados[gi] = galeriaSalva[gi] || null;
+            }
+        }
 
         function renderizarGaleria() {
-            var thumbs = document.querySelectorAll('#galeria-thumbs .hotsiteadm-thumb-preview');
-            thumbs.forEach(function (thumb) {
-                var slot = parseInt(thumb.dataset.slot);
-                var dado = galeriaDados[slot];
-                thumb.innerHTML = '';
-                thumb.style.position = 'relative';
-
-                if (dado) {
-                    var isVideo = dado.startsWith('data:video') || dado.includes('/video/');
-                    if (isVideo) {
-                        var vid = document.createElement('video');
-                        vid.src = dado; vid.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:4px;';
-                        vid.muted = true; vid.setAttribute('playsinline', '');
-                        thumb.appendChild(vid);
-                    } else {
-                        var img = document.createElement('img');
-                        img.src = dado; img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:4px;';
-                        thumb.appendChild(img);
-                    }
-                    var btnX = document.createElement('button');
-                    btnX.type = 'button'; btnX.className = 'btn-galeria-excluir';
-                    btnX.dataset.slot = slot;
-                    btnX.style.cssText = 'position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;';
-                    btnX.innerHTML = '&times;';
-                    btnX.addEventListener('click', function (e) { e.stopPropagation(); galeriaDados[slot] = null; renderizarGaleria(); });
-                    thumb.appendChild(btnX);
-                } else {
-                    var label = slot === 9 ? '<i class="bi bi-play-circle"></i> Vídeo' : '<i class="bi bi-image"></i> Foto ' + (slot + 1);
-                    thumb.innerHTML = label;
-                    thumb.style.display = 'flex'; thumb.style.alignItems = 'center'; thumb.style.justifyContent = 'center'; thumb.style.gap = '4px'; thumb.style.color = '#6c757d'; thumb.style.fontSize = '.85rem';
-                }
-
-                // Clique no card abre file input para esse slot
-                thumb.style.cursor = 'pointer';
-                thumb.addEventListener('click', function (e) {
-                    if (e.target.classList.contains('btn-galeria-excluir')) return;
-                    var input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = slot === 9 ? 'video/*' : 'image/*';
-                    input.addEventListener('change', function () {
-                        var file = input.files[0]; if (!file) return;
-                        var reader = new FileReader();
-                        reader.onload = function (ev) { galeriaDados[slot] = ev.target.result; renderizarGaleria(); };
-                        reader.readAsDataURL(file);
-                    });
-                    input.click();
-                });
-            });
-
-            // Garante 10 slots no DOM se necessário
+            // Garante 10 slots no DOM antes de renderizar
             var galContainer = document.getElementById('galeria-thumbs');
-            if (galContainer && galContainer.querySelectorAll('.hotsiteadm-thumb-preview').length < 10) {
-                for (var s = galContainer.querySelectorAll('.hotsiteadm-thumb-preview').length; s < 10; s++) {
+            if (galContainer) {
+                var existentes = galContainer.querySelectorAll('.hotsiteadm-thumb-preview').length;
+                for (var s = existentes; s < 10; s++) {
                     var newThumb = document.createElement('div');
                     newThumb.className = 'hotsiteadm-thumb-preview';
                     newThumb.dataset.slot = s;
                     galContainer.appendChild(newThumb);
                 }
-                renderizarGaleria(); // re-renderiza com slots completos
             }
+
+            var thumbs = document.querySelectorAll('#galeria-thumbs .hotsiteadm-thumb-preview');
+            thumbs.forEach(function (thumb) {
+                // Captura o slot no escopo correto via IIFE para evitar closure bug
+                (function(slotAtual) {
+                    var dado = galeriaDados[slotAtual];
+                    // Limpa conteúdo e listeners anteriores (clone substitui o nó)
+                    var novoThumb = thumb.cloneNode(false);
+                    novoThumb.dataset.slot = slotAtual;
+                    novoThumb.style.position = 'relative';
+                    thumb.parentNode.replaceChild(novoThumb, thumb);
+
+                    if (dado) {
+                        var isVideo = dado.startsWith('data:video') || dado.includes('/video/');
+                        if (isVideo) {
+                            var vid = document.createElement('video');
+                            vid.src = dado;
+                            vid.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:4px;';
+                            vid.muted = true;
+                            vid.setAttribute('playsinline', '');
+                            novoThumb.appendChild(vid);
+                        } else {
+                            var img = document.createElement('img');
+                            img.src = dado;
+                            img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:4px;';
+                            novoThumb.appendChild(img);
+                        }
+                        var btnX = document.createElement('button');
+                        btnX.type = 'button';
+                        btnX.className = 'btn-galeria-excluir';
+                        btnX.style.cssText = 'position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;z-index:2;';
+                        btnX.innerHTML = '&times;';
+                        btnX.title = 'Excluir mídia';
+                        btnX.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            galeriaDados[slotAtual] = null;
+                            renderizarGaleria();
+                        });
+                        novoThumb.appendChild(btnX);
+                    } else {
+                        var labelHtml = slotAtual === 9
+                            ? '<i class="bi bi-play-circle"></i> Vídeo'
+                            : '<i class="bi bi-image"></i> Foto ' + (slotAtual + 1);
+                        novoThumb.innerHTML = labelHtml;
+                        novoThumb.style.display = 'flex';
+                        novoThumb.style.alignItems = 'center';
+                        novoThumb.style.justifyContent = 'center';
+                        novoThumb.style.gap = '4px';
+                        novoThumb.style.color = '#6c757d';
+                        novoThumb.style.fontSize = '.85rem';
+                    }
+
+                    // Clique no card abre file input para esse slot específico
+                    novoThumb.style.cursor = 'pointer';
+                    novoThumb.addEventListener('click', function (e) {
+                        if (e.target.classList.contains('btn-galeria-excluir')) return;
+                        var fileInput = document.createElement('input');
+                        fileInput.type = 'file';
+                        fileInput.accept = slotAtual === 9 ? 'video/*' : 'image/*';
+                        fileInput.addEventListener('change', function () {
+                            var file = fileInput.files[0];
+                            if (!file) return;
+                            var reader = new FileReader();
+                            reader.onload = function (ev) {
+                                galeriaDados[slotAtual] = ev.target.result;
+                                renderizarGaleria();
+                            };
+                            reader.readAsDataURL(file);
+                        });
+                        fileInput.click();
+                    });
+                })(parseInt(thumb.dataset.slot));
+            });
         }
         renderizarGaleria();
 
@@ -2543,10 +2867,35 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
+        // Máscara Telefone: (00) 00000-0000
+        if (inputTel) {
+            inputTel.addEventListener('input', function (e) {
+                var v = e.target.value.replace(/\D/g, '');
+                if (v.length > 11) v = v.substring(0, 11);
+                if (v.length === 0) { e.target.value = ''; return; }
+                if (v.length <= 2) { v = '(' + v; }
+                else if (v.length <= 7) { v = '(' + v.substring(0, 2) + ') ' + v.substring(2); }
+                else if (v.length <= 11) { v = '(' + v.substring(0, 2) + ') ' + v.substring(2, 7) + '-' + v.substring(7); }
+                e.target.value = v;
+            });
+        }
+
+        // Máscara CEP: 00000-000
+        if (inputCep) {
+            inputCep.addEventListener('input', function (e) {
+                var v = e.target.value.replace(/\D/g, '');
+                if (v.length > 8) v = v.substring(0, 8);
+                if (v.length > 5) v = v.substring(0, 5) + '-' + v.substring(5);
+                e.target.value = v;
+            });
+        }
+
         // Campos obrigatórios com asterisco
         var obrigatorios = [
             { el: inputCnpj, label: 'CPF/CNPJ' }, { el: inputCategoria, label: 'Categoria Principal' },
-            { el: inputCidade, label: 'Atende em' }, { el: inputEndereco, label: 'Endereço do Prestador' }, { el: inputTel, label: 'Telefone' }
+            { el: inputCidade, label: 'Atende em' }, { el: inputEndereco, label: 'Endereço do Prestador' },
+            { el: inputNumero, label: 'Número' }, { el: inputBairro, label: 'Bairro' },
+            { el: inputCep, label: 'CEP' }, { el: inputTel, label: 'Telefone' }
         ];
         obrigatorios.forEach(function (c) {
             if (!c.el) return;
@@ -2566,6 +2915,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 }).map(function (c) { return c.label; });
                 if (invalidos.length > 0) { alert('Campos obrigatórios:\n\n• ' + invalidos.join('\n• ')); return; }
 
+                var enderecoCompleto = [
+                    inputEndereco ? inputEndereco.value.trim() : '',
+                    inputNumero ? inputNumero.value.trim() : '',
+                    inputComplemento ? inputComplemento.value.trim() : '',
+                    inputBairro ? inputBairro.value.trim() : '',
+                    inputCep ? inputCep.value.trim() : ''
+                ].filter(Boolean).join(', ');
+
                 var dadosSalvar = {
                     nome: inputNome ? inputNome.value : '', email: emailLogado,
                     cnpj: inputCnpj ? inputCnpj.value : '',
@@ -2574,9 +2931,14 @@ document.addEventListener('DOMContentLoaded', function () {
                     cidade: inputCidade ? inputCidade.value : '',
                     descricao: inputDescricao ? inputDescricao.value : '',
                     endereco: inputEndereco ? inputEndereco.value : '',
+                    numero: inputNumero ? inputNumero.value : '',
+                    bairro: inputBairro ? inputBairro.value : '',
+                    complemento: inputComplemento ? inputComplemento.value : '',
+                    cep: inputCep ? inputCep.value : '',
+                    enderecoCompleto: enderecoCompleto,
                     tel: inputTel ? inputTel.value : '',
                     foto: (avatarDiv && avatarDiv.dataset.base64) || dadosSalvos.foto || '',
-                    galeria: galeriaDados
+                    galeria: galeriaDados.slice()
                 };
                 var storeAtual = obterStorePrestadores();
                 storeAtual[emailLogado] = dadosSalvar;
@@ -2593,6 +2955,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (inputCidade) inputCidade.value = '';
                 if (inputDescricao) inputDescricao.value = '';
                 if (inputEndereco) inputEndereco.value = '';
+                if (inputNumero) inputNumero.value = '';
+                if (inputBairro) inputBairro.value = '';
+                if (inputComplemento) inputComplemento.value = '';
+                if (inputCep) inputCep.value = '';
                 if (inputTel) inputTel.value = '';
                 subcategoriasDados.length = 0;
                 _renderSubcategorias();
@@ -2981,17 +3347,267 @@ document.addEventListener('DOMContentLoaded', function () {
     // de ativação para kleber.sdi@hotmail.com — confirme o link
     // recebido para ativar o endereço.
     // =========================================================
-    var SG_CONTATO_DESTINO = 'kleber.sdi@hotmail.com';
-    var SG_FORMSUBMIT_URL  = 'https://formsubmit.co/ajax/' + SG_CONTATO_DESTINO;
 
-    function inicializarContatoPrestador() {
-        var btnEnviar = document.querySelector('.contato-enviar-btn');
+    // =========================================================
+    // SPRINT 3 — MODO TESTE / PRODUÇÃO
+    //
+    // SG_MODO_KEY: chave do localStorage que controla o modo atual.
+    //   'teste'    → tickets salvos normalmente, e-mails NÃO enviados
+    //                — registrados no log de simulação (sgEmailLog).
+    //   'producao' → tickets salvos + e-mails enviados via FormSubmit.
+    //
+    // O administrador alterna o modo pelo painel Admin (aba Suporte).
+    // O modo padrão é 'teste' até que o admin ative a produção.
+    //
+    // COMO USAR:
+    //  1. Abra o painel Admin → Suporte / Tickets → painel "Modo de Envio"
+    //  2. Valide os e-mails simulados no log de testes
+    //  3. Quando satisfeito, clique em "Ativar Produção"
+    //  4. A partir daí todos os envios serão reais via FormSubmit
+    // =========================================================
+    var SG_MODO_KEY    = 'sgModoEnvio';
+    var SG_EMAIL_LOG   = 'sgEmailLog';    // log de e-mails simulados (modo teste)
+
+    /** Retorna 'teste' ou 'producao' */
+    function sgObterModo() {
+        return DB.get(SG_MODO_KEY) || 'teste';
+    }
+    function sgDefinirModo(modo) {
+        DB.set(SG_MODO_KEY, modo === 'producao' ? 'producao' : 'teste');
+    }
+    function sgEmModoTeste() { return sgObterModo() !== 'producao'; }
+
+    /** Registra um e-mail simulado no log de testes */
+    function sgRegistrarEmailLog(entrada) {
+        var log = DB.get(SG_EMAIL_LOG) || [];
+        log.push(Object.assign({ dataRegistro: new Date().toISOString() }, entrada));
+        // Mantém no máximo 200 entradas
+        if (log.length > 200) log = log.slice(log.length - 200);
+        DB.set(SG_EMAIL_LOG, log);
+    }
+    function sgObterEmailLog() { return DB.get(SG_EMAIL_LOG) || []; }
+    function sgLimparEmailLog() { DB.remove(SG_EMAIL_LOG); }
+
+    /**
+     * Motor de envio unificado.
+     * Em modo teste: registra no log e resolve imediatamente como sucesso.
+     * Em modo produção: envia via FormSubmit.co.
+     *
+     * @param {Object} config  - { destEmail, fd (FormData), logEntry (objeto descritivo) }
+     * @returns {Promise<{ok: boolean, simulado: boolean}>}
+     */
+    function sgEnviarEmail(config) {
+        if (sgEmModoTeste()) {
+            // Simula envio — registra no log
+            sgRegistrarEmailLog(config.logEntry || { tipo: 'generico', destEmail: config.destEmail });
+            console.info('[ServGo | MODO TESTE] E-mail simulado e registrado no log:', config.logEntry);
+            return Promise.resolve({ ok: true, simulado: true });
+        }
+        // Produção — envio real
+        return fetch('https://formsubmit.co/ajax/' + config.destEmail, { method: 'POST', body: config.fd })
+            .then(function(res){
+                return res.json().catch(function(){ return { success: res.ok ? 'true' : 'false' }; });
+            })
+            .then(function(data){
+                var ok = data.success === 'true' || data.success === true;
+                return { ok: ok, simulado: false };
+            });
+    }
+
+    // =========================================================
+    // SPRINT 3 — DADOS ADMINISTRATIVOS DE CONTATO (sgDadosAdm)
+    // Armazena endereço, telefone, e-mail de suporte e outras
+    // informações exibidas nas páginas de contato do site.
+    // Configurados pelo administrador via dadosAdm.html.
+    // =========================================================
+    var SG_DADOS_ADM_KEY = 'sgDadosAdm';
+
+    var SG_DADOS_ADM_DEFAULTS = {
+        endereco:    'Rua Exemplo, 123 - Cidade, SP',
+        telefone:    '(18) 91234-5678',
+        emailSuporte:'contato@site.com.br',
+        horarioAtendimento: 'Segunda a Sexta, das 08h às 18h',
+        whatsapp:    '',
+        site:        'www.servgo.com.br'
+    };
+
+    function sgObterDadosAdm() {
+        return DB.get(SG_DADOS_ADM_KEY) || Object.assign({}, SG_DADOS_ADM_DEFAULTS);
+    }
+    function sgSalvarDadosAdm(dados) {
+        DB.set(SG_DADOS_ADM_KEY, dados);
+    }
+
+    /**
+     * Preenche dinamicamente o bloco .contato-info nas páginas de contato
+     * com os dados cadastrados pelo administrador.
+     */
+    function sgPreencherContatoInfo() {
+        var info = document.getElementById('contato-info-dinamico');
+        if (!info) return;
+        var d = sgObterDadosAdm();
+        var endEl  = document.getElementById('ci-endereco');
+        var telEl  = document.getElementById('ci-telefone');
+        var emlEl  = document.getElementById('ci-email');
+        if (endEl) endEl.innerHTML = '<i class="bi bi-geo-alt-fill me-2"></i>' + (d.endereco || SG_DADOS_ADM_DEFAULTS.endereco);
+        if (telEl) {
+            var telHtml = '<i class="bi bi-telephone-fill me-2"></i>' + (d.telefone || SG_DADOS_ADM_DEFAULTS.telefone);
+            if (d.whatsapp) telHtml += '&nbsp;&nbsp;<a href="https://wa.me/' + d.whatsapp.replace(/\D/g,'') + '" target="_blank" style="color:inherit;"><i class="bi bi-whatsapp me-1" style="color:#25d366;"></i>' + d.whatsapp + '</a>';
+            telEl.innerHTML = telHtml;
+        }
+        if (emlEl) emlEl.innerHTML = '<i class="bi bi-envelope-fill me-2"></i>' + (d.emailSuporte || SG_DADOS_ADM_DEFAULTS.emailSuporte);
+        // Horário de atendimento — adiciona se existir
+        var horEl = document.getElementById('ci-horario');
+        if (!horEl && d.horarioAtendimento) {
+            var h5 = document.createElement('h5');
+            h5.id = 'ci-horario';
+            h5.innerHTML = '<i class="bi bi-clock me-2"></i>' + d.horarioAtendimento;
+            info.appendChild(h5);
+        } else if (horEl) {
+            horEl.innerHTML = '<i class="bi bi-clock me-2"></i>' + (d.horarioAtendimento || '');
+        }
+    }
+
+    // =========================================================
+    // SPRINT 3 — SISTEMA DE TICKETS (contato unificado)
+    // Garante comunicação fluída: usuário envia → ticket criado
+    // → admin gerencia → notificação por e-mail a cada mudança
+    // de status (aberto → em andamento → resolvido).
+    // =========================================================
+    var SG_TICKETS_KEY = 'sgTickets';
+    function sgObterTickets() { return DB.get(SG_TICKETS_KEY) || []; }
+    function sgSalvarTickets(arr) { DB.set(SG_TICKETS_KEY, arr); }
+
+    /**
+     * Gera o HTML do corpo do e-mail de notificação de status para o usuário.
+     * @param {Object} ticket
+     * @param {string} status  - 'aberto' | 'em_andamento' | 'resolvido'
+     * @param {string} resposta - Resposta/observação do admin (opcional)
+     */
+    function sgGerarEmailStatusTicket(ticket, status, resposta) {
+        var statusLabel = { aberto: 'Aberto', em_andamento: 'Em Andamento', resolvido: 'Resolvido' }[status] || status;
+        var statusCor   = { aberto: '#dc3545', em_andamento: '#b8870c', resolvido: '#198754' }[status] || '#555';
+        var d = sgObterDadosAdm();
+        return '<!DOCTYPE html><html lang="pt-br"><head><meta charset="UTF-8"></head>' +
+            '<body style="font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0;">' +
+            '<div style="max-width:600px;margin:32px auto;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.1);">' +
+            '<div style="background:#146ADB;padding:20px 28px;">' +
+                '<span style="font-size:1.5rem;font-weight:800;color:#fff;">Serv<span style="color:#FFC300;">Go!</span></span>' +
+                '<span style="color:#ffffffaa;font-size:.85rem;margin-left:12px;">Suporte / Atendimento</span>' +
+            '</div>' +
+            '<div style="padding:28px 32px;">' +
+                '<h2 style="font-size:1.2rem;color:#212529;margin:0 0 12px;">Atualização do seu chamado</h2>' +
+                '<div style="background:#f8f9fa;border-left:4px solid ' + statusCor + ';padding:14px 18px;border-radius:6px;margin-bottom:18px;">' +
+                    '<div style="font-size:.82rem;color:#888;margin-bottom:4px;">Número do Chamado</div>' +
+                    '<div style="font-weight:700;color:#212529;font-size:.95rem;">#' + ticket.id + '</div>' +
+                    '<div style="font-size:.82rem;color:#888;margin-top:8px;margin-bottom:4px;">Status</div>' +
+                    '<span style="background:' + statusCor + ';color:#fff;padding:3px 12px;border-radius:20px;font-size:.8rem;font-weight:700;">' + statusLabel + '</span>' +
+                '</div>' +
+                '<table style="width:100%;font-size:.88rem;border-collapse:collapse;margin-bottom:18px;">' +
+                    '<tr><td style="padding:6px 0;color:#888;width:110px;">Assunto:</td><td style="padding:6px 0;color:#333;font-weight:600;">' + (ticket.assunto||'—') + '</td></tr>' +
+                    '<tr><td style="padding:6px 0;color:#888;">Solicitante:</td><td style="padding:6px 0;color:#333;">' + (ticket.nome||'—') + '</td></tr>' +
+                    '<tr><td style="padding:6px 0;color:#888;">Abertura:</td><td style="padding:6px 0;color:#333;">' + new Date(ticket.dataAbertura).toLocaleString('pt-BR') + '</td></tr>' +
+                    (ticket.dataResposta ? '<tr><td style="padding:6px 0;color:#888;">Atualizado em:</td><td style="padding:6px 0;color:#333;">' + new Date(ticket.dataResposta).toLocaleString('pt-BR') + '</td></tr>' : '') +
+                '</table>' +
+                '<div style="background:#f8f9fa;padding:12px 16px;border-radius:6px;margin-bottom:18px;">' +
+                    '<div style="font-size:.82rem;color:#888;margin-bottom:6px;font-weight:600;">Sua mensagem original:</div>' +
+                    '<div style="font-size:.88rem;color:#444;line-height:1.6;">' + (ticket.mensagem||'') + '</div>' +
+                '</div>' +
+                (resposta ? '<div style="background:#d1fae5;border-left:4px solid #198754;padding:14px 18px;border-radius:6px;margin-bottom:18px;">' +
+                    '<div style="font-size:.82rem;color:#065f46;font-weight:700;margin-bottom:6px;"><i>Resposta da equipe ServGo!:</i></div>' +
+                    '<div style="font-size:.9rem;color:#065f46;line-height:1.6;">' + resposta + '</div>' +
+                '</div>' : '') +
+                (status === 'em_andamento' ? '<div style="background:#fff9e6;border:1px solid #ffe58f;padding:12px 16px;border-radius:6px;margin-bottom:18px;font-size:.85rem;color:#7d6608;">⏳ Sua solicitação está em análise. Nossa equipe entrará em contato em breve.</div>' : '') +
+                (status === 'resolvido' ? '<div style="background:#d1fae5;border:1px solid #6ee7b7;padding:12px 16px;border-radius:6px;margin-bottom:18px;font-size:.85rem;color:#065f46;">✅ Seu chamado foi resolvido. Se precisar de mais ajuda, abra um novo chamado.</div>' : '') +
+            '</div>' +
+            '<div style="background:#f0f0f0;padding:16px 32px;text-align:center;border-top:1px solid #e0e0e0;">' +
+                '<p style="color:#888;font-size:.8rem;margin:0 0 4px;">Dúvidas? Entre em contato: <a href="mailto:' + d.emailSuporte + '" style="color:#146ADB;">' + d.emailSuporte + '</a></p>' +
+                '<p style="color:#aaa;font-size:.75rem;margin:0;">© ServGo! — ' + d.site + '</p>' +
+            '</div>' +
+            '</div></body></html>';
+    }
+
+    /**
+     * Envia e-mail de notificação de status via FormSubmit para o usuário
+     * que abriu o ticket.
+     * @param {Object} ticket  - Objeto do ticket atualizado
+     * @param {string} status  - Novo status
+     * @param {string} resposta - Resposta do admin
+     */
+    function sgEnviarNotificacaoStatusTicket(ticket, status, resposta) {
+        if (!ticket || !ticket.email) return;
+        var d = sgObterDadosAdm();
+        var destEmail = d.emailSuporte || 'contato@site.com.br';
+        var statusLabel = { aberto: 'Aberto', em_andamento: 'Em Andamento', resolvido: 'Resolvido' }[status] || status;
+        var fd = new FormData();
+        fd.append('name',      'ServGo! Suporte');
+        fd.append('email',     destEmail);
+        fd.append('_replyto',  destEmail);
+        fd.append('_subject',  '[ServGo! Suporte] Chamado #' + ticket.id + ' — Status: ' + statusLabel);
+        fd.append('_captcha',  'false');
+        fd.append('_template', 'table');
+        fd.append('Para',      ticket.nome + ' <' + ticket.email + '>');
+        fd.append('Assunto do Chamado', ticket.assunto || '—');
+        fd.append('Status Atual', statusLabel);
+        fd.append('Mensagem Original', ticket.mensagem || '—');
+        if (resposta) fd.append('Resposta da Equipe', resposta);
+        fd.append('Número do Chamado', '#' + ticket.id);
+
+        sgEnviarEmail({
+            destEmail: destEmail,
+            fd: fd,
+            logEntry: {
+                tipo:       'notificacao_status',
+                ticketId:   ticket.id,
+                assunto:    ticket.assunto || '—',
+                de:         'ServGo! Suporte <' + destEmail + '>',
+                para:       ticket.nome + ' <' + ticket.email + '>',
+                statusNovo: status,
+                statusLabel: statusLabel,
+                resposta:   resposta || '',
+                modoEnvio:  sgObterModo()
+            }
+        }).catch(function(e){ console.warn('[ServGo] Notificação de ticket não enviada:', e); });
+    }
+
+    /**
+     * Formulário de contato unificado.
+     * Funciona nas três páginas: contatoSite.html, clienteContatoSite.html,
+     * prestadorContato.html.
+     *
+     * Lógica:
+     *  1. Pré-preenche nome/e-mail se o usuário estiver logado
+     *  2. Valida campos obrigatórios
+     *  3. Cria ticket no localStorage (sgTickets) com status 'aberto'
+     *  4. Envia também via FormSubmit para o e-mail de suporte configurado
+     *  5. Exibe feedback claro ao usuário com número do chamado
+     *  6. Preenche contato-info com dados dinâmicos do admin
+     */
+    function inicializarFormContato() {
+        // Preenche informações de contato do admin dinamicamente
+        sgPreencherContatoInfo();
+
+        // Detecta qual botão está presente na página
+        var btnEnviar = document.getElementById('btn-enviar-contato-site') ||
+                        document.getElementById('btn-enviar-contato-cliente') ||
+                        document.getElementById('btn-enviar-contato-prestador') ||
+                        document.querySelector('.contato-enviar-btn');
         if (!btnEnviar) return;
 
-        var notif = document.getElementById('sg-notif-barra-prest');
-        if (notif) notif.remove();
+        // Badge de modo visível para o usuário (só em teste, para orientar desenvolvedores)
+        if (sgEmModoTeste()) {
+            var badgeModo = document.createElement('div');
+            badgeModo.style.cssText = 'background:#fff3cd;border:1px solid #ffc107;color:#856404;font-size:.78rem;padding:5px 12px;border-radius:6px;margin-bottom:10px;display:inline-flex;align-items:center;gap:6px;';
+            badgeModo.innerHTML = '<i class="bi bi-flask me-1"></i><strong>Modo Teste ativo</strong> — e-mails não serão enviados. Ative o Modo Produção no painel Admin → Suporte.';
+            btnEnviar.parentNode.insertBefore(badgeModo, btnEnviar);
+        }
 
-        // Preenche nome e e-mail do usuário logado
+        // Detecta qual div de feedback usar
+        var feedbackEl = document.getElementById('contato-site-feedback') ||
+                         document.getElementById('contato-cliente-feedback') ||
+                         document.getElementById('contato-prestador-feedback');
+
+        // Pré-preenche nome e e-mail do usuário logado
         var usu = obterUsuarioLogado();
         if (usu) {
             var nomeEl  = document.getElementById('nome');
@@ -3000,84 +3616,202 @@ document.addEventListener('DOMContentLoaded', function () {
             if (emailEl && !emailEl.value) emailEl.value = usu.email || '';
         }
 
+        // Detecta origem (prestador, cliente ou visitante)
+        var path = window.location.pathname;
+        var origemContato = path.includes('prestador') ? 'prestador' :
+                            path.includes('cliente')   ? 'cliente'   : 'visitante';
+
         btnEnviar.addEventListener('click', function () {
             var nome     = ((document.getElementById('nome')     || {}).value || '').trim();
             var email    = ((document.getElementById('email')    || {}).value || '').trim();
+            var assunto  = ((document.getElementById('assunto')  || {}).value || '').trim() || 'Contato via site';
             var mensagem = ((document.getElementById('mensagem') || {}).value || '').trim();
             var arquivoInput = document.getElementById('arquivo');
 
-            // Validações
-            if (!nome)    { alert('Informe seu nome.');           return; }
-            if (!email || !/\S+@\S+\.\S+/.test(email)) { alert('Informe um e-mail válido.'); return; }
-            if (!mensagem) { alert('Escreva uma mensagem.');      return; }
+            // Validações — feedback inline
+            function mostrarErro(msg) {
+                if (feedbackEl) {
+                    feedbackEl.style.display = 'block';
+                    feedbackEl.innerHTML = '<div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle me-2"></i>' + msg + '</div>';
+                } else { alert(msg); }
+            }
 
-            // Verifica tamanho do arquivo (limite FormSubmit: ~20 MB)
+            if (!nome)    { mostrarErro('Informe seu nome.');            return; }
+            if (!email || !/\S+@\S+\.\S+/.test(email)) { mostrarErro('Informe um e-mail válido.'); return; }
+            if (!mensagem) { mostrarErro('Escreva uma mensagem.');       return; }
+
             if (arquivoInput && arquivoInput.files && arquivoInput.files[0]) {
-                var tamanhoMB = arquivoInput.files[0].size / (1024 * 1024);
-                if (tamanhoMB > 20) {
-                    alert('O arquivo deve ter no máximo 20 MB.');
-                    return;
+                if (arquivoInput.files[0].size / (1024 * 1024) > 20) {
+                    mostrarErro('O arquivo deve ter no máximo 20 MB.'); return;
                 }
             }
+
+            // Cria ticket no localStorage
+            var modoAtual = sgObterModo();
+            var ticket = {
+                id:               _gerarId('ticket'),
+                assunto:          assunto,
+                mensagem:         mensagem,
+                nome:             nome,
+                email:            email,
+                origem:           origemContato,
+                tipoUsuario:      usu ? usu.tipo : 'visitante',
+                dataAbertura:     new Date().toISOString(),
+                status:           'aberto',
+                resposta:         '',
+                dataResposta:     '',
+                adminResponsavel: '',
+                modoEnvio:        modoAtual,   // registra se foi criado em teste ou produção
+                anexo:            arquivoInput && arquivoInput.files && arquivoInput.files[0]
+                                      ? arquivoInput.files[0].name : null
+            };
+            var tickets = sgObterTickets();
+            tickets.push(ticket);
+            sgSalvarTickets(tickets);
 
             // Feedback visual no botão
             btnEnviar.disabled = true;
             var textoOriginal = btnEnviar.innerHTML;
-            btnEnviar.innerHTML =
-                '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
-                'Enviando…';
+            btnEnviar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enviando…';
 
-            // Monta FormData
+            // Monta FormData (usado em produção; em teste apenas o logEntry é gravado)
+            var d = sgObterDadosAdm();
+            var destEmail = d.emailSuporte || 'contato@site.com.br';
             var fd = new FormData();
             fd.append('name',      nome);
             fd.append('email',     email);
-            fd.append('message',   mensagem);
-            fd.append('_subject',  'Contato ServGo! — ' + nome);
             fd.append('_replyto',  email);
+            fd.append('_subject',  '[ServGo! Contato] ' + assunto + ' — de ' + nome);
             fd.append('_captcha',  'false');
             fd.append('_template', 'table');
-
+            fd.append('Assunto',   assunto);
+            fd.append('Mensagem',  mensagem);
+            fd.append('Origem',    origemContato);
+            fd.append('Tipo Usuário', usu ? usu.tipo : 'visitante');
+            fd.append('Nº Chamado', '#' + ticket.id);
             if (arquivoInput && arquivoInput.files && arquivoInput.files[0]) {
                 fd.append('attachment', arquivoInput.files[0], arquivoInput.files[0].name);
             }
 
-            // Salva no localStorage (log local)
-            var contatos = DB.get('contatosMensagens') || [];
-            contatos.push({
-                de: nome, email: email, mensagem: mensagem,
-                anexo: arquivoInput && arquivoInput.files && arquivoInput.files[0]
-                    ? arquivoInput.files[0].name : null,
-                data: new Date().toISOString()
-            });
-            DB.set('contatosMensagens', contatos);
+            sgEnviarEmail({
+                destEmail: destEmail,
+                fd: fd,
+                logEntry: {
+                    tipo:       'contato_novo',
+                    ticketId:   ticket.id,
+                    assunto:    assunto,
+                    de:         nome + ' <' + email + '>',
+                    para:       destEmail,
+                    origem:     origemContato,
+                    mensagem:   mensagem,
+                    anexo:      ticket.anexo || null,
+                    modoEnvio:  modoAtual
+                }
+            })
+            .then(function(resultado) {
+                btnEnviar.disabled = false;
+                btnEnviar.innerHTML = textoOriginal;
 
-            // Envio via FormSubmit.co
-            fetch(SG_FORMSUBMIT_URL, { method: 'POST', body: fd })
-                .then(function (res) {
-                    // FormSubmit responde com JSON: { success: "true" } ou { success: false }
-                    return res.json().catch(function () { return { success: res.ok ? 'true' : 'false' }; });
-                })
-                .then(function (data) {
-                    btnEnviar.disabled = false;
-                    btnEnviar.innerHTML = textoOriginal;
+                var sufixoModo = resultado.simulado
+                    ? '<div style="font-size:.78rem;margin-top:6px;color:#856404;background:#fff3cd;padding:4px 10px;border-radius:4px;display:inline-block;"><i class="bi bi-flask me-1"></i>Modo Teste — e-mail simulado e registrado no log do Admin.</div>'
+                    : '';
 
-                    var ok = data.success === 'true' || data.success === true;
-                    if (ok) {
-                        exibirToast('✅ Mensagem enviada! Entraremos em contato em breve.');
-                        ['nome', 'email', 'mensagem', 'arquivo'].forEach(function (id) {
-                            var el = document.getElementById(id);
-                            if (el) el.value = '';
-                        });
-                    } else {
-                        alert('Não foi possível enviar a mensagem. ' + 'Se for o primeiro envio, verifique se o e-mail de ativação enviado para ' + SG_CONTATO_DESTINO + ' já foi confirmado. Tente novamente após a confirmação.');
-                    }
-                })
-                .catch(function (err) {
-                    btnEnviar.disabled = false;
-                    btnEnviar.innerHTML = textoOriginal;
-                    console.error('[ServGo] Erro no envio de contato:', err);
-                    alert('Erro de conexão ao enviar a mensagem. Verifique sua internet e tente novamente.');
+                if (feedbackEl) {
+                    feedbackEl.style.display = 'block';
+                    feedbackEl.innerHTML =
+                        '<div class="alert alert-success py-3">' +
+                            '<div style="font-weight:700;font-size:1rem;margin-bottom:6px;"><i class="bi bi-check-circle-fill me-2"></i>Mensagem enviada com sucesso!</div>' +
+                            '<div style="font-size:.88rem;">Chamado registrado: <strong>#' + ticket.id + '</strong>.</div>' +
+                            '<div style="font-size:.85rem;margin-top:4px;color:#0d6832;">Nossa equipe responderá no e-mail <strong>' + email + '</strong> em breve.</div>' +
+                            sufixoModo +
+                        '</div>';
+                } else {
+                    exibirToast('Chamado #' + ticket.id + ' registrado' + (resultado.simulado ? ' (modo teste)' : '') + '!');
+                }
+
+                // Limpa formulário
+                ['nome','email','assunto','mensagem','arquivo'].forEach(function(id){
+                    var el = document.getElementById(id); if (el) el.value = '';
                 });
+                if (usu) {
+                    var nEl = document.getElementById('nome'); if (nEl) nEl.value = usu.nome || '';
+                    var eEl = document.getElementById('email'); if (eEl) eEl.value = usu.email || '';
+                }
+            })
+            .catch(function(err){
+                btnEnviar.disabled = false;
+                btnEnviar.innerHTML = textoOriginal;
+                console.error('[ServGo] Erro no envio de contato:', err);
+                if (feedbackEl) {
+                    feedbackEl.style.display = 'block';
+                    feedbackEl.innerHTML =
+                        '<div class="alert alert-warning py-3">' +
+                            '<div style="font-weight:700;margin-bottom:4px;"><i class="bi bi-exclamation-triangle me-2"></i>Mensagem registrada localmente.</div>' +
+                            '<div style="font-size:.88rem;">Chamado <strong>#' + ticket.id + '</strong> salvo. Envio por e-mail falhou. Nossa equipe entrará em contato em breve.</div>' +
+                        '</div>';
+                } else {
+                    exibirToast('Chamado #' + ticket.id + ' salvo — e-mail pendente.');
+                }
+            });
+        });
+    }
+
+    // Mantém compatibilidade com chamadas existentes
+    function inicializarContatoPrestador() { inicializarFormContato(); }
+
+    // =========================================================
+    // SPRINT 3 — DADOS ADM (dadosAdm.html — seção configuração
+    // de dados de contato administrativos do site)
+    // =========================================================
+    function inicializarDadosAdm() {
+        var secAdm = document.getElementById('sec-dados-adm-contato');
+        if (!secAdm) return;
+
+        var d = sgObterDadosAdm();
+
+        function _preencherCampos(dados) {
+            var mapa = {
+                'dadosadm-endereco':    dados.endereco,
+                'dadosadm-telefone':    dados.telefone,
+                'dadosadm-email':       dados.emailSuporte,
+                'dadosadm-horario':     dados.horarioAtendimento,
+                'dadosadm-whatsapp':    dados.whatsapp,
+                'dadosadm-site':        dados.site
+            };
+            Object.keys(mapa).forEach(function(id){
+                var el = document.getElementById(id);
+                if (el) el.value = mapa[id] || '';
+            });
+        }
+
+        function _salvarCampos() {
+            var dados = {
+                endereco:            (document.getElementById('dadosadm-endereco')  || {}).value || '',
+                telefone:            (document.getElementById('dadosadm-telefone')  || {}).value || '',
+                emailSuporte:        (document.getElementById('dadosadm-email')     || {}).value || '',
+                horarioAtendimento:  (document.getElementById('dadosadm-horario')   || {}).value || '',
+                whatsapp:            (document.getElementById('dadosadm-whatsapp')  || {}).value || '',
+                site:                (document.getElementById('dadosadm-site')      || {}).value || ''
+            };
+            if (!dados.emailSuporte || !/\S+@\S+\.\S+/.test(dados.emailSuporte)) {
+                alert('Informe um e-mail de suporte válido.'); return;
+            }
+            sgSalvarDadosAdm(dados);
+            exibirToast('Dados de contato administrativos salvos com sucesso!');
+        }
+
+        _preencherCampos(d);
+
+        var btnSalvar = document.getElementById('btn-salvar-dados-adm');
+        if (btnSalvar) btnSalvar.addEventListener('click', _salvarCampos);
+
+        var btnRestaurar = document.getElementById('btn-restaurar-dados-adm');
+        if (btnRestaurar) btnRestaurar.addEventListener('click', function(){
+            if (confirm('Restaurar os valores padrão de contato?')) {
+                sgSalvarDadosAdm(Object.assign({}, SG_DADOS_ADM_DEFAULTS));
+                _preencherCampos(SG_DADOS_ADM_DEFAULTS);
+                exibirToast('Dados restaurados para os valores padrão.');
+            }
         });
     }
 
@@ -4180,12 +4914,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 btnVerDisp.style.display = '';
                 // Reatribui onclick a cada troca de prestador (evita capturar email antigo)
                 btnVerDisp.onclick = function () {
+                    var slotAnterior = slotAtual; // preserva para restaurar em caso de Cancel
                     _abrirModalAgenda(email, function (slot) {
                         // Persiste a escolha do cliente e atualiza o display
                         slotAtual = { data: slot.data, horario: slot.horario, label: slot.label };
                         if (blocoHorario) blocoHorario.innerHTML =
                             '<strong><i class="bi bi-check-circle-fill text-success me-1"></i>' +
                             slotAtual.label + '</strong>';
+                    }, function () {
+                        // Sprint 1 — Cancel: restaura o horário que estava antes de abrir o modal
+                        slotAtual = slotAnterior;
+                        if (blocoHorario) {
+                            blocoHorario.innerHTML = slotAtual
+                                ? '<strong><i class="bi bi-check-circle-fill text-success me-1"></i>' + slotAtual.label + '</strong>'
+                                : (proximoHorario(email) ? '<strong>' + proximoHorario(email).label + '</strong>' : '<em>Sem disponibilidade.</em>');
+                        }
                     });
                 };
             }
@@ -4282,7 +5025,7 @@ document.addEventListener('DOMContentLoaded', function () {
             preencherTipos();
         }
 
-        // Sprint 1 — btnAgendar abre o modal de agenda; a solicitação é criada dentro do callback
+        // Sprint 1 — btnAgendar: se já há slot escolhido, confirma direto; caso contrário abre modal de agenda
         var btnAgendar = mainAgendar.querySelector('#btn-solicitar-orcamento, .cta-agendar, .cta');
         if (btnAgendar) {
             btnAgendar.addEventListener('click', function (e) {
@@ -4304,8 +5047,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     mainAgendar.querySelectorAll('.prest-subcat-cb:checked')
                 ).map(function (cb) { return cb.value; });
 
-                // Abre modal de agenda; cria solicitação ao confirmar horário
-                _abrirModalAgenda(selectPrestador.value, function (slot) {
+                function _criarAgendamento(slot) {
                     slotAtual = { data: slot.data, horario: slot.horario, label: slot.label };
                     var novoId = 'orc-cli-' + Date.now();
                     var dataSlot    = slot.data;
@@ -4349,6 +5091,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
                     // Sprint 1 — redireciona para Área do Cliente para acompanhar o pedido
                     window.location.href = '/paginasCliente/clienteAreaExclusiva.html';
+                }
+
+                // Sprint 1 — se o cliente já escolheu um horário via modal, confirma diretamente
+                if (slotAtual) {
+                    _criarAgendamento(slotAtual);
+                    return;
+                }
+
+                // Sem slot pré-escolhido — abre modal de agenda
+                _abrirModalAgenda(selectPrestador.value, function (slot) {
+                    _criarAgendamento(slot);
+                }, function () {
+                    // onCancelar — slot anterior (se havia) foi restaurado pelo handler de Cancel
                 });
             });
         }
@@ -4472,7 +5227,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // MODAL AGENDA — exibe slots disponíveis e confirma booking
     // Reutilizado em clienteAgendarServicos e prestadorHotsite
     // =========================================================
-    function _abrirModalAgenda(emailPrest, onConfirmar) {
+    function _abrirModalAgenda(emailPrest, onConfirmar, onCancelar) {
         var modal = document.getElementById('modalAgendaPrestador');
         if (!modal) return;
 
@@ -4680,6 +5435,26 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         var bsModal = bootstrap.Modal.getOrCreateInstance(modal);
+
+        // Sprint 1 — ao fechar o modal sem confirmar (Cancel / X), restaura o slot anterior
+        function _onModalHidden() {
+            modal.removeEventListener('hidden.bs.modal', _onModalHidden);
+            // slotSelecionado só fica preenchido se o utilizador confirmou (onConfirmar foi chamado);
+            // se fechou sem confirmar, chama onCancelar para restaurar o estado anterior.
+            if (!_modalConfirmado && typeof onCancelar === 'function') {
+                onCancelar();
+            }
+            _modalConfirmado = false;
+        }
+        var _modalConfirmado = false;
+        // Marca como confirmado antes de chamar hide dentro do handler de btnConfirmar
+        var _origOnConfirmar = onConfirmar;
+        onConfirmar = function (slot) {
+            _modalConfirmado = true;
+            _origOnConfirmar(slot);
+        };
+        modal.addEventListener('hidden.bs.modal', _onModalHidden);
+
         bsModal.show();
     }
 
@@ -5916,20 +6691,36 @@ document.addEventListener('DOMContentLoaded', function () {
     // SPRINT 6 — AVISO DE MENSAGENS NÃO LIDAS NA NAVBAR
     // =========================================================
 
-    /** Conta mensagens de clientes ainda não lidas pelo prestador */
+    /** Conta mensagens de clientes ainda não lidas pelo prestador
+     *  — inclui mensagens de chat livre E eventos de agendamento/proposta. */
     function _contarMsgsNaoLidasPrestador(emailPrest) {
-        return obterAgendamentosPrestador(emailPrest).reduce(function (tot, ag) {
+        // 1. Mensagens de chat livre não lidas
+        var totalChat = obterAgendamentosPrestador(emailPrest).reduce(function (tot, ag) {
             var chat = DB.get('agendaChat_' + ag.id) || [];
             return tot + chat.filter(function (m) { return m.tipo === 'cliente' && !m.lidaPrest; }).length;
         }, 0);
+        // 2. Notificações de evento não lidas: nova solicitação, aceite e rejeição de proposta
+        var tiposEventoPrest = ['orcamento_solicitado', 'agendamento', 'orcamento_aceito', 'orcamento_recusado'];
+        var totalEventos = sgObterNotificacoes(emailPrest).filter(function (n) {
+            return !n.lida && tiposEventoPrest.indexOf(n.tipo) >= 0;
+        }).length;
+        return totalChat + totalEventos;
     }
 
-    /** Conta mensagens de prestadores ainda não lidas pelo cliente */
+    /** Conta mensagens de prestadores ainda não lidas pelo cliente
+     *  — inclui mensagens de chat livre E eventos de proposta/confirmação. */
     function _contarMsgsNaoLidasCliente(emailCli) {
-        return (DB.get('clienteAgendamentos_' + emailCli) || []).reduce(function (tot, ag) {
+        // 1. Mensagens de chat livre não lidas
+        var totalChat = (DB.get('clienteAgendamentos_' + emailCli) || []).reduce(function (tot, ag) {
             var chat = DB.get('agendaChat_' + ag.id) || [];
             return tot + chat.filter(function (m) { return m.tipo === 'prest' && !m.lidaCliente; }).length;
         }, 0);
+        // 2. Notificações de evento não lidas: proposta recebida (nova ou reenvio), confirmação, cancelamento
+        var tiposEventoCli = ['orcamento_enviado', 'confirmacao', 'cancelamento', 'conclusao'];
+        var totalEventos = sgObterNotificacoes(emailCli).filter(function (n) {
+            return !n.lida && tiposEventoCli.indexOf(n.tipo) >= 0;
+        }).length;
+        return totalChat + totalEventos;
     }
 
     /** Exibe ou remove o sininho vermelho na navbar do prestador */
@@ -5989,9 +6780,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /**
-     * Sprint 9 — Dropdown de mensagens não lidas no sininho da navbar.
-     * Mostra cada conversa pendente com nome do remetente e contagem;
-     * ao clicar abre diretamente o modal de chat correspondente.
+     * Sprint 2 — Dropdown unificado do sininho da navbar.
+     * Cobre TANTO mensagens de chat livre QUANTO eventos de agendamento/proposta:
+     *
+     * Para o PRESTADOR (tipo='prest'):
+     *   — nova solicitação de agendamento (orcamento_solicitado / agendamento)
+     *   — confirmação de proposta pelo cliente (orcamento_aceito)
+     *   — rejeição de proposta pelo cliente (orcamento_recusado)
+     *   — mensagens de chat livre não lidas
+     *
+     * Para o CLIENTE (tipo='cli'):
+     *   — orçamento/proposta recebida do prestador (orcamento_enviado) ← tb reenvios
+     *   — confirmação do agendamento pelo prestador (confirmacao)
+     *   — cancelamento pelo prestador (cancelamento)
+     *   — conclusão de serviço (conclusao)
+     *   — mensagens de chat livre não lidas
      *
      * @param {HTMLElement} bellEl  — elemento do sininho (âncora do dropdown)
      * @param {'prest'|'cli'} tipo  — tipo de usuário
@@ -6004,87 +6807,174 @@ document.addEventListener('DOMContentLoaded', function () {
         var existente = document.getElementById(dropId);
         if (existente) { existente.remove(); return; }
 
-        // ── Coleta conversas com mensagens não lidas ────────────────────────
-        var conversas = [];
+        // ── Helpers de rótulo/ícone/cor por tipo de evento ─────────────────
+        function _rotuloEvento(tipoNotif) {
+            var mapa = {
+                'orcamento_solicitado': 'Nova solicitação de agendamento',
+                'agendamento':          'Nova solicitação de agendamento',
+                'orcamento_aceito':     'Proposta aceita pelo cliente',
+                'orcamento_recusado':   'Proposta recusada pelo cliente',
+                'orcamento_enviado':    'Orçamento / Proposta recebida',
+                'confirmacao':          'Agendamento confirmado pelo prestador',
+                'cancelamento':         'Agendamento cancelado pelo prestador',
+                'conclusao':            'Serviço concluído'
+            };
+            return mapa[tipoNotif] || 'Notificação';
+        }
+        function _iconeEvento(tipoNotif) {
+            if (tipoNotif === 'orcamento_solicitado' || tipoNotif === 'agendamento') return 'bi-calendar-plus';
+            if (tipoNotif === 'orcamento_aceito' || tipoNotif === 'confirmacao')     return 'bi-check-circle-fill';
+            if (tipoNotif === 'orcamento_recusado' || tipoNotif === 'cancelamento')  return 'bi-x-circle-fill';
+            if (tipoNotif === 'orcamento_enviado')                                   return 'bi-file-earmark-text-fill';
+            if (tipoNotif === 'conclusao')                                           return 'bi-star-fill';
+            return 'bi-bell-fill';
+        }
+        function _corEvento(tipoNotif) {
+            if (tipoNotif === 'orcamento_aceito' || tipoNotif === 'confirmacao' || tipoNotif === 'conclusao') return '#198754';
+            if (tipoNotif === 'orcamento_recusado' || tipoNotif === 'cancelamento')                          return '#dc3545';
+            if (tipoNotif === 'orcamento_enviado')                                                           return '#146ADB';
+            return '#e6a800';
+        }
+
+        // ── Coleta todos os itens pendentes ────────────────────────────────
+        var itens = [];
+
         if (tipo === 'prest') {
+            // — Chat livre não lido —
             obterAgendamentosPrestador(email).forEach(function (ag) {
                 var chat = DB.get('agendaChat_' + ag.id) || [];
                 var naoLidas = chat.filter(function (m) { return m.tipo === 'cliente' && !m.lidaPrest; });
                 if (naoLidas.length > 0) {
-                    conversas.push({
-                        agId:      ag.id,
-                        remetente: ag.cliente   || 'Cliente',
-                        servico:   ag.servico   || '—',
-                        data:      ag.data      || '—',
+                    itens.push({
+                        tipo: 'chat', agId: ag.id,
+                        remetente: ag.cliente || 'Cliente',
+                        servico:   ag.servico || '—',
+                        data:      ag.data    || '—',
                         qtd:       naoLidas.length,
                         ag:        ag
                     });
                 }
             });
+            // — Eventos de agendamento/proposta não lidos —
+            var tiposEventoPrest = ['orcamento_solicitado', 'agendamento', 'orcamento_aceito', 'orcamento_recusado'];
+            sgObterNotificacoes(email).filter(function (n) {
+                return !n.lida && tiposEventoPrest.indexOf(n.tipo) >= 0;
+            }).forEach(function (n) {
+                var d = n.dados || {};
+                itens.push({
+                    tipo: 'evento', tipoNotif: n.tipo, notifId: n.id,
+                    remetente: d.clienteNome || 'Cliente',
+                    servico:   d.servico     || '—',
+                    data:      d.data        || (d.label ? d.label.split(' ')[0] : '—'),
+                    qtd:       1,
+                    agId:      d.agendamentoId || ''
+                });
+            });
+
         } else {
+            // — Chat livre não lido —
             (DB.get('clienteAgendamentos_' + email) || []).forEach(function (ag) {
                 var chat = DB.get('agendaChat_' + ag.id) || [];
                 var naoLidas = chat.filter(function (m) { return m.tipo === 'prest' && !m.lidaCliente; });
                 if (naoLidas.length > 0) {
-                    conversas.push({
-                        agId:          ag.id,
-                        remetente:     ag.nomePrestador  || 'Prestador',
-                        servico:       ag.servico        || '—',
-                        data:          ag.data           || '—',
-                        qtd:           naoLidas.length,
+                    itens.push({
+                        tipo: 'chat', agId: ag.id,
+                        remetente:      ag.nomePrestador  || 'Prestador',
+                        servico:        ag.servico        || '—',
+                        data:           ag.data           || '—',
+                        qtd:            naoLidas.length,
                         emailPrestador: ag.emailPrestador || '',
                         nomePrestador:  ag.nomePrestador  || ''
                     });
                 }
             });
+            // — Eventos de proposta/confirmação/cancelamento não lidos —
+            var tiposEventoCli = ['orcamento_enviado', 'confirmacao', 'cancelamento', 'conclusao'];
+            sgObterNotificacoes(email).filter(function (n) {
+                return !n.lida && tiposEventoCli.indexOf(n.tipo) >= 0;
+            }).forEach(function (n) {
+                var d = n.dados || {};
+                var cliAgs = DB.get('clienteAgendamentos_' + email) || [];
+                var ag = cliAgs.find(function (a) { return a.id === d.agendamentoId; }) || {};
+                itens.push({
+                    tipo: 'evento', tipoNotif: n.tipo, notifId: n.id,
+                    remetente:      d.prestadorNome  || ag.nomePrestador  || 'Prestador',
+                    servico:        d.servico        || ag.servico        || '—',
+                    data:           d.data           || ag.data           || '—',
+                    qtd:            1,
+                    agId:           d.agendamentoId  || ag.id             || '',
+                    emailPrestador: d.prestadorEmail || ag.emailPrestador || '',
+                    nomePrestador:  d.prestadorNome  || ag.nomePrestador  || ''
+                });
+            });
         }
 
-        if (conversas.length === 0) return;
+        if (itens.length === 0) return;
 
-        var total = conversas.reduce(function (t, c) { return t + c.qtd; }, 0);
+        var total = itens.reduce(function (t, c) { return t + c.qtd; }, 0);
 
         // ── Monta o dropdown ────────────────────────────────────────────────
         var drop = document.createElement('div');
         drop.id = dropId;
         drop.style.cssText =
-            'position:absolute;top:calc(100% + 8px);right:0;min-width:270px;max-width:340px;' +
+            'position:absolute;top:calc(100% + 8px);right:0;min-width:295px;max-width:370px;' +
             'background:#fff;border:1.5px solid #dee2e6;border-radius:10px;' +
-            'box-shadow:0 6px 24px rgba(0,0,0,.16);z-index:2100;overflow:hidden;';
+            'box-shadow:0 6px 24px rgba(0,0,0,.16);z-index:2100;overflow:hidden;' +
+            'max-height:440px;display:flex;flex-direction:column;';
 
-        // Cabeçalho
+        // Cabeçalho fixo
         var header = document.createElement('div');
         header.style.cssText =
             'padding:10px 14px;background:#dc3545;color:#fff;font-size:.82rem;' +
-            'font-weight:700;display:flex;align-items:center;gap:7px;';
+            'font-weight:700;display:flex;align-items:center;gap:7px;flex-shrink:0;';
         header.innerHTML =
             '<i class="bi bi-bell-fill"></i> ' +
-            total + ' mensagem' + (total !== 1 ? 'ns' : '') +
-            ' não lida' + (total !== 1 ? 's' : '');
+            total + ' aviso' + (total !== 1 ? 's' : '') + ' não lido' + (total !== 1 ? 's' : '');
         drop.appendChild(header);
 
-        // Itens por conversa
-        conversas.forEach(function (conv) {
+        // Área rolável dos itens
+        var listaDiv = document.createElement('div');
+        listaDiv.style.cssText = 'overflow-y:auto;flex:1;';
+        drop.appendChild(listaDiv);
+
+        itens.forEach(function (conv) {
             var item = document.createElement('div');
             item.style.cssText =
                 'padding:10px 14px;border-bottom:1px solid #f0f4ff;cursor:pointer;' +
                 'display:flex;flex-direction:column;gap:4px;transition:background .15s;';
 
+            var icone, corIcone, rotulo, badge;
+            if (conv.tipo === 'chat') {
+                icone    = 'bi-chat-dots-fill';
+                corIcone = '#146ADB';
+                rotulo   = 'Mensagem de ' + _escaparHtml(conv.remetente);
+                badge    = String(conv.qtd);
+            } else {
+                icone    = _iconeEvento(conv.tipoNotif);
+                corIcone = _corEvento(conv.tipoNotif);
+                rotulo   = _rotuloEvento(conv.tipoNotif);
+                badge    = '!';
+            }
+
             item.innerHTML =
                 '<div style="display:flex;align-items:center;justify-content:space-between;">' +
-                    '<span style="font-weight:700;font-size:.88rem;color:#212529;' +
-                        'display:flex;align-items:center;gap:6px;">' +
-                        '<i class="bi bi-chat-dots-fill" style="color:#146ADB;"></i>' +
-                        _escaparHtml(conv.remetente) +
+                    '<span style="font-weight:700;font-size:.85rem;color:#212529;' +
+                        'display:flex;align-items:center;gap:6px;flex:1;min-width:0;">' +
+                        '<i class="bi ' + icone + '" style="color:' + corIcone + ';flex-shrink:0;"></i>' +
+                        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+                            rotulo +
+                        '</span>' +
                     '</span>' +
-                    '<span style="background:#dc3545;color:#fff;border-radius:12px;' +
-                        'padding:1px 8px;font-size:.72rem;font-weight:700;">' +
-                        conv.qtd +
+                    '<span style="background:' + corIcone + ';color:#fff;border-radius:12px;' +
+                        'padding:1px 8px;font-size:.72rem;font-weight:700;flex-shrink:0;margin-left:6px;">' +
+                        badge +
                     '</span>' +
                 '</div>' +
                 '<small style="color:#6c757d;font-size:.75rem;">' +
                     '<i class="bi bi-tools me-1"></i>' + _escaparHtml(conv.servico) +
-                    ' &nbsp;·&nbsp; ' +
-                    '<i class="bi bi-calendar3 me-1"></i>' + _escaparHtml(conv.data) +
+                    (conv.data && conv.data !== '—'
+                        ? ' &nbsp;·&nbsp; <i class="bi bi-calendar3 me-1"></i>' + _escaparHtml(conv.data)
+                        : '') +
                 '</small>';
 
             item.addEventListener('mouseover', function () { item.style.background = '#f0f4ff'; });
@@ -6093,29 +6983,47 @@ document.addEventListener('DOMContentLoaded', function () {
             item.addEventListener('click', function (e) {
                 e.stopPropagation();
                 drop.remove();
-                if (tipo === 'prest') {
-                    _abrirChatPrestador(conv.ag, email);
-                    // Atualiza o sininho após a leitura (delayed para aguardar o modal fechar)
-                    setTimeout(function () { _atualizarAvisoNavbarMsgsPrestador(email); }, 800);
+
+                if (conv.tipo === 'chat') {
+                    // Abre modal de chat livre
+                    if (tipo === 'prest') {
+                        _abrirChatPrestador(conv.ag, email);
+                        setTimeout(function () { _atualizarAvisoNavbarMsgsPrestador(email); }, 800);
+                    } else {
+                        _abrirChatCliente(
+                            conv.agId, conv.emailPrestador, conv.nomePrestador,
+                            conv.servico, conv.data, email
+                        );
+                        setTimeout(function () { _atualizarAvisoNavbarMsgsCliente(email); }, 800);
+                    }
                 } else {
-                    _abrirChatCliente(
-                        conv.agId, conv.emailPrestador, conv.nomePrestador,
-                        conv.servico, conv.data, email
-                    );
-                    setTimeout(function () { _atualizarAvisoNavbarMsgsCliente(email); }, 800);
+                    // Marca a notificação de evento como lida e navega para a tela correta
+                    sgMarcarNotifLidaPorId(email, conv.notifId);
+                    if (tipo === 'prest') {
+                        var url = '/paginasPrestador/prestadorServicosAgendados.html?aba=pendentes';
+                        if (conv.agId) url += '&agId=' + encodeURIComponent(conv.agId);
+                        window.location.href = url;
+                    } else {
+                        window.location.href = '/paginasCliente/clienteAreaExclusiva.html';
+                    }
+                    setTimeout(function () {
+                        if (tipo === 'prest') _atualizarAvisoNavbarMsgsPrestador(email);
+                        else _atualizarAvisoNavbarMsgsCliente(email);
+                    }, 400);
                 }
             });
 
-            drop.appendChild(item);
+            listaDiv.appendChild(item);
         });
 
-        // Rodapé com total
+        // Rodapé fixo
         var rodape = document.createElement('div');
         rodape.style.cssText =
             'padding:7px 14px;background:#f8f9fa;font-size:.75rem;' +
-            'color:#6c757d;text-align:center;border-top:1px solid #dee2e6;';
-        rodape.textContent = conversas.length + ' conversa' + (conversas.length !== 1 ? 's' : '') +
-            ' com mensagens pendentes';
+            'color:#6c757d;text-align:center;border-top:1px solid #dee2e6;flex-shrink:0;';
+        rodape.textContent =
+            itens.length + ' aviso' + (itens.length !== 1 ? 's' : '') +
+            ' pendente' + (itens.length !== 1 ? 's' : '');
         drop.appendChild(rodape);
 
         bellEl.appendChild(drop);
@@ -6132,19 +7040,24 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 0);
     }
 
+
     // =========================================================
-    // PATCH: Notificações cliente — polling a cada 8 s
+    // SPRINT 2 — Polling cliente: sininho + barra de notificações
+    // Atualiza o sininho da navbar sempre que houver notificações
+    // não lidas (chat livre OU eventos de proposta/agendamento).
     // =========================================================
     function _iniciarPollingNotifCliente() {
         var usu = obterUsuarioLogado();
         if (!usu) return;
         var emailCli = usu.email;
         setInterval(function () {
+            // Sempre atualiza o sininho (cobre chat + eventos de proposta)
+            _atualizarAvisoNavbarMsgsCliente(emailCli);
+            // Re-exibe barra inline se houver notifs não lidas ainda não exibidas
             var barra = document.getElementById('sg-notif-barra-cli');
-            if (barra) return; // já visível, não duplicar
+            if (barra) return;
             var notifs = sgObterNotificacoes(emailCli).filter(function (n) { return !n.lida; });
             if (notifs.length === 0) return;
-            // Re-executa a inicialização de notificações para mostrar a barra
             inicializarNotificacoesDashboardCliente();
         }, 8000);
     }
@@ -7180,6 +8093,9 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarHome();
     inicializarIndexHome();             // Sprint 2 — roteamento de categorias (logado/guest)
     inicializarNoticiasIndexHome();     // Sprint 1 — cards dinâmicos de notícias na home
+    inicializarBuscaIndexCliente();     // Sprint 1 — busca na home do cliente
+    inicializarBuscaIndexPrestador();   // Sprint 1 — busca na home do prestador
+    inicializarFormsNewsletter();       // Sprint 2 — formulários de newsletter + descadastro via URL
     inicializarCadastro();
     inicializarLogin();
     inicializarAdminLogin();     // Sprint 4 — login exclusivo para administradores
@@ -7205,7 +8121,9 @@ document.addEventListener('DOMContentLoaded', function () {
     _iniciarPollingNotifCliente();      // Sprint 3 — novo
     inicializarConfigurarAgenda();
     inicializarDashboardPrestador();
-    inicializarContatoPrestador();
+    inicializarContatoPrestador();  // compatibilidade — chama inicializarFormContato()
+    inicializarFormContato();       // Sprint 3 — contato unificado (contatoSite + clienteContato)
+    inicializarDadosAdm();          // Sprint 3 — configuração de dados admin no dadosAdm.html
     inicializarAdminGerenciamento(); // Sprint 2
     inicializarFaqSite();            // Sprint 3
 
@@ -8483,6 +9401,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var qtdPrest    = Object.keys(dbGet('hotsitePrestadorDados') || {}).length;
             var qtdNot      = obterNoticias().filter(function(n){ return n.status === 'rascunho'; }).length;
             var qtdTickets  = obterTickets().filter(function(t){ return t.status === 'aberto'; }).length;
+            var qtdNewsl    = sgNewsletterObterInscritos().length;
 
             function _setBadge(id, val) {
                 var el = document.getElementById(id);
@@ -8494,6 +9413,7 @@ document.addEventListener('DOMContentLoaded', function () {
             _setBadge('adm-badge-prestadores', qtdPrest);
             _setBadge('adm-badge-noticias',    qtdNot);
             _setBadge('adm-badge-suporte',     qtdTickets);
+            _setBadge('adm-badge-newsletter',  qtdNewsl);
         }
         _atualizarBadges();
 
@@ -8504,6 +9424,7 @@ document.addEventListener('DOMContentLoaded', function () {
             'usuarios':    _carregarUsuarios,
             'prestadores': _carregarPrestadores,
             'noticias':    _carregarNoticias,
+            'newsletter':  _carregarNewsletter,
             'suporte':     _carregarSupporte,
             'manutencao':  _carregarManutencao
         };
@@ -9043,8 +9964,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (idx >= 0) noticias[idx] = registro; else noticias.push(registro);
                 salvarNoticias(noticias);
 
+                // SPRINT 2 — Disparo de newsletter ao publicar nova notícia
                 bootstrap.Modal.getInstance(document.getElementById('modalAdmNoticia')).hide();
-                exibirToast('Notícia "' + _esc(titulo) + '" salva com sucesso!');
+                if (registro.status === 'publicado' && !_noticiaEditandoId) {
+                    var qtdDisparados = _sgNewsletterDisparar(registro);
+                    if (qtdDisparados > 0) {
+                        exibirToast('Notícia salva! Newsletter disparada para ' + qtdDisparados + ' inscrito(s).');
+                    } else {
+                        var inscritos = sgNewsletterObterInscritos();
+                        if (inscritos.length === 0) {
+                            exibirToast('Notícia "' + _esc(titulo) + '" salva. Nenhum inscrito na newsletter ainda.');
+                        } else {
+                            exibirToast('Notícia "' + _esc(titulo) + '" salva com sucesso!');
+                        }
+                    }
+                } else {
+                    exibirToast('Notícia "' + _esc(titulo) + '" salva com sucesso!');
+                }
                 _atualizarBadges();
                 _carregarNoticias();
             });
@@ -9076,34 +10012,169 @@ document.addEventListener('DOMContentLoaded', function () {
             bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdmConfirmar')).show();
         }
 
+        // ── SEÇÃO: NEWSLETTER ──────────────────────────────────
+        function _carregarNewsletter() {
+            var sec = document.getElementById('sec-newsletter');
+            if (!sec) return;
+
+            function _renderNewsletter() {
+                var inscritos = sgNewsletterObterInscritos();
+                var disparos  = sgNewsletterObterDisparos();
+
+                // Tabela de inscritos
+                var inscritosHtml = inscritos.length === 0
+                    ? '<p class="text-muted text-center py-3" style="font-size:.85rem;">Nenhum inscrito ainda.</p>'
+                    : '<table class="table table-sm table-hover mb-0" style="font-size:.87rem;">' +
+                        '<thead><tr><th>E-mail</th><th>Data de Inscrição</th><th style="width:80px;">Ação</th></tr></thead>' +
+                        '<tbody>' + inscritos.map(function(i){
+                            return '<tr>' +
+                                '<td>' + _esc(i.email) + '</td>' +
+                                '<td>' + _fmtData(i.dataInscricao) + '</td>' +
+                                '<td><button class="btn btn-danger btn-sm py-0 px-2" data-unsub="' + _esc(i.email) + '" title="Descadastrar"><i class="bi bi-trash3"></i></button></td>' +
+                            '</tr>';
+                        }).join('') + '</tbody></table>';
+
+                // Log de disparos
+                var disparosHtml = disparos.length === 0
+                    ? '<p class="text-muted text-center py-3" style="font-size:.85rem;">Nenhum disparo registrado.</p>'
+                    : disparos.slice().reverse().map(function(d){
+                        return '<div class="adm-ativ-item" style="border-bottom:1px solid #f0f0f0;padding:10px 0;">' +
+                            '<div style="flex:1;">' +
+                                '<div style="font-weight:600;font-size:.88rem;">' + _esc(d.titulo) + '</div>' +
+                                '<div style="font-size:.78rem;color:#888;">Disparado em ' + _fmtData(d.dataDisparo) + ' · ' + d.destinatarios.length + ' destinatário(s)</div>' +
+                                '<div style="font-size:.76rem;color:#aaa;margin-top:3px;">' + d.destinatarios.slice(0,5).map(_esc).join(', ') + (d.destinatarios.length > 5 ? ' ...' : '') + '</div>' +
+                            '</div>' +
+                        '</div>';
+                    }).join('');
+
+                sec.innerHTML =
+                    '<div class="adm-secao-titulo"><i class="bi bi-envelope-paper-fill" style="color:#146ADB;"></i>Newsletter</div>' +
+                    '<p class="adm-secao-subtitulo">Gerencie os inscritos e acompanhe os disparos automáticos realizados ao publicar notícias.</p>' +
+
+                    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;">' +
+
+                        '<div class="adm-card">' +
+                            '<div class="adm-card-hdr" style="display:flex;align-items:center;justify-content:space-between;">' +
+                                '<span><i class="bi bi-people-fill me-2" style="color:#146ADB;"></i>Inscritos (' + inscritos.length + ')</span>' +
+                                '<button id="adm-news-exportar" class="btn btn-outline-secondary btn-sm" title="Exportar lista em CSV"><i class="bi bi-download me-1"></i>CSV</button>' +
+                            '</div>' +
+                            '<div class="adm-card-corpo" style="padding:0;overflow:auto;max-height:400px;">' + inscritosHtml + '</div>' +
+                        '</div>' +
+
+                        '<div class="adm-card">' +
+                            '<div class="adm-card-hdr"><i class="bi bi-send-fill me-2" style="color:#0dcaf0;"></i>Histórico de Disparos (' + disparos.length + ')</div>' +
+                            '<div class="adm-card-corpo" style="max-height:400px;overflow-y:auto;">' + disparosHtml + '</div>' +
+                        '</div>' +
+
+                    '</div>' +
+
+                    '<div class="adm-card mt-4" style="background:#fffbea;border:1px solid #ffe58f;">' +
+                        '<div class="adm-card-hdr"><i class="bi bi-info-circle-fill me-2" style="color:#b8870c;"></i>Como funciona o envio</div>' +
+                        '<div class="adm-card-corpo" style="font-size:.85rem;color:#555;line-height:1.7;">' +
+                            '<p style="margin:0 0 6px;"><strong>Inscrição:</strong> O visitante informa o e-mail no rodapé das páginas (Home, Área do Cliente, Área do Prestador) e clica em "Cadastrar". O e-mail é salvo na base de inscritos.</p>' +
+                            '<p style="margin:0 0 6px;"><strong>Disparo automático:</strong> Ao salvar uma nova notícia com status "Publicado", o sistema registra automaticamente o disparo para todos os inscritos. O log acima exibe os destinatários e a data de cada envio.</p>' +
+                            '<p style="margin:0 0 6px;"><strong>Descadastro:</strong> O inscrito pode clicar em "Para não receber mais esse conteúdo, clique aqui" no rodapé do e-mail. O link abre a Home com o parâmetro <code>?unsubscribe=email</code> e remove o endereço automaticamente.</p>' +
+                            '<p style="margin:0;"><strong>Envio real:</strong> Esta plataforma funciona sem servidor. Para envio real de e-mails, integre a função <code>_sgNewsletterDisparar()</code> no <code>script.js</code> com um serviço como SendGrid, Mailchimp ou Amazon SES.</p>' +
+                        '</div>' +
+                    '</div>';
+
+                // Botão descadastrar manualmente (admin)
+                sec.querySelectorAll('[data-unsub]').forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        var email = btn.dataset.unsub;
+                        if (confirm('Remover ' + email + ' da newsletter?')) {
+                            sgNewsletterDescadastrar(email);
+                            _atualizarBadges();
+                            _renderNewsletter();
+                            exibirToast('E-mail removido da newsletter.');
+                        }
+                    });
+                });
+
+                // Exportar CSV
+                var btnExp = document.getElementById('adm-news-exportar');
+                if (btnExp) {
+                    btnExp.addEventListener('click', function(){
+                        if (inscritos.length === 0) { alert('Nenhum inscrito para exportar.'); return; }
+                        var csv = 'E-mail,Data de Inscrição\n' + inscritos.map(function(i){
+                            return '"' + i.email + '","' + new Date(i.dataInscricao).toLocaleString('pt-BR') + '"';
+                        }).join('\n');
+                        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                        var url  = URL.createObjectURL(blob);
+                        var a    = document.createElement('a');
+                        a.href = url; a.download = 'newsletter-inscritos-' + new Date().toISOString().slice(0,10) + '.csv';
+                        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        exibirToast('Lista exportada com sucesso!');
+                    });
+                }
+            }
+
+            _renderNewsletter();
+        }
+
         // ── SEÇÃO: SUPORTE / TICKETS ───────────────────────────
         function _carregarSupporte() {
             var sec = document.getElementById('sec-suporte');
             if (!sec) return;
 
+            // Descrições de cada aba para orientar o administrador
+            var descricaoFiltro = {
+                todos:        'Todos os chamados recebidos, independente do status.',
+                aberto:       'Solicitações recém-chegadas aguardando análise da equipe. Responda ou mova para "Em Andamento" ao iniciar o tratamento.',
+                em_andamento: 'Chamados já analisados que estão em tratativas com o usuário. Mova para "Resolvido" ao concluir.',
+                resolvido:    'Histórico completo de chamados encerrados. Todos os registros de atendimento da plataforma.'
+            };
+
+            function _labelStatus(s) {
+                return { aberto: 'Aberto', em_andamento: 'Em Andamento', resolvido: 'Resolvido' }[s] || s;
+            }
+            function _labelOrigem(o) {
+                return { prestador: 'Prestador', cliente: 'Cliente', visitante: 'Visitante' }[o] || (o || '—');
+            }
+
             function _renderTickets(filtro) {
-                var tickets = obterTickets();
-                if (filtro && filtro !== 'todos') tickets = tickets.filter(function(t){ return t.status===filtro; });
+                var todos = obterTickets();
+                var tickets = filtro && filtro !== 'todos'
+                    ? todos.filter(function(t){ return t.status===filtro; })
+                    : todos;
                 tickets = tickets.slice().reverse();
 
+                // Descrição da aba ativa
+                var descEl = document.getElementById('adm-ticket-descricao');
+                if (descEl) descEl.textContent = descricaoFiltro[filtro] || '';
+
                 var html = tickets.length === 0
-                    ? '<div class="adm-vazio"><i class="bi bi-headset"></i>Nenhum ticket encontrado.</div>'
+                    ? '<div class="adm-vazio"><i class="bi bi-headset"></i>Nenhum chamado encontrado nesta categoria.</div>'
                     : tickets.map(function(t){
                         var cor = {aberto:'#dc3545', em_andamento:'#b8870c', resolvido:'#198754'}[t.status] || '#aaa';
-                        return '<div class="adm-ticket-item ' + t.status + '">' +
+                        var origemLabel = _labelOrigem(t.origem);
+                        var origemCor   = { prestador: '#b8870c', cliente: '#146ADB', visitante: '#6c757d' }[t.origem] || '#6c757d';
+                        return '<div class="adm-ticket-item ' + (t.status||'') + '" style="border-left:4px solid ' + cor + ';padding:14px 16px;background:#fff;border-radius:6px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.07);">' +
                             '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:6px;">' +
-                                '<div>' +
+                                '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
                                     '<span style="font-weight:700;color:#1a1a1a;">' + _esc(t.assunto||'Sem assunto') + '</span>' +
-                                    '&nbsp;<span class="adm-badge-status ' + t.status + '">' + t.status.replace('_',' ') + '</span>' +
+                                    '<span class="adm-badge-status ' + (t.status||'') + '" style="background:' + cor + ';color:#fff;padding:2px 10px;border-radius:20px;font-size:.75rem;">' + _labelStatus(t.status) + '</span>' +
+                                    '<span style="background:' + origemCor + '22;color:' + origemCor + ';padding:2px 8px;border-radius:20px;font-size:.73rem;font-weight:600;">' + origemLabel + '</span>' +
                                 '</div>' +
                                 '<span style="font-size:.75rem;color:#888;">' + _fmtData(t.dataAbertura) + '</span>' +
                             '</div>' +
-                            '<div style="font-size:.83rem;color:#555;margin-bottom:4px;"><i class="bi bi-person me-1"></i>' + _esc(t.nome||'—') + ' · <i class="bi bi-envelope me-1"></i>' + _esc(t.email||'—') + '</div>' +
-                            '<div style="font-size:.85rem;color:#333;padding:8px 12px;background:#f8f9fa;border-radius:6px;margin-bottom:8px;">' + _esc(t.mensagem||'') + '</div>' +
-                            (t.resposta ? '<div style="font-size:.83rem;color:#065f46;padding:8px 12px;background:#d1fae5;border-radius:6px;margin-bottom:8px;"><strong>Resposta Admin:</strong> ' + _esc(t.resposta) + '</div>' : '') +
-                            '<div class="adm-acoes">' +
-                                '<button class="adm-btn-acao responder" data-id="' + _esc(t.id) + '" data-acao="responder-ticket"><i class="bi bi-reply"></i> Responder</button>' +
-                                '<button class="adm-btn-acao excluir" data-id="' + _esc(t.id) + '" data-acao="excluir-ticket"><i class="bi bi-trash"></i></button>' +
+                            '<div style="font-size:.83rem;color:#555;margin-bottom:6px;">' +
+                                '<i class="bi bi-person me-1"></i><strong>' + _esc(t.nome||'—') + '</strong>' +
+                                ' &nbsp;·&nbsp; <i class="bi bi-envelope me-1"></i>' + _esc(t.email||'—') +
+                                (t.tipoUsuario ? ' &nbsp;·&nbsp; <i class="bi bi-tag me-1"></i>' + _esc(t.tipoUsuario) : '') +
+                                (t.anexo ? ' &nbsp;·&nbsp; <i class="bi bi-paperclip me-1"></i>' + _esc(t.anexo) : '') +
+                            '</div>' +
+                            '<div style="font-size:.85rem;color:#333;padding:8px 12px;background:#f8f9fa;border-radius:6px;margin-bottom:8px;line-height:1.5;">' + _esc(t.mensagem||'') + '</div>' +
+                            (t.resposta ? '<div style="font-size:.83rem;color:#065f46;padding:8px 12px;background:#d1fae5;border-radius:6px;margin-bottom:8px;"><i class="bi bi-reply-fill me-1"></i><strong>Resposta da equipe:</strong> ' + _esc(t.resposta) + '</div>' : '') +
+                            (t.adminResponsavel ? '<div style="font-size:.75rem;color:#888;margin-bottom:6px;"><i class="bi bi-person-check me-1"></i>Atendido por: ' + _esc(t.adminResponsavel) + (t.dataResposta ? ' em ' + _fmtData(t.dataResposta) : '') + '</div>' : '') +
+                            '<div class="adm-acoes" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">' +
+                                '<button class="adm-btn-acao responder" data-id="' + _esc(t.id) + '" data-acao="responder-ticket" style="background:#146ADB;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:.82rem;cursor:pointer;"><i class="bi bi-reply me-1"></i>Responder / Atualizar</button>' +
+                                (t.status !== 'em_andamento' && t.status !== 'resolvido'
+                                    ? '<button class="adm-btn-acao" data-id="' + _esc(t.id) + '" data-acao="mover-em_andamento" style="background:#b8870c;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:.82rem;cursor:pointer;"><i class="bi bi-arrow-right me-1"></i>Mover para Em Andamento</button>' : '') +
+                                (t.status !== 'resolvido'
+                                    ? '<button class="adm-btn-acao" data-id="' + _esc(t.id) + '" data-acao="mover-resolvido" style="background:#198754;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:.82rem;cursor:pointer;"><i class="bi bi-check2 me-1"></i>Marcar como Resolvido</button>' : '') +
+                                '<button class="adm-btn-acao excluir" data-id="' + _esc(t.id) + '" data-acao="excluir-ticket" style="background:#fff;color:#dc3545;border:1px solid #dc3545;border-radius:6px;padding:5px 10px;font-size:.82rem;cursor:pointer;" title="Excluir ticket"><i class="bi bi-trash"></i></button>' +
                             '</div>' +
                         '</div>';
                     }).join('');
@@ -9111,26 +10182,73 @@ document.addEventListener('DOMContentLoaded', function () {
                 var listaEl = document.getElementById('adm-tickets-lista');
                 if (listaEl) listaEl.innerHTML = html;
 
+                // Ação: responder / atualizar (abre modal)
                 sec.querySelectorAll('[data-acao="responder-ticket"]').forEach(function(btn){
                     btn.addEventListener('click', function(){ _abrirResponderTicket(btn.dataset.id); });
                 });
+
+                // Ação: mover para Em Andamento
+                sec.querySelectorAll('[data-acao="mover-em_andamento"]').forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        _mudarStatusTicket(btn.dataset.id, 'em_andamento', '');
+                    });
+                });
+
+                // Ação: marcar como Resolvido
+                sec.querySelectorAll('[data-acao="mover-resolvido"]').forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        _mudarStatusTicket(btn.dataset.id, 'resolvido', '');
+                    });
+                });
+
+                // Ação: excluir
                 sec.querySelectorAll('[data-acao="excluir-ticket"]').forEach(function(btn){
                     btn.addEventListener('click', function(){
+                        if (!confirm('Excluir este chamado permanentemente?')) return;
                         salvarTickets(obterTickets().filter(function(t){ return t.id!==btn.dataset.id; }));
                         _atualizarBadges();
                         _renderTickets(filtroAtivo);
-                        exibirToast('Ticket removido.');
+                        exibirToast('Chamado removido.');
                     });
                 });
             }
 
+            /**
+             * Muda o status de um ticket e dispara notificação por e-mail ao usuário.
+             */
+            function _mudarStatusTicket(id, novoStatus, resposta) {
+                var tickets = obterTickets();
+                var idx = tickets.findIndex(function(t){ return t.id===id; });
+                if (idx < 0) return;
+                var statusAnterior = tickets[idx].status;
+                if (statusAnterior === novoStatus) {
+                    exibirToast('O chamado já está com status "' + _labelStatus(novoStatus) + '".');
+                    return;
+                }
+                tickets[idx].status           = novoStatus;
+                if (resposta) tickets[idx].resposta = resposta;
+                tickets[idx].dataResposta     = new Date().toISOString();
+                tickets[idx].adminResponsavel = usu.nome || usu.email;
+                salvarTickets(tickets);
+                // Notificação por e-mail ao usuário
+                sgEnviarNotificacaoStatusTicket(tickets[idx], novoStatus, resposta || tickets[idx].resposta || '');
+                _atualizarBadges();
+                _renderTickets(filtroAtivo);
+                exibirToast('Chamado atualizado para "' + _labelStatus(novoStatus) + '" e usuário notificado por e-mail.');
+            }
+
             var filtroAtivo = 'todos';
-            var totais = { todos: obterTickets().length, aberto: obterTickets().filter(function(t){return t.status==='aberto';}).length, em_andamento: obterTickets().filter(function(t){return t.status==='em_andamento';}).length, resolvido: obterTickets().filter(function(t){return t.status==='resolvido';}).length };
+            var totais = {
+                todos:        obterTickets().length,
+                aberto:       obterTickets().filter(function(t){return t.status==='aberto';}).length,
+                em_andamento: obterTickets().filter(function(t){return t.status==='em_andamento';}).length,
+                resolvido:    obterTickets().filter(function(t){return t.status==='resolvido';}).length
+            };
 
             sec.innerHTML =
                 '<div class="adm-secao-titulo"><i class="bi bi-headset" style="color:#0dcaf0;"></i>Suporte / Tickets</div>' +
-                '<p class="adm-secao-subtitulo">Gerencie as mensagens e solicitações de suporte enviadas pelos usuários.</p>' +
-                '<div class="adm-toolbar">' +
+                '<p class="adm-secao-subtitulo">Gerencie as solicitações de contato recebidas de clientes, prestadores e visitantes. A cada mudança de status, o usuário é notificado por e-mail automaticamente.</p>' +
+                '<div class="adm-toolbar" style="flex-wrap:wrap;gap:8px;">' +
                     '<div class="adm-filtro-tabs">' +
                         '<button class="adm-filtro-tab ativo" data-filtro="todos">Todos (' + totais.todos + ')</button>' +
                         '<button class="adm-filtro-tab" data-filtro="aberto" style="border-color:#dc3545;color:#dc3545;">Abertos (' + totais.aberto + ')</button>' +
@@ -9138,6 +10256,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         '<button class="adm-filtro-tab" data-filtro="resolvido" style="border-color:#198754;color:#198754;">Resolvidos (' + totais.resolvido + ')</button>' +
                     '</div>' +
                 '</div>' +
+                '<p id="adm-ticket-descricao" style="font-size:.83rem;color:#888;margin:8px 0 12px;padding:0 2px;">' + descricaoFiltro.todos + '</p>' +
                 '<div id="adm-tickets-lista"></div>';
 
             _renderTickets('todos');
@@ -9151,6 +10270,224 @@ document.addEventListener('DOMContentLoaded', function () {
                     _renderTickets(filtroAtivo);
                 });
             });
+
+            // ── Painel: Modo de Envio (Teste / Produção) ──────────
+            var painelModoDiv = document.createElement('div');
+            painelModoDiv.id  = 'adm-painel-modo-envio';
+            painelModoDiv.style.marginTop = '32px';
+            painelModoDiv.innerHTML = _renderPainelModo();
+            sec.appendChild(painelModoDiv);
+            _bindPainelModo(painelModoDiv);
+
+            // ── Painel: Log de Testes de E-mail ───────────────────
+            var painelLogDiv = document.createElement('div');
+            painelLogDiv.id  = 'adm-painel-email-log';
+            painelLogDiv.style.marginTop = '20px';
+            painelLogDiv.innerHTML = _renderEmailLog();
+            sec.appendChild(painelLogDiv);
+            _bindEmailLog(painelLogDiv);
+
+            // ── Seção de dados de contato administrativo ──────────
+            var secDadosAdm = document.getElementById('sec-dados-adm-contato');
+            if (!secDadosAdm) {
+                var dadosAdmDiv = document.createElement('div');
+                dadosAdmDiv.id = 'sec-dados-adm-contato-inline';
+                dadosAdmDiv.style.marginTop = '20px';
+                dadosAdmDiv.innerHTML = _renderDadosAdmForm();
+                sec.appendChild(dadosAdmDiv);
+                _bindDadosAdmForm(dadosAdmDiv);
+            }
+        }
+
+        // ── Renderiza painel de Modo de Envio ──────────────────────
+        function _renderPainelModo() {
+            var modo = sgObterModo();
+            var eTeste = modo !== 'producao';
+            var corModo  = eTeste ? '#856404' : '#0a3622';
+            var bgModo   = eTeste ? '#fff3cd' : '#d1fae5';
+            var bordaModo= eTeste ? '#ffc107' : '#6ee7b7';
+            var iconeModo= eTeste ? 'bi-flask' : 'bi-send-check-fill';
+            var textoModo= eTeste ? 'Modo Teste' : 'Modo Produção';
+            var descModo = eTeste
+                ? 'E-mails <strong>não são enviados</strong>. Todas as mensagens são simuladas e registradas no log abaixo para validação.'
+                : 'E-mails <strong>enviados em tempo real</strong> via FormSubmit para o endereço de suporte configurado.';
+            return '<div class="adm-card" style="border:2px solid ' + bordaModo + ';background:' + bgModo + ';">' +
+                '<div class="adm-card-hdr" style="background:transparent;border-bottom:1px solid ' + bordaModo + ';">' +
+                    '<span style="color:' + corModo + ';font-weight:700;"><i class="bi ' + iconeModo + ' me-2"></i>Modo de Envio de E-mails: ' + textoModo + '</span>' +
+                '</div>' +
+                '<div class="adm-card-corpo" style="padding:16px;">' +
+                    '<p style="font-size:.88rem;color:' + corModo + ';margin-bottom:14px;">' + descModo + '</p>' +
+                    (eTeste
+                        ? '<div style="background:#fff;border:1px solid #ffc107;border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:.83rem;color:#444;">' +
+                            '<strong style="display:block;margin-bottom:6px;"><i class="bi bi-info-circle me-1"></i>Checklist antes de ativar a Produção:</strong>' +
+                            '<ul style="margin:0;padding-left:18px;line-height:1.9;">' +
+                                '<li>Configure o <strong>E-mail de Suporte</strong> abaixo (painel "Dados de Contato")</li>' +
+                                '<li>Envie pelo menos 1 teste e verifique o log de e-mails abaixo</li>' +
+                                '<li>Confirme que todos os campos (assunto, nome, origem) aparecem corretamente no log</li>' +
+                                '<li>Acesse <strong>formsubmit.co</strong> e confirme o e-mail de ativação enviado ao e-mail de suporte</li>' +
+                            '</ul>' +
+                          '</div>' +
+                          '<button id="adm-btn-ativar-producao" class="btn btn-success btn-sm px-4"><i class="bi bi-send-check-fill me-1"></i>Ativar Modo Produção</button>' +
+                          '<span style="font-size:.78rem;color:#888;margin-left:12px;">Você poderá voltar ao modo teste a qualquer momento.</span>'
+                        : '<button id="adm-btn-voltar-teste" class="btn btn-warning btn-sm px-4"><i class="bi bi-flask me-1"></i>Voltar ao Modo Teste</button>' +
+                          '<span style="font-size:.78rem;color:#888;margin-left:12px;">Útil para testar novas configurações sem enviar e-mails reais.</span>'
+                    ) +
+                '</div>' +
+            '</div>';
+        }
+
+        function _bindPainelModo(container) {
+            var btnProd = container.querySelector('#adm-btn-ativar-producao');
+            var btnTeste = container.querySelector('#adm-btn-voltar-teste');
+            if (btnProd) {
+                btnProd.addEventListener('click', function(){
+                    if (!confirm('Ativar Modo Produção?\n\nA partir deste momento todos os e-mails serão enviados via FormSubmit para o e-mail de suporte configurado.\n\nCertifique-se de ter confirmado o e-mail de ativação do FormSubmit antes de continuar.')) return;
+                    sgDefinirModo('producao');
+                    exibirToast('✅ Modo Produção ativado. E-mails serão enviados em tempo real.');
+                    // Re-renderiza o painel
+                    container.innerHTML = _renderPainelModo();
+                    _bindPainelModo(container);
+                });
+            }
+            if (btnTeste) {
+                btnTeste.addEventListener('click', function(){
+                    sgDefinirModo('teste');
+                    exibirToast('Modo Teste ativado. E-mails serão simulados e registrados no log.');
+                    container.innerHTML = _renderPainelModo();
+                    _bindPainelModo(container);
+                });
+            }
+        }
+
+        // ── Renderiza log de e-mails de teste ─────────────────────
+        function _renderEmailLog() {
+            var log = sgObterEmailLog().slice().reverse();
+            var tipoLabel = { contato_novo: 'Novo Contato', notificacao_status: 'Notificação de Status' };
+            var tipoCor   = { contato_novo: '#146ADB', notificacao_status: '#198754' };
+            var logHtml = log.length === 0
+                ? '<p class="text-muted text-center py-3" style="font-size:.85rem;"><i class="bi bi-inbox me-2"></i>Nenhum e-mail simulado ainda. Envie um contato de teste para ver o registro aqui.</p>'
+                : log.map(function(e, i){
+                    var cor  = tipoCor[e.tipo]   || '#888';
+                    var rotulo = tipoLabel[e.tipo] || e.tipo;
+                    var statusHtml = e.statusLabel
+                        ? '<span style="background:' + ({Aberto:'#dc3545',['Em Andamento']:'#b8870c',Resolvido:'#198754'}[e.statusLabel]||'#888') + ';color:#fff;padding:1px 8px;border-radius:20px;font-size:.73rem;margin-left:6px;">' + e.statusLabel + '</span>'
+                        : '';
+                    return '<div style="border-left:3px solid ' + cor + ';padding:10px 14px;margin-bottom:10px;background:#fff;border-radius:0 6px 6px 0;box-shadow:0 1px 3px rgba(0,0,0,.06);">' +
+                        '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:4px;margin-bottom:6px;">' +
+                            '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+                                '<span style="background:' + cor + ';color:#fff;padding:2px 10px;border-radius:20px;font-size:.75rem;font-weight:700;">' + rotulo + '</span>' +
+                                (e.ticketId ? '<span style="font-size:.78rem;color:#888;">Chamado #' + _esc(e.ticketId) + '</span>' : '') +
+                                statusHtml +
+                            '</div>' +
+                            '<span style="font-size:.73rem;color:#aaa;">' + (e.dataRegistro ? new Date(e.dataRegistro).toLocaleString('pt-BR') : '—') + '</span>' +
+                        '</div>' +
+                        '<div style="font-size:.83rem;color:#333;line-height:1.6;">' +
+                            '<div><span style="color:#888;">De:</span> ' + _esc(e.de||'—') + '</div>' +
+                            '<div><span style="color:#888;">Para:</span> ' + _esc(e.para||'—') + '</div>' +
+                            (e.assunto ? '<div><span style="color:#888;">Assunto:</span> ' + _esc(e.assunto) + '</div>' : '') +
+                            (e.mensagem ? '<div style="margin-top:4px;padding:6px 10px;background:#f8f9fa;border-radius:4px;font-size:.82rem;color:#555;">' + _esc(e.mensagem.substring(0,120)) + (e.mensagem.length>120?'…':'') + '</div>' : '') +
+                            (e.resposta ? '<div style="margin-top:4px;padding:6px 10px;background:#d1fae5;border-radius:4px;font-size:.82rem;color:#065f46;"><strong>Resposta:</strong> ' + _esc(e.resposta) + '</div>' : '') +
+                            (e.anexo ? '<div style="font-size:.77rem;color:#888;margin-top:3px;"><i class="bi bi-paperclip me-1"></i>' + _esc(e.anexo) + '</div>' : '') +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+
+            return '<div class="adm-card">' +
+                '<div class="adm-card-hdr" style="display:flex;align-items:center;justify-content:space-between;">' +
+                    '<span><i class="bi bi-journal-text me-2" style="color:#6f42c1;"></i>Log de E-mails Simulados <span style="font-size:.78rem;color:#888;font-weight:400;">(' + log.length + ' registro' + (log.length!==1?'s':'') + ')</span></span>' +
+                    '<div style="display:flex;gap:8px;">' +
+                        '<button id="adm-log-atualizar" class="btn btn-outline-secondary btn-sm" title="Atualizar"><i class="bi bi-arrow-clockwise"></i></button>' +
+                        '<button id="adm-log-exportar" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i>CSV</button>' +
+                        '<button id="adm-log-limpar" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash me-1"></i>Limpar</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="adm-card-corpo" style="max-height:420px;overflow-y:auto;padding:14px 16px;">' +
+                    logHtml +
+                '</div>' +
+            '</div>';
+        }
+
+        function _bindEmailLog(container) {
+            var btnAtualizar = container.querySelector('#adm-log-atualizar');
+            var btnExportar  = container.querySelector('#adm-log-exportar');
+            var btnLimpar    = container.querySelector('#adm-log-limpar');
+            if (btnAtualizar) btnAtualizar.addEventListener('click', function(){
+                container.innerHTML = _renderEmailLog();
+                _bindEmailLog(container);
+            });
+            if (btnExportar) btnExportar.addEventListener('click', function(){
+                var log = sgObterEmailLog();
+                if (!log.length) { alert('Nenhum registro para exportar.'); return; }
+                var cols = ['dataRegistro','tipo','ticketId','de','para','assunto','statusLabel','modoEnvio','mensagem'];
+                var csv  = cols.join(',') + '\n' + log.map(function(e){
+                    return cols.map(function(c){ return '"' + String(e[c]||'').replace(/"/g,'""') + '"'; }).join(',');
+                }).join('\n');
+                var blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+                var url  = URL.createObjectURL(blob);
+                var a    = document.createElement('a');
+                a.href = url; a.download = 'servgo-email-log-' + new Date().toISOString().slice(0,10) + '.csv';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                exibirToast('Log exportado com sucesso!');
+            });
+            if (btnLimpar) btnLimpar.addEventListener('click', function(){
+                if (!confirm('Limpar todo o log de e-mails simulados?')) return;
+                sgLimparEmailLog();
+                container.innerHTML = _renderEmailLog();
+                _bindEmailLog(container);
+                exibirToast('Log de e-mails limpo.');
+            });
+        }
+
+        /**
+         * Renderiza o formulário de dados admin de contato.
+         */
+        function _renderDadosAdmForm() {
+            var d = sgObterDadosAdm();
+            return '<div class="adm-card">' +
+                '<div class="adm-card-hdr"><i class="bi bi-gear-fill me-2" style="color:#146ADB;"></i>Dados de Contato Administrativos' +
+                '<small style="font-size:.78rem;color:#888;margin-left:10px;">Exibidos nas páginas de contato do site</small></div>' +
+                '<div class="adm-card-corpo">' +
+                '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">' +
+                    '<div><label style="font-size:.83rem;font-weight:700;margin-bottom:4px;display:block;">Endereço</label><input id="dadosadm-endereco" class="form-control form-control-sm" value="' + _esc(d.endereco||'') + '" placeholder="Rua, número, cidade"></div>' +
+                    '<div><label style="font-size:.83rem;font-weight:700;margin-bottom:4px;display:block;">Telefone</label><input id="dadosadm-telefone" class="form-control form-control-sm" value="' + _esc(d.telefone||'') + '" placeholder="(11) 91234-5678"></div>' +
+                    '<div><label style="font-size:.83rem;font-weight:700;margin-bottom:4px;display:block;">E-mail de Suporte <span style="color:red;">*</span></label><input id="dadosadm-email" type="email" class="form-control form-control-sm" value="' + _esc(d.emailSuporte||'') + '" placeholder="suporte@site.com.br"></div>' +
+                    '<div><label style="font-size:.83rem;font-weight:700;margin-bottom:4px;display:block;">WhatsApp</label><input id="dadosadm-whatsapp" class="form-control form-control-sm" value="' + _esc(d.whatsapp||'') + '" placeholder="(11) 91234-5678"></div>' +
+                    '<div><label style="font-size:.83rem;font-weight:700;margin-bottom:4px;display:block;">Horário de Atendimento</label><input id="dadosadm-horario" class="form-control form-control-sm" value="' + _esc(d.horarioAtendimento||'') + '" placeholder="Seg-Sex 08h–18h"></div>' +
+                    '<div><label style="font-size:.83rem;font-weight:700;margin-bottom:4px;display:block;">Site</label><input id="dadosadm-site" class="form-control form-control-sm" value="' + _esc(d.site||'') + '" placeholder="www.servgo.com.br"></div>' +
+                '</div>' +
+                '<div style="display:flex;gap:10px;margin-top:16px;">' +
+                    '<button id="btn-salvar-dados-adm" class="btn btn-primary btn-sm"><i class="bi bi-floppy me-1"></i>Salvar Dados de Contato</button>' +
+                    '<button id="btn-restaurar-dados-adm" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-counterclockwise me-1"></i>Restaurar Padrão</button>' +
+                '</div>' +
+                '</div></div>';
+        }
+
+        function _bindDadosAdmForm(container) {
+            var btnSalvar = (container || document).getElementById('btn-salvar-dados-adm');
+            var btnRestaurar = (container || document).getElementById('btn-restaurar-dados-adm');
+            if (btnSalvar) btnSalvar.addEventListener('click', function(){
+                var dados = {
+                    endereco:           ((container||document).getElementById('dadosadm-endereco')  || {}).value || '',
+                    telefone:           ((container||document).getElementById('dadosadm-telefone')  || {}).value || '',
+                    emailSuporte:       ((container||document).getElementById('dadosadm-email')     || {}).value || '',
+                    horarioAtendimento: ((container||document).getElementById('dadosadm-horario')   || {}).value || '',
+                    whatsapp:           ((container||document).getElementById('dadosadm-whatsapp')  || {}).value || '',
+                    site:               ((container||document).getElementById('dadosadm-site')      || {}).value || ''
+                };
+                if (!dados.emailSuporte || !/\S+@\S+\.\S+/.test(dados.emailSuporte)) {
+                    alert('Informe um e-mail de suporte válido.'); return;
+                }
+                sgSalvarDadosAdm(dados);
+                exibirToast('Dados de contato salvos! As páginas de contato já refletem as novas informações.');
+            });
+            if (btnRestaurar) btnRestaurar.addEventListener('click', function(){
+                if (!confirm('Restaurar os valores padrão de contato?')) return;
+                sgSalvarDadosAdm(Object.assign({}, SG_DADOS_ADM_DEFAULTS));
+                var campos = { 'dadosadm-endereco': SG_DADOS_ADM_DEFAULTS.endereco, 'dadosadm-telefone': SG_DADOS_ADM_DEFAULTS.telefone, 'dadosadm-email': SG_DADOS_ADM_DEFAULTS.emailSuporte, 'dadosadm-horario': SG_DADOS_ADM_DEFAULTS.horarioAtendimento, 'dadosadm-whatsapp': SG_DADOS_ADM_DEFAULTS.whatsapp, 'dadosadm-site': SG_DADOS_ADM_DEFAULTS.site };
+                Object.keys(campos).forEach(function(id){ var el = (container||document).getElementById(id); if(el) el.value = campos[id]; });
+                exibirToast('Dados restaurados para os valores padrão.');
+            });
         }
 
         function _abrirResponderTicket(id) {
@@ -9160,13 +10497,21 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('adm-ticket-status').value  = t.status || 'aberto';
             document.getElementById('adm-ticket-resposta').value = t.resposta || '';
             var detEl = document.getElementById('adm-ticket-detalhes');
-            if (detEl) detEl.innerHTML =
-                '<div style="background:#f8f9fa;padding:12px;border-radius:6px;font-size:.88rem;">' +
-                '<strong>De:</strong> ' + _esc(t.nome||'—') + ' &lt;' + _esc(t.email||'') + '&gt;<br>' +
-                '<strong>Assunto:</strong> ' + _esc(t.assunto||'—') + '<br>' +
-                '<strong>Mensagem:</strong><br>' +
-                '<div style="margin-top:6px;padding:8px 12px;background:#fff;border:1px solid #dee2e6;border-radius:4px;">' + _esc(t.mensagem||'') + '</div>' +
-                '</div>';
+            if (detEl) {
+                var origemLabel = { prestador: 'Prestador', cliente: 'Cliente', visitante: 'Visitante' }[t.origem] || (t.origem || '—');
+                detEl.innerHTML =
+                    '<div style="background:#f8f9fa;padding:12px;border-radius:6px;font-size:.88rem;">' +
+                    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:8px;">' +
+                    '<div><strong>De:</strong> ' + _esc(t.nome||'—') + ' &lt;' + _esc(t.email||'') + '&gt;</div>' +
+                    '<div><strong>Origem:</strong> ' + _esc(origemLabel) + (t.tipoUsuario ? ' (' + _esc(t.tipoUsuario) + ')' : '') + '</div>' +
+                    '<div><strong>Assunto:</strong> ' + _esc(t.assunto||'—') + '</div>' +
+                    '<div><strong>Abertura:</strong> ' + _fmtData(t.dataAbertura) + '</div>' +
+                    (t.anexo ? '<div><strong>Anexo:</strong> ' + _esc(t.anexo) + '</div>' : '') +
+                    '</div>' +
+                    '<strong>Mensagem:</strong>' +
+                    '<div style="margin-top:6px;padding:8px 12px;background:#fff;border:1px solid #dee2e6;border-radius:4px;line-height:1.5;">' + _esc(t.mensagem||'') + '</div>' +
+                    '</div>';
+            }
             bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAdmTicket')).show();
         }
 
@@ -9179,13 +10524,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 var tickets  = obterTickets();
                 var idx      = tickets.findIndex(function(t){ return t.id===id; });
                 if (idx < 0) return;
-                tickets[idx].status = status;
-                tickets[idx].resposta = resposta;
-                tickets[idx].dataResposta = new Date().toISOString();
+                var statusAnterior = tickets[idx].status;
+                tickets[idx].status           = status;
+                tickets[idx].resposta         = resposta;
+                tickets[idx].dataResposta     = new Date().toISOString();
                 tickets[idx].adminResponsavel = usu.nome || usu.email;
                 salvarTickets(tickets);
                 bootstrap.Modal.getInstance(document.getElementById('modalAdmTicket')).hide();
-                exibirToast('Ticket atualizado com sucesso!');
+                // Notifica o usuário por e-mail sempre que status ou resposta muda
+                sgEnviarNotificacaoStatusTicket(tickets[idx], status, resposta);
+                exibirToast('Chamado atualizado! Notificação enviada para ' + (tickets[idx].email||'o usuário') + '.');
                 _atualizarBadges();
                 _carregarSupporte();
             });

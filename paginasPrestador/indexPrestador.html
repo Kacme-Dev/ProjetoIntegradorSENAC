@@ -74,9 +74,10 @@
 
             <div class="container">
                 <div class="input-group">
-                    <input type="text" class="form-control" placeholder="Busque por serviço, profissional ou categoria..." aria-label="Busca">
-                    <button class="btn btn-warning" type="button"><i class="bi bi-search"></i> Buscar</button>
+                    <input type="text" id="campoBuscaPrestador" class="form-control" placeholder="Busque por serviço, profissional ou categoria..." aria-label="Busca">
+                    <button id="btnBuscarPrestador" class="btn btn-warning" type="button" style="background-color:#2B2B2B !important; border-color:#2B2B2B !important; color:#fff !important;"><i class="bi bi-search"></i> Buscar</button>
                 </div>
+                <div id="alertaBuscaPrestador" style="display:none;" class="alert alert-warning mt-2 py-2"></div>
             </div>
 
             <!--FIM CAMPO DE BUSCA-->
@@ -310,11 +311,12 @@
                 <p class="text-conteudo">Assine nossa newsletter e receba em primeira mão artigos, tendências e novidades
                     do mundo de prestação de serviços.
                 </p>
-                <form class="d-flex justify-content-center mt-4">
-                    <input class="form-control me-2" type="email" placeholder="Digite seu e-mail"
+                <form id="formNewsletterPrestador" class="d-flex justify-content-center mt-4" novalidate>
+                    <input id="inputNewsletterPrestador" class="form-control me-2" type="email" placeholder="Digite seu e-mail"
                         style="max-width: 300px;" aria-label="E-mail">
                     <button class="btn btn-warning" type="submit">Cadastrar</button>
                 </form>
+                <div id="alertaNewsletterPrestador" style="display:none;" class="mt-2 text-center"></div>
             </div>
         </div>
 
