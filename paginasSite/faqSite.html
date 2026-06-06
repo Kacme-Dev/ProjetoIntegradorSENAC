@@ -80,7 +80,10 @@
             <label for="mensagem" class="form-label">Se sua pergunta for sobre um problema técnico, uma dúvida sobre pagamentos ou sugestões que não estão respondidas acima, entre em contato com nossa equipe de suporte.</label>
             <textarea class="caixa-mensagem-fixa" id="mensagem" rows="3" required placeholder="Digite sua dúvida aqui..."></textarea>
             <div class="invalid-feedback">Por favor, insira uma mensagem.</div>
-            <button class="btn btn-primary" type="button">Enviar</button>
+            <div id="faq-enviar-feedback" style="display:none;" class="mt-2"></div>
+            <button class="btn btn-primary" type="button" id="faq-btn-enviar-duvida">
+                <i class="bi bi-send me-1"></i>Enviar
+            </button>
         </div>
 
         

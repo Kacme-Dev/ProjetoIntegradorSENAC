@@ -734,7 +734,460 @@ document.addEventListener('DOMContentLoaded', function () {
     // =========================================================
     // CADASTRO
     // =========================================================
-    function inicializarCadastro() {
+    // =========================================================
+    // SG_Trial — Gerenciamento de Trial e Assinaturas
+    // =========================================================
+    var SG_Trial = (function () {
+        var PLANOS = [
+            {
+                id: 'basico',
+                nome: 'Plano Básico',
+                preco: 'R$ 49,90/mês',
+                descricao: 'Hotsite ativo, agendamentos ilimitados, suporte por e-mail.',
+                destaque: false,
+                cor: '#146ADB'
+            },
+            {
+                id: 'profissional',
+                nome: 'Plano Profissional',
+                preco: 'R$ 89,90/mês',
+                descricao: 'Tudo do Básico + destaque no catálogo, galeria de fotos ampliada, relatórios mensais.',
+                destaque: true,
+                cor: '#FFC300'
+            },
+            {
+                id: 'premium',
+                nome: 'Plano Premium',
+                preco: 'R$ 139,90/mês',
+                descricao: 'Tudo do Profissional + suporte prioritário 24h, selo verificado, campanhas de divulgação.',
+                destaque: false,
+                cor: '#198754'
+            }
+        ];
+
+        var TRIAL_DIAS = 30;
+        var AVISO_DIAS = 5; // começa a avisar quando faltam 5 dias
+
+        function verificarStatus(email, dadosUsu) {
+            // Assinatura ativa — acesso irrestrito
+            if (dadosUsu.assinatura && dadosUsu.assinatura.ativa) {
+                return { bloqueado: false, diasRestantes: 999, motivo: 'assinante' };
+            }
+            // Assinatura cancelada — bloqueado, deve reativar ou contratar novo plano
+            if (dadosUsu.assinatura && dadosUsu.assinatura.cancelada) {
+                return { bloqueado: true, diasRestantes: 0, motivo: 'cancelado' };
+            }
+            // Sem trialInicio — prestador recém-cadastrado que optou pelo trial gratuito
+            if (!dadosUsu.trialInicio) {
+                return { bloqueado: false, diasRestantes: TRIAL_DIAS, motivo: 'trial_gratuito' };
+            }
+            var inicio = new Date(dadosUsu.trialInicio);
+            var agora  = new Date();
+            var diffMs = agora - inicio;
+            var diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            var restantes = TRIAL_DIAS - diffDias;
+            if (restantes <= 0) {
+                return { bloqueado: true, diasRestantes: 0, motivo: 'trial_expirado' };
+            }
+            return { bloqueado: false, diasRestantes: restantes, motivo: 'trial' };
+        }
+
+        function deveAvisar(diasRestantes) {
+            return diasRestantes <= AVISO_DIAS && diasRestantes > 0;
+        }
+
+        function obterPlanos() { return PLANOS; }
+
+        function obterPlano(id) {
+            return PLANOS.filter(function(p){ return p.id === id; })[0] || null;
+        }
+
+        return { verificarStatus: verificarStatus, deveAvisar: deveAvisar, obterPlanos: obterPlanos, obterPlano: obterPlano, TRIAL_DIAS: TRIAL_DIAS };
+    }());
+
+    // ── Modal: Termos do período de testes (30 dias) ──────────────────
+    function _sgMostrarModalTrialPrestador(nome, email, senha) {
+        var modalId = 'sg-modal-trial-cadastro';
+        var existente = document.getElementById(modalId);
+        if (existente) existente.remove();
+
+        var html = '<div class="modal fade" id="' + modalId + '" tabindex="-1" aria-modal="true" role="dialog">' +
+            '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-content">' +
+            '<div class="modal-header" style="background:#146ADB;color:#fff;">' +
+            '<h5 class="modal-title"><i class="bi bi-clock-history me-2"></i>Período de Testes Gratuito</h5>' +
+            '</div>' +
+            '<div class="modal-body">' +
+            '<p>Olá, <strong>' + _esc(nome) + '</strong>! Seja bem-vindo(a) ao ServGo!</p>' +
+            '<div style="background:#e8f4fd;border-left:4px solid #146ADB;padding:14px 16px;border-radius:0 8px 8px 0;margin-bottom:16px;">' +
+            '<p style="margin:0 0 8px;font-weight:700;color:#146ADB;"><i class="bi bi-gift-fill me-2"></i>30 Dias Gratuitos</p>' +
+            '<p style="margin:0;font-size:.9rem;color:#333;">Você terá acesso completo ao seu HotSite de serviços por <strong>30 dias</strong> sem custo algum. Após esse período, será necessário contratar um plano de assinatura para continuar utilizando os recursos da plataforma.</p>' +
+            '</div>' +
+            '<ul style="font-size:.88rem;color:#555;margin-bottom:0;">' +
+            '<li>O período de testes inicia-se na data de hoje.</li>' +
+            '<li>Você receberá alertas a partir de 5 dias antes do vencimento.</li>' +
+            '<li>No vencimento, o acesso será suspenso até a contratação de um plano.</li>' +
+            '<li>Você pode contratar um plano a qualquer momento pelo seu painel.</li>' +
+            '</ul>' +
+            '</div>' +
+            '<div class="modal-footer">' +
+            '<button type="button" class="btn btn-secondary" id="sg-trial-cancelar"><i class="bi bi-x-circle me-1"></i>Cancelar</button>' +
+            '<button type="button" class="btn btn-warning fw-bold" id="sg-trial-concordar"><i class="bi bi-check-circle me-1"></i>Concordar e Cadastrar</button>' +
+            '</div></div></div></div>';
+
+        document.body.insertAdjacentHTML('beforeend', html);
+        var modalEl = document.getElementById(modalId);
+
+        // Tenta usar Bootstrap Modal; fallback para exibição CSS direta
+        var modal = null;
+        try {
+            modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+            modal.show();
+        } catch (errModal) {
+            console.warn('SG_Trial: bootstrap.Modal indisponível, usando fallback CSS');
+            modalEl.style.display = 'flex';
+            modalEl.style.alignItems = 'center';
+            modalEl.style.justifyContent = 'center';
+            modalEl.classList.add('show');
+            document.body.classList.add('modal-open');
+        }
+
+        document.getElementById('sg-trial-cancelar').addEventListener('click', function () {
+            try { if (modal) modal.hide(); } catch (e) {}
+            try { modalEl.remove(); } catch (e) {}
+            document.body.classList.remove('modal-open');
+        });
+
+        document.getElementById('sg-trial-concordar').addEventListener('click', function () {
+            try {
+                var usuarios = obterUsuariosCadastrados();
+                usuarios[email] = {
+                    nome: nome,
+                    senha: senha,
+                    tipo: 'prestador',
+                    trialInicio: new Date().toISOString(),
+                    dataCadastro: new Date().toISOString()
+                };
+                salvarUsuariosCadastrados(usuarios);
+            } catch (errSave) {
+                console.error('SG_Trial: erro ao salvar usuário:', errSave);
+            }
+            // Redireciona imediatamente — sem depender de evento Bootstrap
+            try { modal.hide(); } catch (e) {}
+            try { modalEl.remove(); } catch (e) {}
+            window.location.href = 'login.html?cadastro=sucesso';
+        });
+    }
+
+    // ── Modal: Trial expirado no login ────────────────────────────────
+    function _sgMostrarModalTrialExpirado(email, nome, alertaEl) {
+        var modalId = 'sg-modal-trial-expirado';
+        var existente = document.getElementById(modalId);
+        if (existente) existente.remove();
+
+        var html = '<div class="modal fade" id="' + modalId + '" tabindex="-1" aria-modal="true" role="dialog">' +
+            '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-content">' +
+            '<div class="modal-header" style="background:#dc3545;color:#fff;">' +
+            '<h5 class="modal-title"><i class="bi bi-lock-fill me-2"></i>Período de Testes Encerrado</h5>' +
+            '</div>' +
+            '<div class="modal-body">' +
+            '<p>Olá, <strong>' + _esc(nome || email) + '</strong>!</p>' +
+            '<div style="background:#fff3cd;border-left:4px solid #dc3545;padding:14px 16px;border-radius:0 8px 8px 0;margin-bottom:16px;">' +
+            '<p style="margin:0;font-size:.9rem;color:#333;">Seu período de <strong>30 dias gratuitos</strong> foi encerrado. Para continuar utilizando o HotSite e todos os recursos do ServGo!, contrate um dos nossos planos de assinatura.</p>' +
+            '</div>' +
+            '</div>' +
+            '<div class="modal-footer">' +
+            '<a href="/index.html" class="btn btn-secondary"><i class="bi bi-house me-1"></i>Voltar ao Site</a>' +
+            '<a href="/paginasSite/planosContrato.html" class="btn btn-warning fw-bold"><i class="bi bi-credit-card me-1"></i>Ver Planos de Assinatura</a>' +
+            '</div></div></div></div>';
+
+        document.body.insertAdjacentHTML('beforeend', html);
+        var modalEl = document.getElementById(modalId);
+        var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+        modal.show();
+    }
+
+    // ── Modal: Assinatura cancelada no login ──────────────────────────
+    function _sgMostrarModalReativacao(email, nome, alertaEl) {
+        var modalId = 'sg-modal-reativacao';
+        var existente = document.getElementById(modalId);
+        if (existente) existente.remove();
+
+        var cad = obterUsuariosCadastrados();
+        var dadosUsu = cad[email] || {};
+        var planoAnterior = (dadosUsu.assinatura && dadosUsu.assinatura.planoAnterior) || null;
+        var nomePlano = planoAnterior ? (SG_Trial.obterPlano(planoAnterior) || {}).nome || planoAnterior : null;
+
+        var html = '<div class="modal fade" id="' + modalId + '" tabindex="-1" aria-modal="true" role="dialog">' +
+            '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-content">' +
+            '<div class="modal-header" style="background:#dc3545;color:#fff;">' +
+            '<h5 class="modal-title"><i class="bi bi-lock-fill me-2"></i>Assinatura Cancelada</h5>' +
+            '</div>' +
+            '<div class="modal-body">' +
+            '<p>Olá, <strong>' + _esc(nome || email) + '</strong>!</p>' +
+            '<div style="background:#fff3cd;border-left:4px solid #dc3545;padding:12px 14px;border-radius:0 8px 8px 0;margin-bottom:14px;">' +
+            '<p style="margin:0;font-size:.9rem;"><i class="bi bi-lock-fill me-1"></i>Seu acesso está <strong>bloqueado</strong>. Para voltar a utilizar o ServGo!, reative seu plano anterior ou contrate um novo plano.</p>' +
+            '</div>' +
+            (nomePlano ? '<p style="font-size:.88rem;color:#555;">Seu último plano ativo era: <strong>' + _esc(nomePlano) + '</strong>.</p>' : '') +
+            '</div>' +
+            '<div class="modal-footer" style="flex-wrap:wrap;gap:8px;">' +
+            '<a href="/index.html" class="btn btn-secondary btn-sm"><i class="bi bi-house me-1"></i>Voltar ao Site</a>' +
+            (planoAnterior ? '<button type="button" class="btn btn-success fw-bold btn-sm" id="sg-reativar-mesmo-plano"><i class="bi bi-arrow-repeat me-1"></i>Reativar ' + _esc(nomePlano) + '</button>' : '') +
+            '<a href="/paginasSite/planosContrato.html" class="btn btn-warning fw-bold btn-sm"><i class="bi bi-credit-card me-1"></i>Contratar Novo Plano</a>' +
+            '</div></div></div></div>';
+
+        document.body.insertAdjacentHTML('beforeend', html);
+        var modalEl = document.getElementById(modalId);
+        var modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+        modal.show();
+
+        var btnReativar = document.getElementById('sg-reativar-mesmo-plano');
+        if (btnReativar) {
+            btnReativar.addEventListener('click', function () {
+                var usuarios = obterUsuariosCadastrados();
+                var u = usuarios[email] || {};
+                u.assinatura = {
+                    ativa: true,
+                    cancelada: false,
+                    plano: planoAnterior,
+                    planoAnterior: planoAnterior,
+                    contratoId: u.assinatura && u.assinatura.contratoId ? u.assinatura.contratoId : ('CONT-' + Date.now()),
+                    dataInicio: new Date().toISOString()
+                };
+                usuarios[email] = u;
+                salvarUsuariosCadastrados(usuarios);
+                modal.hide();
+                modalEl.addEventListener('hidden.bs.modal', function () {
+                    modalEl.remove();
+                    salvarUsuarioLogado(email, u.nome, u.tipo);
+                    redirecionarPorTipo(u.tipo);
+                }, { once: true });
+            });
+        }
+    }
+
+    // ── Inicializar botões de assinatura na sidebar (prestadorHotsiteAdm) ──
+    function inicializarBotoesAssinatura() {
+        var btnContratar  = document.getElementById('sg-btn-contratar-plano');
+        var btnCancelar   = document.getElementById('sg-btn-cancelar-assinatura');
+        var btnAlterar    = document.getElementById('sg-btn-alterar-plano');
+        var wrapCancelar  = document.getElementById('sg-wrap-cancelar-plano');
+        if (!btnContratar && !btnCancelar) return;
+
+        var usu = obterUsuarioLogado();
+        if (!usu) return;
+        var email = usu.email;
+        var usuarios = obterUsuariosCadastrados();
+        var dadosUsu = usuarios[email] || {};
+
+        // Estado: assinante ativo
+        var isAssinante = dadosUsu.assinatura && dadosUsu.assinatura.ativa;
+        if (isAssinante) {
+            if (btnContratar) btnContratar.style.display = 'none';
+            if (wrapCancelar) wrapCancelar.style.display = 'block';
+        } else {
+            if (btnContratar) btnContratar.style.display = 'block';
+            if (wrapCancelar) wrapCancelar.style.display = 'none';
+        }
+
+        // Botão Contratar Plano
+        if (btnContratar) {
+            btnContratar.addEventListener('click', function (e) {
+                e.preventDefault();
+                _sgAbrirModalPlanos(email, dadosUsu, false);
+            });
+        }
+
+        // Botão Cancelar Assinatura
+        if (btnCancelar) {
+            btnCancelar.addEventListener('click', function (e) {
+                e.preventDefault();
+                _sgConfirmarCancelamento(email);
+            });
+        }
+
+        // Botão Alterar Plano
+        if (btnAlterar) {
+            btnAlterar.addEventListener('click', function (e) {
+                e.preventDefault();
+                _sgAbrirModalPlanos(email, dadosUsu, true);
+            });
+        }
+
+        // Aviso de trial na sidebar
+        _sgMostrarAvisoTrialSidebar(email, dadosUsu);
+    }
+
+    // ── Aviso de trial na sidebar do HotsiteAdm ──────────────────────
+    function _sgMostrarAvisoTrialSidebar(email, dadosUsu) {
+        var wrapAviso = document.getElementById('sg-trial-aviso-sidebar');
+        if (!wrapAviso) return;
+        var st = SG_Trial.verificarStatus(email, dadosUsu);
+        if (!SG_Trial.deveAvisar(st.diasRestantes) && !st.bloqueado) {
+            wrapAviso.style.display = 'none';
+            return;
+        }
+        wrapAviso.style.display = 'block';
+        var msg, cor;
+        if (st.diasRestantes === 1 || st.diasRestantes === 0) {
+            msg = '<i class="bi bi-exclamation-triangle-fill me-1"></i>Seu período de testes <strong>encerra hoje</strong>! Contrate um plano para continuar.';
+            cor = '#dc3545';
+        } else {
+            msg = '<i class="bi bi-clock me-1"></i>Faltam <strong>' + st.diasRestantes + ' dias</strong> para o fim do período de testes.';
+            cor = '#b8870c';
+        }
+        wrapAviso.innerHTML = '<div style="background:' + cor + ';color:#fff;padding:10px 12px;border-radius:6px;font-size:.8rem;margin:8px 10px;">' + msg + '</div>';
+    }
+
+    // ── Modal: Escolher plano ─────────────────────────────────────────
+    function _sgAbrirModalPlanos(email, dadosUsu, isAlteracao) {
+        var modalId = 'sg-modal-planos';
+        var existente = document.getElementById(modalId);
+        if (existente) existente.remove();
+
+        var planos = SG_Trial.obterPlanos();
+        var planoAtual = dadosUsu.assinatura && dadosUsu.assinatura.plano ? dadosUsu.assinatura.plano : null;
+
+        var cardsHtml = planos.map(function (p) {
+            var isCurrent = p.id === planoAtual;
+            var borda = p.destaque ? '3px solid #FFC300' : '1.5px solid #dee2e6';
+            var bg = p.destaque ? '#fffbeb' : '#fff';
+            var badgeDestaque = p.destaque ? '<span style="background:#FFC300;color:#000;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:20px;margin-bottom:6px;display:inline-block;">★ Mais Popular</span><br>' : '';
+            return '<div style="border:' + borda + ';background:' + bg + ';border-radius:10px;padding:18px;margin-bottom:12px;">' +
+                badgeDestaque +
+                '<div style="font-weight:800;font-size:1rem;color:#1a1a1a;">' + _esc(p.nome) + '</div>' +
+                '<div style="font-size:1.3rem;font-weight:800;color:' + p.cor + ';margin:4px 0;">' + _esc(p.preco) + '</div>' +
+                '<div style="font-size:.85rem;color:#555;margin-bottom:12px;">' + _esc(p.descricao) + '</div>' +
+                (isCurrent ? '<button class="btn btn-secondary btn-sm w-100" disabled><i class="bi bi-check me-1"></i>Plano Atual</button>' :
+                    '<button class="btn btn-warning btn-sm w-100 fw-bold sg-btn-selecionar-plano" data-plano="' + p.id + '" data-nome="' + _esc(p.nome) + '"><i class="bi bi-check-circle me-1"></i>' + (isAlteracao ? 'Alterar para este Plano' : 'Contratar') + '</button>') +
+                '</div>';
+        }).join('');
+
+        var html = '<div class="modal fade" id="' + modalId + '" tabindex="-1" aria-modal="true" role="dialog">' +
+            '<div class="modal-dialog modal-dialog-centered modal-lg">' +
+            '<div class="modal-content">' +
+            '<div class="modal-header" style="background:#146ADB;color:#fff;">' +
+            '<h5 class="modal-title"><i class="bi bi-credit-card me-2"></i>' + (isAlteracao ? 'Alterar Plano de Assinatura' : 'Contratar Plano de Assinatura') + '</h5>' +
+            '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>' +
+            '</div>' +
+            '<div class="modal-body">' +
+            '<p style="font-size:.9rem;color:#555;margin-bottom:18px;">Escolha o plano que melhor atende às suas necessidades. O plano entrará em vigor imediatamente após a contratação.</p>' +
+            cardsHtml +
+            '<p style="font-size:.78rem;color:#aaa;margin-top:10px;text-align:center;">Ao contratar, você aceita os <a href="/paginasSite/planosContrato.html" target="_blank">Termos de Contrato</a> do plano selecionado.</p>' +
+            '</div>' +
+            '<div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button></div>' +
+            '</div></div></div>';
+
+        document.body.insertAdjacentHTML('beforeend', html);
+        var modalEl = document.getElementById(modalId);
+        var modal = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        modalEl.querySelectorAll('.sg-btn-selecionar-plano').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var planoId   = btn.dataset.plano;
+                var planoNome = btn.dataset.nome;
+                _sgEfetivarAssinatura(email, planoId, planoNome, isAlteracao, modal, modalEl);
+            });
+        });
+    }
+
+    // ── Efetivar assinatura ───────────────────────────────────────────
+    function _sgEfetivarAssinatura(email, planoId, planoNome, isAlteracao, modalAnterior, modalAnteriorEl) {
+        var usuarios = obterUsuariosCadastrados();
+        var u = usuarios[email] || {};
+        var contratoId = (u.assinatura && u.assinatura.contratoId) ? u.assinatura.contratoId : ('CONT-' + Date.now());
+        u.assinatura = {
+            ativa: true,
+            cancelada: false,
+            plano: planoId,
+            planoAnterior: planoId,
+            contratoId: contratoId,
+            dataInicio: new Date().toISOString()
+        };
+        usuarios[email] = u;
+        salvarUsuariosCadastrados(usuarios);
+
+        if (modalAnterior) modalAnterior.hide();
+        if (modalAnteriorEl) modalAnteriorEl.addEventListener('hidden.bs.modal', function () { modalAnteriorEl.remove(); }, { once: true });
+
+        // Atualiza botões na sidebar imediatamente
+        var btnContratar = document.getElementById('sg-btn-contratar-plano');
+        var wrapCancelar = document.getElementById('sg-wrap-cancelar-plano');
+        if (btnContratar) btnContratar.style.display = 'none';
+        if (wrapCancelar) wrapCancelar.style.display = 'block';
+
+        // Toast de confirmação
+        _sgToastAssinatura('Plano <strong>' + _esc(planoNome) + '</strong> ativado com sucesso! Contrato: ' + contratoId, 'success');
+    }
+
+    // ── Confirmar cancelamento ────────────────────────────────────────
+    function _sgConfirmarCancelamento(email) {
+        var modalId = 'sg-modal-cancelar-assinatura';
+        var existente = document.getElementById(modalId);
+        if (existente) existente.remove();
+
+        var html = '<div class="modal fade" id="' + modalId + '" tabindex="-1" aria-modal="true" role="dialog">' +
+            '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-content">' +
+            '<div class="modal-header" style="background:#dc3545;color:#fff;">' +
+            '<h5 class="modal-title"><i class="bi bi-x-octagon me-2"></i>Cancelar Assinatura</h5>' +
+            '</div>' +
+            '<div class="modal-body">' +
+            '<p>Tem certeza que deseja cancelar sua assinatura?</p>' +
+            '<div style="background:#fff3cd;border-left:4px solid #dc3545;padding:12px 14px;border-radius:0 8px 8px 0;">' +
+            '<p style="margin:0;font-size:.88rem;color:#333;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Ao cancelar, <strong>seu acesso ao HotSite será bloqueado imediatamente</strong>. Para voltar a utilizar o serviço, você precisará reativar a assinatura.</p>' +
+            '</div>' +
+            '</div>' +
+            '<div class="modal-footer">' +
+            '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Manter Assinatura</button>' +
+            '<button type="button" class="btn btn-danger fw-bold" id="sg-confirmar-cancelar"><i class="bi bi-x-circle me-1"></i>Confirmar Cancelamento</button>' +
+            '</div></div></div></div>';
+
+        document.body.insertAdjacentHTML('beforeend', html);
+        var modalEl = document.getElementById(modalId);
+        var modal = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+        modal.show();
+
+        document.getElementById('sg-confirmar-cancelar').addEventListener('click', function () {
+            var usuarios = obterUsuariosCadastrados();
+            var u = usuarios[email] || {};
+            var planoAnterior = u.assinatura && u.assinatura.plano ? u.assinatura.plano : null;
+            u.assinatura = {
+                ativa: false,
+                cancelada: true,
+                planoAnterior: planoAnterior,
+                contratoId: u.assinatura && u.assinatura.contratoId ? u.assinatura.contratoId : null,
+                dataCancelamento: new Date().toISOString()
+            };
+            usuarios[email] = u;
+            salvarUsuariosCadastrados(usuarios);
+            modal.hide();
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                modalEl.remove();
+                deslogarUsuario();
+                window.location.href = '/index.html';
+            }, { once: true });
+        });
+    }
+
+    // ── Toast simples para assinatura ─────────────────────────────────
+    function _sgToastAssinatura(mensagem, tipo) {
+        var id = 'sg-toast-assinatura-' + Date.now();
+        var bg = tipo === 'success' ? '#198754' : '#dc3545';
+        var html = '<div id="' + id + '" style="position:fixed;bottom:24px;right:24px;z-index:9999;background:' + bg + ';color:#fff;padding:14px 20px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:.9rem;max-width:320px;" role="alert">' +
+            '<i class="bi bi-check-circle-fill me-2"></i>' + mensagem +
+            '</div>';
+        document.body.insertAdjacentHTML('beforeend', html);
+        setTimeout(function () {
+            var el = document.getElementById(id);
+            if (el) el.remove();
+        }, 4000);
+    }
+
+        function inicializarCadastro() {
         var prestCard = document.getElementById('prestador-card-completo');
         var cliCard = document.getElementById('cliente-card-completo');
         if (!prestCard && !cliCard) return;
@@ -778,10 +1231,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 var senha = document.getElementById('senha-prestador').value;
                 var repita = document.getElementById('senha-prestador-repita').value;
                 if (senha !== repita) { alert('As senhas não coincidem.'); return; }
-                var usuarios = obterUsuariosCadastrados();
-                usuarios[email] = { nome: nome, senha: senha, tipo: 'prestador' };
-                salvarUsuariosCadastrados(usuarios);
-                window.location.href = 'login.html?cadastro=sucesso';
+
+                // ── Verifica se e-mail já existe ──────────────
+                var usuariosExist = obterUsuariosCadastrados();
+                if (usuariosExist[email]) {
+                    alert('Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.');
+                    return;
+                }
+
+                // ── Salva dados pendentes e redireciona para escolha de plano ─
+                try {
+                    sessionStorage.setItem('sgCadastroPrestadorPendente', JSON.stringify({
+                        nome: nome,
+                        email: email,
+                        senha: senha,
+                        dataCadastro: new Date().toISOString()
+                    }));
+                } catch (e) {
+                    console.warn('SG: sessionStorage indisponível', e);
+                }
+                window.location.href = '/paginasSite/planosContrato.html';
             });
         }
         if (formCli) {
@@ -838,6 +1307,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
             var cad = obterUsuariosCadastrados();
             if (cad[email] && cad[email].senha === senha) {
+                // ── Verifica estado do trial/assinatura do prestador ──
+                if (cad[email].tipo === 'prestador') {
+                    var statusTrial = SG_Trial.verificarStatus(email, cad[email]);
+                    if (statusTrial.bloqueado) {
+                        if (statusTrial.motivo === 'cancelado') {
+                            // Assinatura cancelada — mostra modal de reativação
+                            _sgMostrarModalReativacao(email, cad[email].nome, alertaErro);
+                            return;
+                        }
+                        // Trial expirado — mostra modal de contratação
+                        _sgMostrarModalTrialExpirado(email, cad[email].nome, alertaErro);
+                        return;
+                    }
+                }
                 salvarUsuarioLogado(email, cad[email].nome, cad[email].tipo);
                 redirecionarPorTipo(cad[email].tipo);
                 return;
@@ -8111,6 +8594,280 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarBotaoVoltar();
     inicializarPerfilCliente();
     inicializarHotsitePrestador();
+    // =========================================================
+    // MEU PLANO — Página prestadorMeuPlano.html
+    // =========================================================
+    function inicializarMeuPlano() {
+        var mainEl = document.getElementById('sg-meu-plano-main');
+        if (!mainEl) return;
+
+        var usu = obterUsuarioLogado();
+        if (!usu || usu.tipo !== 'prestador') {
+            window.location.href = '/paginasSite/login.html';
+            return;
+        }
+
+        var email   = usu.email;
+        var usuarios = obterUsuariosCadastrados();
+        var dadosUsu = usuarios[email] || {};
+        var st       = SG_Trial.verificarStatus(email, dadosUsu);
+        var planos   = SG_Trial.obterPlanos();
+
+        // ── Renderiza o cabeçalho do status atual ──────────────
+        var statusEl = document.getElementById('sg-plano-status-bloco');
+        if (statusEl) statusEl.innerHTML = _sgMeuPlanoStatusHtml(dadosUsu, st);
+
+        // ── Renderiza os cards de plano com ações ──────────────
+        var cardsEl = document.getElementById('sg-plano-cards');
+        if (cardsEl) cardsEl.innerHTML = _sgMeuPlanoCardsHtml(planos, dadosUsu, st);
+
+        // ── Delegação de eventos nos botões dos cards ──────────
+        if (cardsEl) {
+            cardsEl.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-acao-plano]');
+                if (!btn) return;
+                var acao    = btn.dataset.acaoPlano;
+                var planoId = btn.dataset.plano;
+                var planoNome = btn.dataset.nome;
+
+                if (acao === 'contratar' || acao === 'upgrade' || acao === 'downgrade') {
+                    _sgMeuPlanoConfirmarContratacao(email, planoId, planoNome, acao, dadosUsu, function () {
+                        // Recarrega a página após ação
+                        window.location.reload();
+                    });
+                } else if (acao === 'cancelar') {
+                    _sgMeuPlanoCancelar(email, dadosUsu);
+                }
+            });
+        }
+
+        // ── Botão usar trial gratuito (só aparece se ainda não iniciou trial) ──
+        var btnTrial = document.getElementById('sg-btn-usar-trial');
+        if (btnTrial) {
+            btnTrial.addEventListener('click', function () {
+                _sgMeuPlanoIniciarTrial(email, dadosUsu, function () {
+                    window.location.reload();
+                });
+            });
+        }
+    }
+
+    // ── Bloco de status atual ──────────────────────────────────
+    function _sgMeuPlanoStatusHtml(dadosUsu, st) {
+        var planoAtual = dadosUsu.assinatura && dadosUsu.assinatura.plano ? SG_Trial.obterPlano(dadosUsu.assinatura.plano) : null;
+        var contratoId = dadosUsu.assinatura && dadosUsu.assinatura.contratoId ? dadosUsu.assinatura.contratoId : null;
+        var dataInicio = dadosUsu.assinatura && dadosUsu.assinatura.dataInicio ? new Date(dadosUsu.assinatura.dataInicio).toLocaleDateString('pt-BR') : null;
+        var trialIni   = dadosUsu.trialInicio ? new Date(dadosUsu.trialInicio).toLocaleDateString('pt-BR') : null;
+
+        if (st.motivo === 'assinante' && planoAtual) {
+            return '<div style="background:linear-gradient(135deg,#d1fae5,#a7f3d0);border:2px solid #10b981;border-radius:12px;padding:20px 24px;margin-bottom:24px;">' +
+                '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+                '<div style="background:#10b981;color:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;"><i class="bi bi-check-circle-fill"></i></div>' +
+                '<div>' +
+                '<div style="font-weight:800;font-size:1.1rem;color:#065f46;">Plano Ativo: ' + _esc(planoAtual.nome) + '</div>' +
+                '<div style="font-size:.85rem;color:#047857;">' + _esc(planoAtual.preco) + (dataInicio ? ' · Desde ' + dataInicio : '') + '</div>' +
+                (contratoId ? '<div style="font-size:.78rem;color:#6b7280;margin-top:2px;">Contrato: <strong>' + _esc(contratoId) + '</strong></div>' : '') +
+                '</div></div></div>';
+        }
+
+        if (st.motivo === 'trial' || st.motivo === 'trial_gratuito') {
+            var diasRestantes = st.diasRestantes;
+            var cor = diasRestantes <= 5 ? '#dc3545' : '#b8870c';
+            return '<div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #FFC300;border-radius:12px;padding:20px 24px;margin-bottom:24px;">' +
+                '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+                '<div style="background:#FFC300;color:#000;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;"><i class="bi bi-clock-history"></i></div>' +
+                '<div>' +
+                '<div style="font-weight:800;font-size:1.1rem;color:#92400e;">Período de Testes Gratuito (30 dias)</div>' +
+                '<div style="font-size:.88rem;color:' + cor + ';font-weight:700;">' +
+                (diasRestantes <= 0 ? 'Encerrado' : diasRestantes === 1 ? 'Encerra hoje!' : 'Faltam <strong>' + diasRestantes + ' dias</strong>') +
+                '</div>' +
+                (trialIni ? '<div style="font-size:.78rem;color:#6b7280;margin-top:2px;">Início do trial: ' + trialIni + '</div>' : '') +
+                '<div style="font-size:.82rem;color:#555;margin-top:4px;">Acesso equivalente ao <strong>Plano Básico</strong>. Contrate um plano para continuar após o vencimento.</div>' +
+                '</div></div></div>';
+        }
+
+        if (st.motivo === 'cancelado') {
+            return '<div style="background:#fee2e2;border:2px solid #dc3545;border-radius:12px;padding:20px 24px;margin-bottom:24px;">' +
+                '<div style="display:flex;align-items:center;gap:12px;">' +
+                '<div style="background:#dc3545;color:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;"><i class="bi bi-x-circle-fill"></i></div>' +
+                '<div>' +
+                '<div style="font-weight:800;font-size:1.1rem;color:#991b1b;">Assinatura Cancelada</div>' +
+                '<div style="font-size:.85rem;color:#b91c1c;">Seu acesso está suspenso. Contrate um plano para reativar.</div>' +
+                '</div></div></div>';
+        }
+
+        if (st.motivo === 'trial_expirado' || st.bloqueado) {
+            return '<div style="background:#fee2e2;border:2px solid #dc3545;border-radius:12px;padding:20px 24px;margin-bottom:24px;">' +
+                '<div style="display:flex;align-items:center;gap:12px;">' +
+                '<div style="background:#dc3545;color:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;"><i class="bi bi-hourglass-bottom"></i></div>' +
+                '<div>' +
+                '<div style="font-weight:800;font-size:1.1rem;color:#991b1b;">Período de Testes Encerrado</div>' +
+                '<div style="font-size:.85rem;color:#b91c1c;">Seus 30 dias gratuitos foram utilizados. Contrate um plano para continuar.</div>' +
+                '</div></div></div>';
+        }
+
+        return '';
+    }
+
+    // ── Cards de plano com ações contextuais ─────────────────────────
+    function _sgMeuPlanoCardsHtml(planos, dadosUsu, st) {
+        var planoAtualId = dadosUsu.assinatura && dadosUsu.assinatura.ativa ? dadosUsu.assinatura.plano : null;
+        var indices      = { basico: 0, profissional: 1, premium: 2 };
+        var idxAtual     = planoAtualId !== null ? (indices[planoAtualId] !== undefined ? indices[planoAtualId] : -1) : -1;
+
+        return planos.map(function (p, i) {
+            var isAtual  = p.id === planoAtualId;
+            var borda    = isAtual ? '3px solid #10b981' : p.destaque ? '2px solid #FFC300' : '1.5px solid #dee2e6';
+            var bg       = isAtual ? '#f0fdf4' : p.destaque ? '#fffbeb' : '#fff';
+            var badgeAtual = isAtual ? '<span style="background:#10b981;color:#fff;font-size:.68rem;font-weight:700;padding:2px 10px;border-radius:20px;margin-bottom:6px;display:inline-block;">✓ Plano Atual</span><br>' : '';
+            var badgePop   = (!isAtual && p.destaque) ? '<span style="background:#FFC300;color:#000;font-size:.68rem;font-weight:700;padding:2px 10px;border-radius:20px;margin-bottom:6px;display:inline-block;">★ Mais Popular</span><br>' : '';
+
+            // Define o botão de ação contextual
+            var btnHtml = '';
+            if (isAtual) {
+                // Botão cancelar no plano atual
+                btnHtml = '<button type="button" class="btn btn-outline-danger btn-sm w-100 mt-2" data-acao-plano="cancelar" data-plano="' + p.id + '" data-nome="' + _esc(p.nome) + '">' +
+                    '<i class="bi bi-x-circle me-1"></i>Cancelar Assinatura</button>';
+            } else if (!planoAtualId) {
+                // Sem plano ativo — botão contratar
+                btnHtml = '<button type="button" class="btn btn-warning fw-bold btn-sm w-100" data-acao-plano="contratar" data-plano="' + p.id + '" data-nome="' + _esc(p.nome) + '">' +
+                    '<i class="bi bi-check-circle me-1"></i>Contratar</button>';
+            } else if (i > idxAtual) {
+                // Upgrade
+                btnHtml = '<button type="button" class="btn btn-success btn-sm w-100" data-acao-plano="upgrade" data-plano="' + p.id + '" data-nome="' + _esc(p.nome) + '">' +
+                    '<i class="bi bi-arrow-up-circle me-1"></i>Fazer Upgrade</button>';
+            } else {
+                // Downgrade
+                btnHtml = '<button type="button" class="btn btn-outline-secondary btn-sm w-100" data-acao-plano="downgrade" data-plano="' + p.id + '" data-nome="' + _esc(p.nome) + '">' +
+                    '<i class="bi bi-arrow-down-circle me-1"></i>Fazer Downgrade</button>';
+            }
+
+            return '<div style="border:' + borda + ';background:' + bg + ';border-radius:10px;padding:18px 16px;flex:1;min-width:220px;">' +
+                badgeAtual + badgePop +
+                '<div style="font-weight:800;font-size:.95rem;color:#1a1a1a;">' + _esc(p.nome) + '</div>' +
+                '<div style="font-size:1.3rem;font-weight:900;color:' + p.cor + ';margin:4px 0;">' + _esc(p.preco) + '</div>' +
+                '<div style="font-size:.82rem;color:#555;margin-bottom:12px;">' + _esc(p.descricao) + '</div>' +
+                btnHtml +
+                '</div>';
+        }).join('');
+    }
+
+    // ── Confirmar contratação / upgrade / downgrade ───────────────────
+    function _sgMeuPlanoConfirmarContratacao(email, planoId, planoNome, acao, dadosUsu, callback) {
+        var precos   = { basico: 'R$ 49,90/mês', profissional: 'R$ 89,90/mês', premium: 'R$ 139,90/mês' };
+        var acaoLabels = { contratar: 'Contratar', upgrade: 'Fazer Upgrade para', downgrade: 'Fazer Downgrade para' };
+        var label    = acaoLabels[acao] || 'Contratar';
+
+        var modalId  = 'sg-meu-plano-modal-conf';
+        var exist    = document.getElementById(modalId);
+        if (exist) exist.remove();
+
+        var html = '<div class="modal fade" id="' + modalId + '" tabindex="-1" aria-modal="true" role="dialog">' +
+            '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-content">' +
+            '<div class="modal-header" style="background:#146ADB;color:#fff;">' +
+            '<h5 class="modal-title"><i class="bi bi-credit-card me-2"></i>' + label + ' ' + _esc(planoNome) + '</h5>' +
+            '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>' +
+            '</div>' +
+            '<div class="modal-body">' +
+            '<p>Você está prestes a <strong>' + label.toLowerCase() + ' ' + _esc(planoNome) + '</strong> por <strong>' + (precos[planoId] || '') + '</strong>.</p>' +
+            '<p class="text-muted small">O plano entra em vigor imediatamente. Ao confirmar, você aceita os <a href="/paginasSite/planosContrato.html" target="_blank">Termos de Contrato</a>.</p>' +
+            '</div>' +
+            '<div class="modal-footer">' +
+            '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>' +
+            '<button type="button" class="btn btn-warning fw-bold" id="sg-meu-plano-btn-ok"><i class="bi bi-check-circle me-1"></i>Confirmar</button>' +
+            '</div></div></div></div>';
+
+        document.body.insertAdjacentHTML('beforeend', html);
+        var modalEl = document.getElementById(modalId);
+        var modal   = new bootstrap.Modal(modalEl);
+        modal.show();
+
+        document.getElementById('sg-meu-plano-btn-ok').addEventListener('click', function () {
+            var usuarios   = obterUsuariosCadastrados();
+            var u          = usuarios[email] || {};
+            var contratoId = (u.assinatura && u.assinatura.contratoId) ? u.assinatura.contratoId : ('CONT-' + Date.now());
+            u.assinatura   = {
+                ativa: true,
+                cancelada: false,
+                plano: planoId,
+                planoAnterior: planoId,
+                contratoId: contratoId,
+                dataInicio: new Date().toISOString()
+            };
+            usuarios[email] = u;
+            salvarUsuariosCadastrados(usuarios);
+            modal.hide();
+            modalEl.addEventListener('hidden.bs.modal', function () { modalEl.remove(); }, { once: true });
+            if (typeof callback === 'function') callback();
+        });
+    }
+
+    // ── Cancelar assinatura com confirmação ───────────────────────────
+    function _sgMeuPlanoCancelar(email, dadosUsu) {
+        var modalId = 'sg-meu-plano-modal-cancelar';
+        var exist   = document.getElementById(modalId);
+        if (exist) exist.remove();
+
+        var html = '<div class="modal fade" id="' + modalId + '" tabindex="-1" aria-modal="true" role="dialog">' +
+            '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-content">' +
+            '<div class="modal-header" style="background:#dc3545;color:#fff;">' +
+            '<h5 class="modal-title"><i class="bi bi-x-octagon me-2"></i>Cancelar Assinatura</h5>' +
+            '</div>' +
+            '<div class="modal-body">' +
+            '<div style="background:#fff3cd;border-left:4px solid #dc3545;padding:12px 14px;border-radius:0 8px 8px 0;margin-bottom:14px;">' +
+            '<p style="margin:0;font-size:.88rem;"><i class="bi bi-exclamation-triangle-fill me-1"></i>' +
+            'Ao cancelar, <strong>seu login ficará bloqueado imediatamente</strong>. Para voltar a utilizar o ServGo!, será necessário reativar o plano anterior ou contratar um novo plano.</p>' +
+            '</div>' +
+            '<p style="font-size:.88rem;color:#555;">Tem certeza que deseja cancelar sua assinatura?</p>' +
+            '</div>' +
+            '<div class="modal-footer">' +
+            '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-arrow-left me-1"></i>Manter Assinatura</button>' +
+            '<button type="button" class="btn btn-danger fw-bold" id="sg-meu-plano-confirmar-cancelar"><i class="bi bi-x-circle me-1"></i>Confirmar Cancelamento</button>' +
+            '</div></div></div></div>';
+
+        document.body.insertAdjacentHTML('beforeend', html);
+        var modalEl = document.getElementById(modalId);
+        var modal   = new bootstrap.Modal(modalEl, { backdrop: 'static' });
+        modal.show();
+
+        document.getElementById('sg-meu-plano-confirmar-cancelar').addEventListener('click', function () {
+            var usuarios   = obterUsuariosCadastrados();
+            var u          = usuarios[email] || {};
+            var planoAnt   = u.assinatura && u.assinatura.plano ? u.assinatura.plano : null;
+            u.assinatura   = {
+                ativa: false,
+                cancelada: true,
+                planoAnterior: planoAnt,
+                contratoId: u.assinatura && u.assinatura.contratoId ? u.assinatura.contratoId : null,
+                dataCancelamento: new Date().toISOString()
+            };
+            usuarios[email] = u;
+            salvarUsuariosCadastrados(usuarios);
+            deslogarUsuario();
+            modal.hide();
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                modalEl.remove();
+                window.location.href = '/index.html';
+            }, { once: true });
+        });
+    }
+
+    // ── Iniciar trial gratuito a partir da página Meu Plano ──────────
+    function _sgMeuPlanoIniciarTrial(email, dadosUsu, callback) {
+        var usuarios = obterUsuariosCadastrados();
+        var u        = usuarios[email] || {};
+        if (!u.trialInicio) {
+            u.trialInicio = new Date().toISOString();
+            usuarios[email] = u;
+            salvarUsuariosCadastrados(usuarios);
+        }
+        if (typeof callback === 'function') callback();
+    }
+
+        inicializarMeuPlano();
+    inicializarBotoesAssinatura();
     inicializarAlterarSenhaGeral();
     inicializarSidebarResponsiva();
     inicializarAgendarServicos();
@@ -8126,6 +8883,7 @@ document.addEventListener('DOMContentLoaded', function () {
     inicializarDadosAdm();          // Sprint 3 — configuração de dados admin no dadosAdm.html
     inicializarAdminGerenciamento(); // Sprint 2
     inicializarFaqSite();            // Sprint 3
+    inicializarFaqEnviarDuvida();    // Sprint 3 — envio de dúvida do FAQ para o suporte admin
 
     // =========================================================
     // SPRINT 4 — LOGIN ADMINISTRATIVO SEGURO
@@ -9343,6 +10101,105 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // =========================================================
+    // SPRINT 3 — ENVIO DE DÚVIDA DO FAQ PARA O SUPORTE ADMIN
+    // (faqSite.html)
+    //
+    // Funcionalidades:
+    //  • Captura o textarea#mensagem da seção "Não encontrou sua dúvida?"
+    //  • Valida preenchimento mínimo antes de salvar
+    //  • Cria ticket com status 'aberto' na chave sgTickets
+    //    (mesma usada por inicializarFormContato e adminGerenciamento)
+    //  • Preenche nome/e-mail automaticamente se o usuário estiver logado
+    //  • Exibe feedback inline de sucesso com número do chamado
+    //  • Limpa o campo após envio bem-sucedido
+    // =========================================================
+    function inicializarFaqEnviarDuvida() {
+        var btn      = document.getElementById('faq-btn-enviar-duvida');
+        var textarea = document.getElementById('mensagem');
+        if (!btn || !textarea) return;
+
+        var feedbackEl = document.getElementById('faq-enviar-feedback');
+
+        function _mostrarFeedback(tipo, html) {
+            if (!feedbackEl) return;
+            var cls = tipo === 'sucesso' ? 'alert-success' :
+                      tipo === 'erro'    ? 'alert-danger'  : 'alert-warning';
+            feedbackEl.style.display = 'block';
+            feedbackEl.innerHTML = '<div class="alert ' + cls + ' py-2 mb-0">' + html + '</div>';
+        }
+
+        function _esconderFeedback() {
+            if (feedbackEl) { feedbackEl.style.display = 'none'; feedbackEl.innerHTML = ''; }
+        }
+
+        function _setBtnEstado(carregando) {
+            btn.disabled = carregando;
+            btn.innerHTML = carregando
+                ? '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Enviando…'
+                : '<i class="bi bi-send me-1"></i>Enviar';
+        }
+
+        btn.addEventListener('click', function () {
+            _esconderFeedback();
+
+            var texto = textarea.value.trim();
+
+            if (!texto) {
+                _mostrarFeedback('erro',
+                    '<i class="bi bi-exclamation-triangle me-2"></i>' +
+                    'Por favor, escreva sua dúvida antes de enviar.');
+                textarea.focus();
+                return;
+            }
+            if (texto.length < 10) {
+                _mostrarFeedback('erro',
+                    '<i class="bi bi-exclamation-triangle me-2"></i>' +
+                    'Sua mensagem é muito curta. Descreva melhor sua dúvida.');
+                textarea.focus();
+                return;
+            }
+
+            _setBtnEstado(true);
+
+            var usu    = obterUsuarioLogado();
+            var nome   = usu ? (usu.nome  || usu.email || 'Visitante') : 'Visitante';
+            var email  = usu ? (usu.email || 'nao-informado@faq.servgo') : 'nao-informado@faq.servgo';
+            var tipo   = usu ? (usu.tipo  || 'visitante') : 'visitante';
+
+            var ticket = {
+                id:               _gerarId('ticket'),
+                assunto:          'Dúvida via FAQ',
+                mensagem:         texto,
+                nome:             nome,
+                email:            email,
+                origem:           'faq',
+                tipoUsuario:      tipo,
+                dataAbertura:     new Date().toISOString(),
+                status:           'aberto',
+                resposta:         '',
+                dataResposta:     '',
+                adminResponsavel: '',
+                modoEnvio:        sgObterModo(),
+                anexo:            null
+            };
+
+            var tickets = sgObterTickets();
+            tickets.push(ticket);
+            sgSalvarTickets(tickets);
+
+            setTimeout(function () {
+                _setBtnEstado(false);
+                _mostrarFeedback('sucesso',
+                    '<div style="font-weight:700;margin-bottom:4px;">' +
+                    '<i class="bi bi-check-circle-fill me-2"></i>Dúvida enviada com sucesso!</div>' +
+                    '<div style="font-size:.88rem;">Chamado registrado: <strong>#' + ticket.id + '</strong>. ' +
+                    'Nossa equipe de suporte irá analisar e responder em breve.</div>');
+                textarea.value = '';
+            }, 500);
+        });
+    }
+
+    // =========================================================
     // SPRINT 2 — GERENCIAMENTO ADMINISTRATIVO
     // (adminGerenciamento.html)
     // Oferece: gestão de usuários, prestadores, notícias,
@@ -9775,6 +10632,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             var hotsiteStore = dbGet('hotsitePrestadorDados') || {};
             var avsStore     = dbGet('avaliacoesRecebidasPrestador') || {};
+            var todosUsuarios = obterUsuariosCadastrados();
 
             var lista = Object.keys(hotsiteStore).map(function(email){
                 var h    = hotsiteStore[email] || {};
@@ -9788,12 +10646,29 @@ document.addEventListener('DOMContentLoaded', function () {
                 var estStr = p.media !== '—'
                     ? '<span style="color:#FFC300;">★</span> ' + p.media + ' <span style="color:#888;font-size:.78rem;">(' + p.total + ')</span>'
                     : '<span style="color:#aaa;">Sem avaliações</span>';
+                var dadosUsu = todosUsuarios[p.email] || {};
+                var st = dadosUsu.tipo === 'prestador' ? SG_Trial.verificarStatus(p.email, dadosUsu) : { bloqueado: false, diasRestantes: 0 };
+                var statusHtml;
+                if (dadosUsu.assinatura && dadosUsu.assinatura.ativa) {
+                    statusHtml = '<span class="adm-badge-status ativo">Assinante</span><br><small style="color:#888;font-size:.7rem;">' + _esc(dadosUsu.assinatura.plano || 'Plano') + '</small>';
+                } else if (dadosUsu.tipo === 'prestador' && dadosUsu.trialInicio) {
+                    statusHtml = st.bloqueado
+                        ? '<span class="adm-badge-status inativo">Trial Expirado</span>'
+                        : '<span class="adm-badge-status em_andamento">Trial</span><br><small style="color:#888;font-size:.7rem;">' + st.diasRestantes + ' dia(s)</small>';
+                } else if (dadosUsu.assinatura && dadosUsu.assinatura.cancelada) {
+                    statusHtml = '<span class="adm-badge-status inativo">Cancelado</span>';
+                } else {
+                    statusHtml = '<span class="adm-badge-status rascunho">Seed</span>';
+                }
+                var contratoHtml = (dadosUsu.assinatura && dadosUsu.assinatura.contratoId)
+                    ? '<br><small style="color:#888;font-size:.7rem;">Contrato #' + dadosUsu.assinatura.contratoId + '</small>' : '';
                 return '<tr>' +
                     '<td style="font-weight:600;">' + _esc(p.nome) + '</td>' +
                     '<td><span class="adm-badge-status prestador">' + _esc(p.categoria) + '</span></td>' +
                     '<td>' + _esc(p.cidade) + '</td>' +
                     '<td style="text-align:center;">' + p.ags + '</td>' +
                     '<td>' + estStr + '</td>' +
+                    '<td>' + statusHtml + contratoHtml + '</td>' +
                     '<td><div class="adm-acoes">' +
                         '<a class="adm-btn-acao ver" href="/paginasPrestador/prestadorHotsite.html?email=' + encodeURIComponent(p.email) + '" target="_blank">' +
                             '<i class="bi bi-box-arrow-up-right"></i> HotSite' +
@@ -9805,13 +10680,47 @@ document.addEventListener('DOMContentLoaded', function () {
                 '</tr>';
             }).join('');
 
-            var tabHtml = lista.length === 0
-                ? '<div class="adm-vazio"><i class="bi bi-briefcase"></i>Nenhum prestador com HotSite cadastrado.</div>'
-                : '<table class="adm-tabela"><thead><tr><th>Nome</th><th>Categoria</th><th>Cidade</th><th style="text-align:center;">Agendamentos</th><th>Avaliações</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table>';
+            // Prestadores em trial sem hotsite publicado
+            var emailsComHotsite = Object.keys(hotsiteStore);
+            var prestSemHotsite = Object.keys(todosUsuarios).filter(function(em){
+                return todosUsuarios[em].tipo === 'prestador' && emailsComHotsite.indexOf(em) === -1;
+            });
+            var rowsSemHotsite = prestSemHotsite.map(function(em){
+                var u  = todosUsuarios[em];
+                var st = SG_Trial.verificarStatus(em, u);
+                var statusHtml;
+                if (u.assinatura && u.assinatura.ativa) {
+                    statusHtml = '<span class="adm-badge-status ativo">Assinante</span>';
+                } else if (st.bloqueado) {
+                    statusHtml = '<span class="adm-badge-status inativo">Trial Expirado</span>';
+                } else if (u.assinatura && u.assinatura.cancelada) {
+                    statusHtml = '<span class="adm-badge-status inativo">Cancelado</span>';
+                } else {
+                    statusHtml = '<span class="adm-badge-status em_andamento">Trial</span><br><small style="color:#888;font-size:.7rem;">' + st.diasRestantes + ' dia(s)</small>';
+                }
+                return '<tr style="background:#fffbeb;">' +
+                    '<td style="font-weight:600;">' + _esc(u.nome||em) + ' <small style="color:#aaa;">(sem hotsite)</small></td>' +
+                    '<td>—</td><td>—</td><td style="text-align:center;">0</td><td>—</td>' +
+                    '<td>' + statusHtml + '</td>' +
+                    '<td><div class="adm-acoes">' +
+                        '<button class="adm-btn-acao excluir" data-email="' + _esc(em) + '" data-nome="' + _esc(u.nome||em) + '" data-acao="remover-usuario">' +
+                            '<i class="bi bi-trash"></i> Remover' +
+                        '</button>' +
+                    '</div></td>' +
+                '</tr>';
+            }).join('');
+
+            var totalPrest = lista.length + prestSemHotsite.length;
+            var badgeEl = document.getElementById('adm-badge-prestadores');
+            if (badgeEl) { badgeEl.textContent = totalPrest; badgeEl.style.display = 'inline-block'; }
+
+            var tabHtml = totalPrest === 0
+                ? '<div class="adm-vazio"><i class="bi bi-briefcase"></i>Nenhum prestador cadastrado.</div>'
+                : '<table class="adm-tabela"><thead><tr><th>Nome</th><th>Categoria</th><th>Cidade</th><th style="text-align:center;">Agendamentos</th><th>Avaliações</th><th>Status / Contrato</th><th>Ações</th></tr></thead><tbody>' + rows + rowsSemHotsite + '</tbody></table>';
 
             sec.innerHTML =
                 '<div class="adm-secao-titulo"><i class="bi bi-briefcase-fill" style="color:#FFC300;"></i>Gerenciar Prestadores</div>' +
-                '<p class="adm-secao-subtitulo">' + lista.length + ' prestador' + (lista.length !== 1 ? 'es' : '') + ' com HotSite publicado na plataforma.</p>' +
+                '<p class="adm-secao-subtitulo">' + lista.length + ' com HotSite publicado · ' + prestSemHotsite.length + ' em trial sem hotsite.</p>' +
                 '<div class="adm-card"><div id="adm-prest-corpo">' + tabHtml + '</div></div>';
 
             sec.querySelectorAll('[data-acao="remover-hotsite"]').forEach(function(btn){

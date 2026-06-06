@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ServGo! - Administração do Hot Site</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/estiloServGo.css">
+</head>
+
+<body>
+
+    <header>
+
+            <!--TOPO DA PÁGINA-->
+
+        <!--Trabalha sobre os Menus (links) — estrutura idêntica ao index.html-->
+
+        <nav class="navbar navbar-expand-lg">
+
+            <div class="container menu"> <!--Altera o conteúdo dos Menus (links)-->
+
+                <!--Logo — clicar volta para a página do prestador-->
+                <a class="navbar-brand" href="/paginasPrestador/indexPrestador.html">
+                    <span class="serv-part">Serv</span><span class="go-part">Go!</span>
+                </a>
+
+                <!--Botão Sanduíche — visível apenas em mobile, expande os itens do menu como dropdown-->
+                <div class="d-flex order-lg-3">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPrestador"
+                        aria-controls="navbarPrestador" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                </div>
+
+                <!--Área colapsável da navbar:
+                    - Desktop: exibe apenas o dropdown "Meu Perfil" à direita
+                    - Mobile: ao clicar no sanduíche, exibe os itens da sidebar como dropdown -->
+                <div class="collapse navbar-collapse" id="navbarPrestador">
+
+                    <!--Itens da sidebar — visíveis somente no collapse mobile (d-lg-none)-->
+                    <ul class="navbar-nav mx-auto d-lg-none">
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorAreaExclusiva.html"><i class="bi bi-house-door me-2"></i>Área Exclusiva</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorServicosAgendados.html"><i class="bi bi-calendar-check me-2"></i>Meus Agendamentos</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorConfigurarAgenda.html"><i class="bi bi-calendar3 me-2"></i>Gerenciar Agenda</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorHotsiteAdm.html"><i class="bi bi-globe me-2"></i>Meu Hot Site</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorAvaliacoesFeitas.html"><i class="bi bi-star me-2"></i>Avaliações Feitas</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorAvaliacoesRecebidas.html"><i class="bi bi-star-half me-2"></i>Avaliações Recebidas</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/dashboardPrestador.html"><i class="bi bi-grid-1x2 me-2"></i>Dashboard</a></li>
+                        <li class="nav-item"><a class="nav-link text-dark fw-bold" href="/paginasPrestador/prestadorContato.html"><i class="bi bi-chat-text me-2"></i>Suporte/Contato</a></li>
+                        <li class="nav-item border-top mt-2 pt-2"><a class="nav-link fw-bold" href="/index.html" style="color: rgb(220, 53, 69);"><i class="bi bi-box-arrow-right me-2"></i>Sair</a></li>
+                    </ul>
+
+                    <!--Dropdown "Meu Perfil" — alinhado à direita, visível em desktop e no collapse mobile-->
+                    <ul class="navbar-nav ms-auto align-items-lg-center">
+                        <li class="nav-item">
+                            <span class="navbar-logada-info" style="position: relative; display: inline-flex; flex-direction: column; align-items: center; cursor: default;">
+
+                                <a id="prest-perfil-toggle" href="#" style="font-size: 0.72rem; color: var(--azul-principal,#146ADB); text-decoration: underline; cursor: pointer; white-space: nowrap;">
+                                    <i class="bi bi-chevron-down" id="prest-chevron" style="font-size:.65rem;"></i> Meu Perfil
+                                </a>
+
+                                <!-- Dropdown Menu -->
+                                <div id="prest-perfil-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); right: 0; min-width: 230px; background: var(--fundo-card,#fff); border: 1.5px solid var(--borda,#dee2e6); border-radius: 8px; box-shadow: rgba(0, 0, 0, 0.13) 0px 4px 18px; z-index: 1055; padding: 6px 0px;">
+                                    <a href="/paginasPrestador/prestadorAreaExclusiva.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-house-door me-2" style="color:#146ADB;"></i>Área Exclusiva
+                                    </a>
+                                    <a href="/paginasPrestador/prestadorServicosAgendados.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-calendar-check me-2" style="color:#146ADB;"></i>Meus Agendamentos
+                                    </a>
+                                    <a href="/paginasPrestador/prestadorConfigurarAgenda.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-calendar3 me-2" style="color:#146ADB;"></i>Gerenciar Agenda
+                                    </a>
+                                    <a href="/paginasPrestador/prestadorHotsiteAdm.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-globe me-2" style="color:#146ADB;"></i>Meu Hot Site
+                                    </a>
+                                    <a href="/paginasPrestador/prestadorAvaliacoesFeitas.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-star me-2" style="color:#146ADB;"></i>Avaliações Feitas
+                                    </a>
+                                    <a href="/paginasPrestador/prestadorAvaliacoesRecebidas.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-star-half me-2" style="color:#146ADB;"></i>Avaliações Recebidas
+                                    </a>
+                                    <a href="/paginasPrestador/dashboardPrestador.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-grid-1x2 me-2" style="color:#146ADB;"></i>Dashboard
+                                    </a>
+                                    <a href="/paginasPrestador/prestadorContato.html" style="display: block; padding: 7px 16px; color: var(--texto-principal,#212529); text-decoration: none; font-size: 0.88rem;">
+                                        <i class="bi bi-chat-text me-2" style="color:#146ADB;"></i>Suporte/Contato
+                                    </a>
+                                    <div style="border-top: 1px solid var(--borda,#dee2e6); margin: 6px 0px;"></div>
+                                    <a href="/index.html" style="display: block; padding: 7px 16px; color: rgb(220, 53, 69); text-decoration: none; font-size: 0.88rem; font-weight: 600;">
+                                        <i class="bi bi-box-arrow-right me-2"></i>Sair
+                                    </a>
+                                </div>
+                            </span>
+                        </li>
+                    </ul>
+
+                </div>
+
+            </div>
+        </nav>
+        </header>
+        <!--FIM DO CABEÇALHO DA PÁGINA-->
+
+    <!-- WRAPPER SIDEBAR + CONTEÚDO -->
+    <div class="prest-wrapper">
+
+        <!-- SIDEBAR -->
+                <nav class="prest-sidebar">
+            <ul>
+                <li><a href="/paginasPrestador/prestadorAreaExclusiva.html"><i class="bi bi-house-door"></i> Área Exclusiva</a></li>
+                <li><a href="/paginasPrestador/prestadorServicosAgendados.html"><i class="bi bi-calendar-check"></i> Meus Agendamentos</a></li>
+                <li><a href="/paginasPrestador/prestadorConfigurarAgenda.html"><i class="bi bi-calendar3"></i> Gerenciar Agenda</a></li>
+                <li><a class="prest-nav-ativo" href="/paginasPrestador/prestadorHotsiteAdm.html"><i class="bi bi-globe"></i> Meu Hot Site</a></li>
+                <li><a href="/paginasPrestador/prestadorAvaliacoesFeitas.html"><i class="bi bi-star"></i> Avaliações Feitas</a></li>
+                <li><a href="/paginasPrestador/prestadorAvaliacoesRecebidas.html"><i class="bi bi-star-half"></i> Avaliações Recebidas</a></li>
+                <li><a href="/paginasPrestador/dashboardPrestador.html"><i class="bi bi-grid-1x2"></i> Dashboard</a></li>
+                <li><a href="/paginasPrestador/prestadorContato.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+
+                <!-- Aviso de trial (exibido dinamicamente via JS quando faltam ≤5 dias) -->
+                <li id="sg-trial-aviso-sidebar" style="display:none;list-style:none;padding:0;"></li>
+
+                <!-- Botão Contratar Plano (visível quando não é assinante) -->
+                <li style="list-style:none;padding:6px 10px;">
+                    <a href="#" id="sg-btn-contratar-plano"
+                       style="display:block;background:#198754;color:#fff;border-radius:7px;padding:10px 14px;font-weight:700;font-size:.88rem;text-decoration:none;text-align:center;transition:background .15s;">
+                        <i class="bi bi-credit-card-fill me-1"></i> Contratar Plano de Assinatura
+                    </a>
+                </li>
+
+                <!-- Bloco Cancelar + Alterar (visível quando é assinante) -->
+                <li id="sg-wrap-cancelar-plano" style="display:none;list-style:none;padding:0 10px;">
+                    <a href="#" id="sg-btn-cancelar-assinatura"
+                       style="display:block;background:#dc3545;color:#fff;border-radius:7px;padding:10px 14px;font-weight:700;font-size:.88rem;text-decoration:none;text-align:center;margin-bottom:6px;transition:background .15s;">
+                        <i class="bi bi-x-circle-fill me-1"></i> Cancelar Assinatura
+                    </a>
+                    <a href="#" id="sg-btn-alterar-plano"
+                       style="display:block;background:#6f42c1;color:#fff;border-radius:7px;padding:9px 14px;font-weight:600;font-size:.84rem;text-decoration:none;text-align:center;transition:background .15s;">
+                        <i class="bi bi-arrow-repeat me-1"></i> Alterar Plano
+                    </a>
+                </li>
+
+                <li class="sidebar-sair"><a href="/index.html" id="sidebar-btn-sair"><i class="bi bi-box-arrow-right"></i> Sair</a></li>
+            </ul>
+        </nav>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="prest-main">
+            <div class="container">
+            <h1 class="hotsiteadm-titulo-pagina">Administração do Hot Site — Serviços</h1>
+
+            <div class="hotsiteadm-layout">
+
+                <!-- PAINEL DE CONTROLES -->
+                <aside class="hotsiteadm-controles">
+                    <h3 style="color:#FFC300;"><i class="bi bi-sliders me-2"></i>Controles do Hot Site</h3>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-nome">Nome do Prestador</label>
+                        <input class="hotsiteadm-input" type="text" id="adm-nome" value="" readonly>
+                        <small style="color:var(--texto-muted); font-size:0.78rem;">Preenchido automaticamente a partir do seu cadastro.</small>
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-cnpj">CPF/CNPJ</label>
+                        <input class="hotsiteadm-input" type="text" id="adm-cnpj" value="" maxlength="18" placeholder="000.000.000-00 ou 00.000.000/0000-00">
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-categoria">Categoria Principal</label>
+                        <select class="hotsiteadm-select" id="adm-categoria">
+                            <option value="" selected>Selecione...</option>
+                            <option value="Manutenção Predial">Manutenção Predial</option>
+                            <option value="Saúde">Saúde</option>
+                            <option value="Beleza">Beleza</option>
+                            <option value="TI">TI</option>
+                            <option value="Consultoria">Consultoria</option>
+                            <option value="Design">Design</option>
+                            <option value="Logística">Logística</option>
+                            <option value="Segurança">Segurança</option>
+                            <option value="Lazer">Lazer</option>
+                            <option value="Alimentação">Alimentação</option>
+                            <option value="Construção">Construção</option>
+                        </select>
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-cidade">Atende em</label>
+                        <input class="hotsiteadm-input" type="text" id="adm-cidade" value="" placeholder="Cidade(s) de atendimento">
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-descricao">Descrição dos Serviços</label>
+                        <textarea class="caixa-mensagem-fixa" id="adm-descricao" rows="6" maxlength="2000" style="resize: none; overflow-y: auto; height: 169px;"></textarea>
+                        <small id="adm-descricao-contador" style="display:block; text-align:right; font-size:0.78rem; color:var(--texto-muted); margin-top:-8px; margin-bottom:8px;">0 / 2000</small>
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-endereco">Endereço do Prestador</label>
+                        <input class="hotsiteadm-input" type="text" id="adm-endereco" value="" placeholder="Rua, Avenida, Travessa…">
+                    </div>
+
+                    <div class="hotsiteadm-grupo" style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <div style="flex:0 0 90px;">
+                            <label for="adm-numero">Número</label>
+                            <input class="hotsiteadm-input" type="text" id="adm-numero" value="" placeholder="Nº" maxlength="10" style="margin-bottom:0;">
+                        </div>
+                        <div style="flex:1 1 120px;">
+                            <label for="adm-bairro">Bairro</label>
+                            <input class="hotsiteadm-input" type="text" id="adm-bairro" value="" placeholder="Bairro" style="margin-bottom:0;">
+                        </div>
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-complemento">Complemento</label>
+                        <input class="hotsiteadm-input" type="text" id="adm-complemento" value="" placeholder="Apto, Sala, Bloco… (opcional)">
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-cep">CEP</label>
+                        <input class="hotsiteadm-input" type="text" id="adm-cep" value="" maxlength="9" placeholder="00000-000">
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-email">Email de Contato</label>
+                        <input class="hotsiteadm-input" type="email" id="adm-email" value="" readonly>
+                        <small style="color:var(--texto-muted); font-size:0.78rem;">Preenchido automaticamente a partir do seu cadastro.</small>
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-tel">Telefone</label>
+                        <input class="hotsiteadm-input" type="text" id="adm-tel" value="" maxlength="15" placeholder="(00) 00000-0000">
+                    </div>
+
+                    <div class="hotsiteadm-grupo">
+                        <label for="adm-galeria">Foto de Perfil (Avatar)</label>
+                        <input type="file" id="adm-galeria" accept="image/*" class="hotsiteadm-input" style="padding: 5px;">
+                        <small style="color:var(--texto-muted); font-size:0.78rem;">Ou clique diretamente no avatar ao lado para trocar a foto.</small>
+                    </div>
+
+                    <div class="hotsiteadm-botoes" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <a href="/paginasPrestador/prestadorAreaExclusiva.html" id="btn-cancelar-hotsite" class="conf-btn-salvar" style="background-color:#dc3545; color:#fff; border:none; border-radius:4px; font-weight:bold; padding:10px 15px; cursor:pointer; flex:1; text-align:center; text-decoration:none; display:inline-block;"><i class="bi bi-x-circle me-1"></i> Cancelar</a>
+                        <button type="button" id="btn-limpar-hotsite" style="background-color: #6c757d; color: white; border: none; border-radius: 4px; font-weight: bold; padding: 10px 15px; cursor: pointer; flex: 1;"><i class="bi bi-eraser me-1"></i> Limpar</button>
+                        <button type="button" id="btn-salvar-hotsite" class="conf-btn-salvar" style="background-color:#FFC300; color:#000; flex: 1 1 100%; margin-top: 8px;"><i class="bi bi-floppy me-1"></i> Salvar &amp; Publicar</button>
+                    </div>
+
+                    <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 4px;">
+                        <div style="font-size:0.88rem; font-weight:700; color:var(--texto-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom: 10px;">Configurações</div>
+                        <a class="cta" href="/paginasPrestador/prestadorConfigurarAgenda.html" style="width: 100%; text-align: center; background-color: var(--rodape-fundo);">
+                            <i class="bi bi-calendar3 me-1"></i> Configurar Agenda
+                        </a>
+                    </div>
+
+                    <!-- SEGURANÇA: ALTERAR SENHA (modal) -->
+                    <div style="border-top: 1px solid var(--borda); padding-top: 16px; margin-top: 16px;">
+                        <div style="font-size:0.88rem; font-weight:700; color:var(--texto-muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom: 10px;">Segurança</div>
+                        <a class="cta" href="#" data-bs-toggle="modal" data-bs-target="#modalAlterarSenha" style="width: 100%; text-align: center; background-color: var(--rodape-fundo); cursor: pointer;">
+                            <i class="bi bi-lock me-1"></i> Alterar Senha
+                        </a>
+                    </div>
+                </aside>
+
+                <!-- PREVIEW DO HOTSITE -->
+                <div class="hotsiteadm-preview">
+                    <div class="hotsiteadm-indicador-edicao">
+                        <i class="bi bi-pencil-square me-1"></i> Você está em Modo de Edição / Preview
+                    </div>
+
+                    <!-- CARD PERFIL PREVIEW -->
+                    <div class="hotsiteadm-preview-perfil">
+                        <div class="hotsite-avatar" style="margin-bottom: 12px; background-color:#FFC300; color:#000;">JC</div>
+                        <div class="hotsite-nome"></div>
+                        <div class="hotsite-meta-info">
+                            Serviço Prestado &nbsp;·&nbsp; ★★★★☆ &nbsp;0.0 &nbsp;·&nbsp; 0 avaliações
+                        </div>
+                        <div class="hotsite-atende" style="margin-top: 8px;">
+                            <i class="bi bi-geo-alt-fill me-1"></i> Atende em:
+                        </div>
+                        <a class="cta" href="/paginasPrestador/prestadorServicosAgendados.html" style="margin-top:12px; width:100%; text-align:center; background-color:#FFC300; color:#000;">
+                            <i class="bi bi-calendar-check me-1"></i> Verificar Agendamentos
+                        </a>
+                    </div>
+
+                    <!-- CARD CONTEÚDO PREVIEW -->
+                    <div class="hotsiteadm-preview-conteudo">
+                        <div class="hotsite-cabecalho-bloco">
+                            <div>
+                                <div class="hotsite-secao-titulo">Serviços &amp; Descrição</div>
+                                <p class="hotsite-desc"></p>
+                            </div>
+                        </div>
+
+                        <div class="hotsite-secao-titulo" style="margin-top: 14px;">Galeria de Trabalhos</div>
+                        <div class="hotsiteadm-galeria-preview" id="galeria-thumbs">
+                            <div class="hotsiteadm-thumb-preview" data-slot="0" style="position:relative;"><i class="bi bi-image"></i> Foto 1<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="1" style="position:relative;"><i class="bi bi-image"></i> Foto 2<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="2" style="position:relative;"><i class="bi bi-image"></i> Foto 3<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="3" style="position:relative;"><i class="bi bi-image"></i> Foto 4<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="4" style="position:relative;"><i class="bi bi-image"></i> Foto 5<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="5" style="position:relative;"><i class="bi bi-image"></i> Foto 6<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="6" style="position:relative;"><i class="bi bi-image"></i> Foto 7<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="7" style="position:relative;"><i class="bi bi-image"></i> Foto 8<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="8" style="position:relative;"><i class="bi bi-image"></i> Foto 9<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                            <div class="hotsiteadm-thumb-preview" data-slot="9" style="position:relative;"><i class="bi bi-play-circle"></i> Vídeo<button type="button" class="btn-galeria-excluir" title="Excluir mídia" style="position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;display:none;">&times;</button></div>
+                        </div>
+
+                        <div class="hotsite-secao-titulo" style="margin-top: 14px;">Depoimentos (Lidos do Sistema)</div>
+                        <div class="hotsite-depoimento"></div>
+
+                        <div class="hotsite-secao-titulo" style="margin-top: 14px;">Contatos</div>
+                        <p id="hotsite-preview-contatos" style="font-size:0.9rem; color:#444; margin:0 0 14px;">
+                            <span id="hotsite-preview-email"><i class="bi bi-envelope me-1"></i> —</span>
+                            &nbsp;&nbsp;
+                            <span id="hotsite-preview-tel"><i class="bi bi-telephone me-1"></i> —</span>
+                        </p>
+
+                        <div class="hotsite-secao-titulo">Agenda &amp; Disponibilidade</div>
+                        <div id="hotsite-preview-disponibilidade" style="margin-bottom:16px; padding:10px 14px; background:#f0f4ff; border-radius:6px; font-size:0.9rem; cursor:default;">
+                            Próximo horário disponível: <strong id="hotsite-preview-proximo-slot">—</strong>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- MODAL: ALTERAR SENHA -->
+            <div class="modal fade" id="modalAlterarSenha" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#FFC300; color:#000;">
+                            <h5 class="modal-title"><i class="bi bi-lock me-2"></i>Alterar Senha</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="senha-atual-geral" class="form-label fw-bold text-dark">Senha Atual:</label>
+                                <input type="password" class="form-control" id="senha-atual-geral" autocomplete="current-password">
+                            </div>
+                            <hr>
+                            <div class="mb-3">
+                                <label for="nova-senha-geral" class="form-label fw-bold text-dark">Nova Senha:</label>
+                                <input type="password" class="form-control" id="nova-senha-geral" autocomplete="new-password">
+                                <small class="text-muted d-block mt-1">Mínimo 8 caracteres, incluindo letras, números e caracteres especiais (Case Sensitive).</small>
+                            </div>
+                            <div class="mb-3">
+                                <label for="repita-nova-senha-geral" class="form-label fw-bold text-dark">Repita a Nova Senha:</label>
+                                <input type="password" class="form-control" id="repita-nova-senha-geral" autocomplete="new-password">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-warning" id="btn-salvar-senha-geral"><i class="bi bi-floppy me-1"></i>Salvar Nova Senha</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container" style="padding-top: 40px; padding-bottom: 32px;">
+            <div class="row">
+                <div class="col-md-3 mb-4">
+                    <a class="navbar-footer" href="#">
+                        <span class="serv-part-footer">Serv</span><span class="go-part-footer">Go!</span>
+                    </a>
+                    <p class="small text-muted mt-2">Análise, inovação e conteúdo de valor.</p>
+                    <div class="d-flex social-icons-custom mt-2">
+                        <a href="#" class="text-white me-3"><i class="bi bi-linkedin"></i></a>
+                        <a href="#" class="text-white me-3"><i class="bi bi-instagram"></i></a>
+                        <a href="#" class="text-white"><i class="bi bi-facebook"></i></a>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Links Rápidos</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50 text-decoration-none">Quem Somos</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Serviços</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Blog</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Fale Conosco</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Nossos Serviços</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                        <li><a href="#" class="text-white-50 text-decoration-none">Exemplo</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <h5 class="text-uppercase fw-bold mb-3 border-bottom border-warning pb-2 text-white">Contato</h5>
+                    <p class="small text-white-50"><i class="bi bi-geo-alt-fill me-2"></i> Rua Exemplo, 123 - Cidade, SP</p>
+                    <p class="small text-white-50"><i class="bi bi-telephone-fill me-2"></i> (18) 91234-5678</p>
+                    <p class="small text-white-50"><i class="bi bi-envelope-fill me-2"></i> contato@site.com.br</p>
+                    <a href="#" class="small text-decoration-none text-warning">Trabalhe Conosco</a>
+                </div>
+            </div>
+            <hr class="text-white-50">
+            <div class="text-center small text-white-50">
+                &copy; 2026 ServGo! Todos os direitos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/script.js" defer></script>
+</body>
+</html>
