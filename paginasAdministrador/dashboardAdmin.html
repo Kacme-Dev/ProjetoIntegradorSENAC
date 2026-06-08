@@ -8,6 +8,15 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="/css/estiloServGo.css">
+    <!-- Sprint 2 — dashboardAdmin redireciona imediatamente para adminGerenciamento -->
+    <script>
+        (function () {
+            var dest = '/paginasAdministrador/adminGerenciamento.html';
+            if (window.location.pathname.indexOf('dashboardAdmin') !== -1) {
+                window.location.replace(dest);
+            }
+        })();
+    </script>
 </head>
 
 <body>
@@ -23,12 +32,7 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto align-items-lg-center">
                         <li class="nav-item mb-2 mb-lg-0 me-2">
-                            <a href="/paginasSite/adminGerenciamento.html" class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-gear-wide-connected me-1"></i>Gerenciamento
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-danger" href="/paginasSite/adminLogin.html" id="adm-dash-sair">Sair (Admin)</a>
+                            <a class="btn btn-danger" href="/paginasSite/login.html">Sair (Admin)</a>
                         </li>
                     </ul>
                 </div>
@@ -42,8 +46,7 @@
         <!-- SIDEBAR -->
         <nav class="prest-sidebar">
             <ul>
-                <li><a href="/paginasSite/dashboardAdmin.html" class="prest-nav-ativo"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-                <li><a href="/paginasSite/adminGerenciamento.html"><i class="bi bi-gear-wide-connected"></i> Gerenciamento</a></li>
+                <li><a href="/paginasAdministrador/adminGerenciamento.html" class="prest-nav-ativo"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
                 <li><a href="#"><i class="bi bi-people"></i> Usuários</a></li>
                 <li><a href="#"><i class="bi bi-person-check"></i> Prestadores</a></li>
                 <li><a href="#"><i class="bi bi-ticket-detailed"></i> Suporte</a></li>

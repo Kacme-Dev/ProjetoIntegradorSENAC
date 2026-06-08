@@ -20,13 +20,8 @@
             <span class="navbar-logada-info" id="adm-saudacao-navbar">Admin</span>
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav ms-auto align-items-lg-center">
-                    <li class="nav-item me-2">
-                        <a href="/paginasSite/dashboardAdmin.html" class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-speedometer2 me-1"></i>Dashboard
-                        </a>
-                    </li>
                     <li class="nav-item">
-                        <a class="btn btn-danger btn-sm" href="/paginasSite/adminLogin.html" id="adm-btn-sair">
+                        <a class="btn btn-danger btn-sm" href="/paginasSite/login.html" id="adm-btn-sair">
                             <i class="bi bi-box-arrow-right me-1"></i>Sair
                         </a>
                     </li>
@@ -78,12 +73,17 @@
                 </a>
             </li>
             <li>
+                <a href="#" data-sec="planos">
+                    <i class="bi bi-credit-card-2-front-fill"></i> Planos & Contratos
+                </a>
+            </li>
+            <li>
                 <a href="#" data-sec="manutencao">
                     <i class="bi bi-tools"></i> Manutenção
                 </a>
             </li>
             <li class="sidebar-sair">
-                <a href="/paginasSite/adminLogin.html" id="sidebar-btn-sair">
+                <a href="/paginasSite/login.html" id="sidebar-btn-sair">
                     <i class="bi bi-box-arrow-right"></i> Sair
                 </a>
             </li>
@@ -110,6 +110,9 @@
 
         <!-- Seção: Suporte / Tickets -->
         <div class="admin-secao" id="sec-suporte" style="display:none;"></div>
+
+        <!-- Seção: Planos & Contratos -->
+        <div class="admin-secao" id="sec-planos" style="display:none;"></div>
 
         <!-- Seção: Manutenção -->
         <div class="admin-secao" id="sec-manutencao" style="display:none;"></div>
