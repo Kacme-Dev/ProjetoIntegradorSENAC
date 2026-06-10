@@ -1218,17 +1218,44 @@ document.addEventListener('DOMContentLoaded', function () {
         var existente = document.getElementById(modalId);
         if (existente) existente.remove();
 
+        var usuarios  = obterUsuariosCadastrados();
+        var dadosUsu  = usuarios[email] || {};
+        var planoAtualId = dadosUsu.assinatura && dadosUsu.assinatura.plano ? dadosUsu.assinatura.plano : null;
+        var eraTrial  = !planoAtualId || planoAtualId === 'trial' || planoAtualId === 'gratuito';
+        var nomePlano = planoAtualId && !eraTrial
+            ? ((SG_Trial.obterPlano(planoAtualId) || {}).nome || planoAtualId)
+            : 'Plano Gratuito / Trial';
+
+        var regrasCarencia = eraTrial
+            ? '<li style="margin-bottom:8px;"><i class="bi bi-hourglass-split me-2" style="color:#b8870c;"></i>' +
+              '<strong>Carência de 90 dias:</strong> o Plano Gratuito só poderá ser reativado após <strong>90 dias corridos</strong> do cancelamento. ' +
+              'Um contador será exibido na tela de login informando os dias restantes.</li>'
+            : '';
+
         var html = '<div class="modal fade" id="' + modalId + '" tabindex="-1" aria-modal="true" role="dialog">' +
-            '<div class="modal-dialog modal-dialog-centered">' +
+            '<div class="modal-dialog modal-dialog-centered modal-lg">' +
             '<div class="modal-content">' +
             '<div class="modal-header" style="background:#dc3545;color:#fff;">' +
-            '<h5 class="modal-title"><i class="bi bi-x-octagon me-2"></i>Cancelar Assinatura</h5>' +
+            '<h5 class="modal-title"><i class="bi bi-x-octagon me-2"></i>Cancelar Assinatura — ' + _esc(nomePlano) + '</h5>' +
             '</div>' +
             '<div class="modal-body">' +
-            '<p>Tem certeza que deseja cancelar sua assinatura?</p>' +
-            '<div style="background:#fff3cd;border-left:4px solid #dc3545;padding:12px 14px;border-radius:0 8px 8px 0;">' +
-            '<p style="margin:0;font-size:.88rem;color:#333;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Ao cancelar, <strong>seu acesso ao HotSite será bloqueado imediatamente</strong>. Para voltar a utilizar o serviço, você precisará reativar a assinatura.</p>' +
+            '<div style="background:#fee2e2;border-left:4px solid #dc3545;padding:14px 16px;border-radius:0 8px 8px 0;margin-bottom:18px;">' +
+            '<p style="margin:0 0 4px;font-weight:700;color:#991b1b;font-size:.92rem;">' +
+            '<i class="bi bi-exclamation-octagon-fill me-1"></i>Leia com atenção antes de confirmar</p>' +
+            '<p style="margin:0;font-size:.85rem;color:#7f1d1d;">As condições abaixo entram em vigor <strong>imediatamente</strong> após a confirmação.</p>' +
             '</div>' +
+            '<ul style="list-style:none;padding:0;margin:0 0 16px;">' +
+            '<li style="margin-bottom:8px;"><i class="bi bi-lock-fill me-2" style="color:#dc3545;"></i>' +
+            '<strong>Bloqueio imediato:</strong> seu login ficará bloqueado. Não será possível acessar o painel, agendamentos ou HotSite.</li>' +
+            regrasCarencia +
+            '<li style="margin-bottom:8px;"><i class="bi bi-arrow-repeat me-2" style="color:#146ADB;"></i>' +
+            '<strong>Opção A — Reativar plano cancelado:</strong> a qualquer momento (respeitando a carência, se aplicável) ' +
+            'você pode reativar o mesmo plano. Um novo ciclo iniciará na data da reativação.</li>' +
+            '<li style="margin-bottom:0;"><i class="bi bi-credit-card me-2" style="color:#198754;"></i>' +
+            '<strong>Opção B — Contratar novo plano:</strong> contrate um plano diferente imediatamente. ' +
+            'A nova data de cobrança será a data da nova adesão.</li>' +
+            '</ul>' +
+            '<p style="font-size:.85rem;color:#555;margin-bottom:0;">Tem certeza que deseja cancelar a assinatura <strong>' + _esc(nomePlano) + '</strong>?</p>' +
             '</div>' +
             '<div class="modal-footer">' +
             '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Manter Assinatura</button>' +
@@ -1241,22 +1268,23 @@ document.addEventListener('DOMContentLoaded', function () {
         modal.show();
 
         document.getElementById('sg-confirmar-cancelar').addEventListener('click', function () {
-            var usuarios = obterUsuariosCadastrados();
-            var u = usuarios[email] || {};
-            var planoAnterior = u.assinatura && u.assinatura.plano ? u.assinatura.plano : null;
+            var usu2 = obterUsuariosCadastrados();
+            var u = usu2[email] || {};
+            var planoAnt = u.assinatura && u.assinatura.plano ? u.assinatura.plano : null;
             u.assinatura = {
                 ativa: false,
                 cancelada: true,
-                planoAnterior: planoAnterior,
+                planoAnterior: planoAnt,
                 contratoId: u.assinatura && u.assinatura.contratoId ? u.assinatura.contratoId : null,
-                dataCancelamento: new Date().toISOString()
+                dataCancelamento: new Date().toISOString(),
+                eraTrial: eraTrial
             };
-            usuarios[email] = u;
-            salvarUsuariosCadastrados(usuarios);
+            usu2[email] = u;
+            salvarUsuariosCadastrados(usu2);
+            DB.remove('usuarioLogado');
             modal.hide();
             modalEl.addEventListener('hidden.bs.modal', function () {
                 modalEl.remove();
-                deslogarUsuario();
                 window.location.href = '/index.html';
             }, { once: true });
         });
@@ -8770,23 +8798,26 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        // ── Sprint 3 — Botão Cancelar Plano ──────────────────────────
-        // Visível quando há assinatura ativa OU trial em andamento.
-        // Oculto quando já está cancelado, em carência ou sem nenhuma assinatura iniciada.
-        var btnCancelarPlano = document.getElementById('sg-btn-cancelar-plano-meuPlano');
-        if (btnCancelarPlano) {
+        // ── Sprint 3 — Botão Cancelar Plano (renderizado dinamicamente) ──────
+        // Não depende de elemento pré-existente no HTML estático.
+        // É criado e conectado aqui, garantindo execução sem falhas silenciosas.
+        var wrapCancel = document.getElementById('sg-cancelar-plano-wrap');
+        if (wrapCancel) {
             var podeCancel = st.motivo === 'assinante' ||
-                             st.motivo === 'trial' ||
+                             st.motivo === 'trial'     ||
                              st.motivo === 'trial_gratuito';
-            if (!podeCancel) {
-                btnCancelarPlano.style.display = 'none';
-            } else {
-                btnCancelarPlano.addEventListener('click', function () {
-                    // Relê dadosUsu do storage no momento do clique — garante dados frescos
+            if (podeCancel) {
+                var btnCancel = document.createElement('button');
+                btnCancel.type      = 'button';
+                btnCancel.innerHTML = '<i class="bi bi-x-circle me-1"></i> Cancelar Plano';
+                btnCancel.className = 'btn btn-outline-danger fw-bold btn-sm';
+                btnCancel.style.cssText = 'display:inline-flex;align-items:center;gap:6px;';
+                btnCancel.addEventListener('click', function () {
                     var usuariosAtual = obterUsuariosCadastrados();
                     var dadosAtual    = usuariosAtual[email] || {};
                     _sgMeuPlanoCancelar(email, dadosAtual);
                 });
+                wrapCancel.appendChild(btnCancel);
             }
         }
     }
@@ -8831,7 +8862,23 @@ document.addEventListener('DOMContentLoaded', function () {
                 '<div style="background:#dc3545;color:#fff;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;"><i class="bi bi-x-circle-fill"></i></div>' +
                 '<div>' +
                 '<div style="font-weight:800;font-size:1.1rem;color:#991b1b;">Assinatura Cancelada</div>' +
-                '<div style="font-size:.85rem;color:#b91c1c;">Seu acesso está suspenso. Contrate um plano para reativar.</div>' +
+                '<div style="font-size:.85rem;color:#b91c1c;">Seu acesso está suspenso. Contrate ou reative um plano para voltar a usar o ServGo!.</div>' +
+                '</div></div></div>';
+        }
+
+        if (st.motivo === 'cancelado_carencia') {
+            var dias = st.diasCarenciaRestantes || 0;
+            return '<div style="background:#fff3cd;border:2px solid #FFC300;border-radius:12px;padding:20px 24px;margin-bottom:24px;">' +
+                '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+                '<div style="background:#FFC300;color:#000;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;"><i class="bi bi-hourglass-split"></i></div>' +
+                '<div style="flex:1;">' +
+                '<div style="font-weight:800;font-size:1.1rem;color:#92400e;">Plano Cancelado — Carência Ativa</div>' +
+                '<div style="font-size:.85rem;color:#78350f;margin-top:2px;">O plano gratuito só poderá ser reativado após <strong>90 dias corridos</strong> do cancelamento.</div>' +
+                '<div style="margin-top:10px;background:#fff;border-radius:8px;padding:8px 14px;display:inline-flex;align-items:center;gap:10px;">' +
+                '<span style="font-size:2rem;font-weight:900;color:#dc3545;line-height:1;">' + dias + '</span>' +
+                '<span style="font-size:.8rem;color:#555;">dia' + (dias !== 1 ? 's' : '') + ' restante' + (dias !== 1 ? 's' : '') + '<br>para liberar o plano gratuito</span>' +
+                '</div>' +
+                '<div style="font-size:.82rem;color:#555;margin-top:8px;">Você pode contratar um plano pago imediatamente para retomar o acesso.</div>' +
                 '</div></div></div>';
         }
 
@@ -9018,7 +9065,9 @@ document.addEventListener('DOMContentLoaded', function () {
             };
             usuarios[email] = u;
             salvarUsuariosCadastrados(usuarios);
-            deslogarUsuario();
+            // Remove a sessão do usuário ANTES de navegar — não usa deslogarUsuario()
+            // pois esse método redireciona imediatamente e impede o modal de fechar corretamente
+            DB.remove('usuarioLogado');
             modal.hide();
             modalEl.addEventListener('hidden.bs.modal', function () {
                 modalEl.remove();

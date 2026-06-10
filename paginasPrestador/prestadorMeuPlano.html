@@ -120,16 +120,12 @@
                     </p>
                     <!-- Botão Alterar Plano → direciona para planosContrato.html -->
                     <a href="/paginasSite/planosContrato.html"
-                       class="btn btn-warning fw-bold btn-sm mb-18"
+                       class="btn btn-warning fw-bold btn-sm"
                        style="margin-bottom:18px;display:inline-flex;align-items:center;gap:6px;">
                         <i class="bi bi-arrow-repeat"></i> Alterar Plano
                     </a>
-                    <!-- Botão Cancelar Plano — Sprint 3 -->
-                    <button type="button" id="sg-btn-cancelar-plano-meuPlano"
-                        class="btn btn-outline-danger fw-bold btn-sm"
-                        style="margin-bottom:18px;margin-left:8px;display:inline-flex;align-items:center;gap:6px;">
-                        <i class="bi bi-x-circle"></i> Cancelar Plano
-                    </button>
+                    <!-- Botão Cancelar Plano — renderizado dinamicamente pelo script.js conforme estado do plano -->
+                    <div id="sg-cancelar-plano-wrap" style="display:inline-block;margin-left:8px;margin-bottom:18px;"></div>
                     <!-- Cards de plano (renderizados pelo JS) -->
                     <div id="sg-plano-cards" style="display:flex;gap:16px;flex-wrap:wrap;"></div>
                 </div>
@@ -209,11 +205,336 @@
         </div>
     </footer>
 
+    <!-- ═══════════════════════════════════════════════════════
+         MODAL — CONFIRMAR CANCELAMENTO DE PLANO
+         ═══════════════════════════════════════════════════════ -->
+    <div class="modal fade sg-modal-cancelar" id="modalCancelarPlano" tabindex="-1"
+         aria-labelledby="modalCancelarPlanoLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:520px;">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCancelarPlanoLabel">
+                        <i class="bi bi-x-circle-fill me-2"></i>Cancelar Plano
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white"
+                            data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <!-- Plano sendo cancelado (preenchido via JS) -->
+                    <div class="sg-cancel-plano-destaque" id="sg-modal-plano-info">
+                        <div>
+                            <div class="sg-cancel-plano-nome" id="sg-modal-plano-nome">—</div>
+                            <div class="sg-cancel-plano-sub" id="sg-modal-plano-contrato">—</div>
+                        </div>
+                    </div>
+
+                    <p style="font-size:.88rem;color:#444;margin-bottom:0;">
+                        Antes de confirmar, leia atentamente as regras que entram em vigor
+                        <strong>imediatamente</strong> após o cancelamento:
+                    </p>
+
+                    <!-- Regras de negócio obrigatórias -->
+                    <div class="sg-cancel-regras">
+                        <div class="sg-cancel-regras-titulo">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            Regras de Cancelamento — Leia com atenção
+                        </div>
+
+                        <div class="sg-cancel-regra-item">
+                            <div class="sg-cancel-regra-icone vermelho">
+                                <i class="bi bi-lock-fill"></i>
+                            </div>
+                            <div>
+                                <strong style="color:#1a1a1a;">Bloqueio imediato de acesso.</strong>
+                                Após o cancelamento, sua conta será bloqueada e você
+                                não poderá fazer login na plataforma para prestar serviços.
+                                Seu status será alterado para <em>"bloqueado por cancelamento"</em>.
+                            </div>
+                        </div>
+
+                        <div class="sg-cancel-regra-item">
+                            <div class="sg-cancel-regra-icone amarelo">
+                                <i class="bi bi-clock-fill"></i>
+                            </div>
+                            <div>
+                                <strong style="color:#1a1a1a;">Carência de 90 dias para o Plano Gratuito.</strong>
+                                O retorno ao uso gratuito da plataforma só será possível após
+                                <strong>90 dias corridos</strong> a partir da data do cancelamento.
+                                Um contador será exibido informando o tempo restante.
+                            </div>
+                        </div>
+
+                        <div class="sg-cancel-regra-item">
+                            <div class="sg-cancel-regra-icone azul">
+                                <i class="bi bi-arrow-repeat"></i>
+                            </div>
+                            <div>
+                                <strong style="color:#1a1a1a;">Reativação ou novo plano disponível a qualquer momento.</strong>
+                                Você pode reativar o mesmo plano ou contratar um novo plano pago
+                                imediatamente, sem aguardar a carência. A nova data de cobrança
+                                será contada a partir da reativação.
+                            </div>
+                        </div>
+
+                        <div class="sg-cancel-regra-item">
+                            <div class="sg-cancel-regra-icone vermelho">
+                                <i class="bi bi-globe-x"></i>
+                            </div>
+                            <div>
+                                <strong style="color:#1a1a1a;">HotSite removido do catálogo.</strong>
+                                Seu perfil público deixará de ser exibido na plataforma para
+                                clientes imediatamente após o cancelamento.
+                            </div>
+                        </div>
+
+                        <div class="sg-cancel-regra-item">
+                            <div class="sg-cancel-regra-icone verde">
+                                <i class="bi bi-file-earmark-check"></i>
+                            </div>
+                            <div>
+                                <strong style="color:#1a1a1a;">Sem multa rescisória.</strong>
+                                O cancelamento é gratuito. Cancelamentos nos primeiros 7 dias
+                                têm direito a reembolso integral (CDC art. 49).
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Checkbox de ciência obrigatório -->
+                    <label class="sg-cancel-check-wrap" for="sg-check-ciencia">
+                        <input type="checkbox" id="sg-check-ciencia">
+                        <span class="sg-cancel-check-label">
+                            Li e compreendi todas as regras acima. Confirmo que desejo
+                            cancelar meu plano e estou ciente do bloqueio imediato.
+                        </span>
+                    </label>
+
+                </div><!-- /.modal-body -->
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        <i class="bi bi-arrow-left me-1"></i>Voltar
+                    </button>
+                    <button type="button" class="sg-btn-confirmar-cancelar"
+                            id="sg-btn-confirmar-cancelar" disabled>
+                        <i class="bi bi-x-circle me-1"></i>Confirmar Cancelamento
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- /MODAL CANCELAMENTO -->
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/script.js" defer></script>
 
     <!-- Complemento inline: renderiza recursos e dados do contrato após o script.js -->
     <script>
+    /* ═══════════════════════════════════════════════════════════════
+       MÓDULO — CANCELAMENTO DE PLANO (prestadorMeuPlano.html)
+       ═══════════════════════════════════════════════════════════════ */
+    (function () {
+        'use strict';
+
+        var USUARIOS_KEY = 'usuariosCadastrados';
+        var PLANO_NOMES = {
+            basico:       'Plano Básico',
+            profissional: 'Plano Profissional',
+            premium:      'Plano Premium',
+            trial:        'Trial Gratuito (30 dias)'
+        };
+
+        // ── Helpers ──────────────────────────────────────────────
+        function _getUsuarios() {
+            try { return JSON.parse(localStorage.getItem(USUARIOS_KEY) || '{}'); }
+            catch(e) { return {}; }
+        }
+        function _setUsuarios(obj) {
+            localStorage.setItem(USUARIOS_KEY, JSON.stringify(obj));
+        }
+        function _getLogado() {
+            try { return JSON.parse(localStorage.getItem('usuarioLogado') || 'null'); }
+            catch(e) { return null; }
+        }
+        function _esc(s) {
+            return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        // ── Renderiza botão "Cancelar Plano" no wrap existente ───
+        function renderizarBotaoCancelar() {
+            var wrap = document.getElementById('sg-cancelar-plano-wrap');
+            if (!wrap) return;
+
+            var usu = _getLogado();
+            if (!usu || usu.tipo !== 'prestador') return;
+
+            var cad    = _getUsuarios();
+            var d      = cad[usu.email] || {};
+            var ass    = d.assinatura || {};
+
+            // Só exibe o botão se houver plano ativo (não trial puro sem assinatura)
+            if (!ass.ativa || ass.cancelada) {
+                // Se já cancelado, exibe badge informativo
+                if (ass.cancelada) {
+                    wrap.innerHTML =
+                        '<span class="sg-badge-cancelado">' +
+                        '<i class="bi bi-x-circle-fill"></i>Plano cancelado em ' +
+                        new Date(ass.dataCancelamento).toLocaleDateString('pt-BR') + '</span>';
+                }
+                return;
+            }
+
+            wrap.innerHTML =
+                '<button type="button" id="sg-btn-abrir-cancelar"' +
+                ' style="background:#dc3545;color:#fff;border:none;border-radius:8px;' +
+                'padding:11px 20px;font-weight:700;font-size:.9rem;cursor:pointer;' +
+                'display:inline-flex;align-items:center;gap:8px;">' +
+                '<i class="bi bi-x-circle"></i> Cancelar Plano</button>';
+
+            document.getElementById('sg-btn-abrir-cancelar')
+                .addEventListener('click', abrirModalCancelamento);
+        }
+
+        // ── Abre modal de confirmação ────────────────────────────
+        function abrirModalCancelamento() {
+            var usu = _getLogado();
+            if (!usu) return;
+            var cad    = _getUsuarios();
+            var d      = cad[usu.email] || {};
+            var ass    = d.assinatura || {};
+            var planoId = ass.plano || 'basico';
+
+            // Preenche info do plano no modal
+            var nomeEl = document.getElementById('sg-modal-plano-nome');
+            var contEl = document.getElementById('sg-modal-plano-contrato');
+            if (nomeEl) nomeEl.textContent = PLANO_NOMES[planoId] || planoId;
+            if (contEl) {
+                contEl.textContent = ass.contratoId
+                    ? 'Contrato: ' + ass.contratoId
+                    : 'Contratado em: ' + (ass.dataInicio
+                        ? new Date(ass.dataInicio).toLocaleDateString('pt-BR') : '—');
+            }
+
+            // Reseta checkbox
+            var chk = document.getElementById('sg-check-ciencia');
+            var btnConf = document.getElementById('sg-btn-confirmar-cancelar');
+            if (chk) { chk.checked = false; }
+            if (btnConf) { btnConf.disabled = true; }
+
+            var modalEl = document.getElementById('modalCancelarPlano');
+            if (modalEl) {
+                new bootstrap.Modal(modalEl).show();
+            }
+        }
+
+        // ── Checkbox libera botão de confirmar ───────────────────
+        document.addEventListener('change', function (e) {
+            if (e.target && e.target.id === 'sg-check-ciencia') {
+                var btnConf = document.getElementById('sg-btn-confirmar-cancelar');
+                if (btnConf) btnConf.disabled = !e.target.checked;
+            }
+        });
+
+        // ── Confirma o cancelamento ──────────────────────────────
+        document.addEventListener('click', function (e) {
+            if (e.target && e.target.id === 'sg-btn-confirmar-cancelar') {
+                efetivarCancelamento();
+            }
+        });
+
+        function efetivarCancelamento() {
+            var usu = _getLogado();
+            if (!usu) return;
+
+            var cad = _getUsuarios();
+            var d   = cad[usu.email] || {};
+            var ass = d.assinatura || {};
+
+            var agora = new Date().toISOString();
+
+            // Grava o cancelamento no objeto do usuário
+            d.assinatura = Object.assign({}, ass, {
+                ativa:             false,
+                cancelada:         true,
+                dataCancelamento:  agora,
+                planoAnoCancelado: ass.plano || 'basico'
+            });
+
+            // Marca status da conta
+            d.statusConta = 'bloqueado_cancelamento';
+
+            cad[usu.email] = d;
+            _setUsuarios(cad);
+
+            // Encerra a sessão ativa
+            localStorage.removeItem('usuarioLogado');
+
+            // Fecha modal e redireciona para login com parâmetro informativo
+            var modalEl = document.getElementById('modalCancelarPlano');
+            if (modalEl) {
+                var instancia = bootstrap.Modal.getInstance(modalEl);
+                if (instancia) instancia.hide();
+            }
+
+            setTimeout(function () {
+                window.location.href = '/paginasSite/login.html?cancelamento=efetuado';
+            }, 400);
+        }
+
+        // ── Exibe aviso se conta já cancelada (carregamento da página) ──
+        function exibirAvisoCancelamento() {
+            var usu = _getLogado();
+            // se não está mais logado (cancelou), não há nada a exibir aqui
+            if (!usu) return;
+
+            var cad = _getUsuarios();
+            var d   = cad[usu.email] || {};
+            var ass = d.assinatura || {};
+
+            if (!ass.cancelada) return;
+
+            var mainEl = document.getElementById('sg-meu-plano-main');
+            if (!mainEl) return;
+
+            var dataCanc = new Date(ass.dataCancelamento);
+            var dataLib  = new Date(dataCanc.getTime() + 90 * 24 * 60 * 60 * 1000);
+            var hoje     = new Date();
+            var diasFalt = Math.max(0, Math.ceil((dataLib - hoje) / (24 * 60 * 60 * 1000)));
+
+            var avisoHtml =
+                '<div class="sg-aviso-cancelamento">' +
+                '<div class="sg-aviso-cancelamento-icone"><i class="bi bi-x-circle-fill"></i></div>' +
+                '<div>' +
+                '<div class="sg-aviso-cancelamento-titulo">Plano Cancelado — Conta Bloqueada</div>' +
+                '<div class="sg-aviso-cancelamento-texto">' +
+                'Seu plano foi cancelado em <strong>' + dataCanc.toLocaleDateString('pt-BR') + '</strong>. ' +
+                'O acesso à plataforma está bloqueado. ' +
+                (diasFalt > 0
+                    ? 'O plano gratuito poderá ser reativado em <strong>' + diasFalt + ' dias</strong>.'
+                    : 'O período de carência já foi cumprido. Você pode reativar gratuitamente.') +
+                '<br><a href="/paginasSite/planosContrato.html?reativar=1" style="color:#842029;font-weight:700;">' +
+                '<i class="bi bi-arrow-repeat me-1"></i>Reativar plano agora</a>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+
+            mainEl.insertAdjacentHTML('afterbegin', avisoHtml);
+        }
+
+        // ── Init ─────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+            renderizarBotaoCancelar();
+            exibirAvisoCancelamento();
+        });
+    })();
+
+    /* ═══════════════════════════════════════════════════════════════
+       RECURSOS E DADOS DO CONTRATO (bloco original)
+       ═══════════════════════════════════════════════════════════════ */
     document.addEventListener('DOMContentLoaded', function () {
         // Recursos por plano (espelhando planosContrato.html)
         var RECURSOS = {

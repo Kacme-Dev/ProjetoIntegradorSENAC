@@ -162,6 +162,260 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/script.js" defer></script>
-</body>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MÓDULO — TELA DE ACESSO BLOQUEADO POR CANCELAMENTO
+         Detecta conta cancelada ANTES que script.js redirecione
+         ═══════════════════════════════════════════════════════════ -->
+    <script>
+    (function () {
+        'use strict';
+
+        var USUARIOS_KEY = 'usuariosCadastrados';
+        var PLANO_NOMES  = {
+            basico:       'Plano Básico — R$ 49,90/mês',
+            profissional: 'Plano Profissional — R$ 89,90/mês',
+            premium:      'Plano Premium — R$ 139,90/mês',
+            trial:        'Trial Gratuito'
+        };
+
+        function _getUsuarios() {
+            try { return JSON.parse(localStorage.getItem(USUARIOS_KEY) || '{}'); }
+            catch(e) { return {}; }
+        }
+        function _esc(s) {
+            return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        // ── Exibe mensagem se chegou da página de cancelamento ───
+        document.addEventListener('DOMContentLoaded', function () {
+            var params = new URLSearchParams(window.location.search);
+
+            if (params.get('cancelamento') === 'efetuado') {
+                var alertaEl = document.getElementById('alerta-login-erro');
+                if (alertaEl) {
+                    alertaEl.innerHTML =
+                        '<div class="alert alert-warning alert-dismissible fade show" role="alert">' +
+                        '<i class="bi bi-x-circle-fill me-2"></i>' +
+                        '<strong>Plano cancelado.</strong> Seu acesso foi encerrado. ' +
+                        'Faça login para ver as opções de reativação.' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' +
+                        '</div>';
+                }
+            }
+        });
+
+        // ── Intercepta submit do form de login ───────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+            var form = document.getElementById('form-login');
+            if (!form) return;
+
+            form.addEventListener('submit', function (e) {
+                var emailInput = document.getElementById('email-login');
+                var senhaInput = document.getElementById('senha-login');
+                if (!emailInput || !senhaInput) return;
+
+                var email = emailInput.value.trim().toLowerCase();
+                var senha = senhaInput.value;
+
+                var cad = _getUsuarios();
+                var d   = cad[email];
+                if (!d) return; // deixa o script.js tratar (usuário não encontrado)
+
+                // Verifica senha antes de verificar bloqueio
+                if (d.senha !== senha) return; // deixa o script.js tratar
+
+                // Verifica se é prestador com conta bloqueada por cancelamento
+                if (d.tipo === 'prestador' && d.statusConta === 'bloqueado_cancelamento') {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    exibirTelaBloqueio(email, d);
+                }
+            }, true); // capture=true para rodar antes do script.js
+        });
+
+        // ── Monta e exibe a tela de bloqueio ─────────────────────
+        function exibirTelaBloqueio(email, d) {
+            var ass       = d.assinatura || {};
+            var planoId   = ass.planoAnoCancelado || ass.plano || 'basico';
+            var dataCanc  = ass.dataCancelamento ? new Date(ass.dataCancelamento) : new Date();
+            var dataLib   = new Date(dataCanc.getTime() + 90 * 24 * 60 * 60 * 1000);
+            var hoje      = new Date();
+
+            var diasPassados = Math.min(90, Math.max(0,
+                Math.floor((hoje - dataCanc) / (24 * 60 * 60 * 1000))));
+            var diasFaltam   = Math.max(0,
+                Math.ceil((dataLib - hoje) / (24 * 60 * 60 * 1000)));
+            var progresso    = Math.min(100, (diasPassados / 90) * 100);
+            var carenciaCumprida = diasFaltam === 0;
+
+            // Cria overlay full-page
+            var overlay = document.createElement('div');
+            overlay.id  = 'sg-bloqueio-overlay';
+            overlay.className = 'sg-bloqueio-page';
+            overlay.style.cssText =
+                'position:fixed;inset:0;z-index:9999;' +
+                'background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);' +
+                'display:flex;align-items:center;justify-content:center;padding:32px 16px;' +
+                'overflow-y:auto;';
+
+            var cancelacaoStr = dataCanc.toLocaleDateString('pt-BR');
+            var liberacaoStr  = dataLib.toLocaleDateString('pt-BR');
+            var planoNome     = (PLANO_NOMES[planoId] || planoId)
+                                    .replace(/\s*—.*$/, ''); // só o nome
+
+            overlay.innerHTML =
+                '<div class="sg-bloqueio-card">' +
+
+                // Logo
+                '<div style="margin-bottom:20px;">' +
+                '<span style="font-size:1.6rem;font-weight:900;">' +
+                '<span style="color:#fff;">Serv</span><span style="color:#ffc300;">Go!</span>' +
+                '</span></div>' +
+
+                // Ícone
+                '<div class="sg-bloqueio-icone"><i class="bi bi-person-fill-lock"></i></div>' +
+
+                // Título
+                '<div class="sg-bloqueio-titulo">Acesso Bloqueado</div>' +
+                '<div class="sg-bloqueio-subtitulo">' +
+                'Seu plano foi cancelado em <strong style="color:#fff;">' + cancelacaoStr + '</strong>.<br>' +
+                'O acesso à plataforma está suspenso até a reativação.' +
+                '</div>' +
+
+                // Tag do plano cancelado
+                '<div class="sg-bloqueio-plano-tag">' +
+                '<i class="bi bi-tag-fill"></i>' + _esc(planoNome) + ' — Cancelado' +
+                '</div>' +
+
+                // Contador de carência (só se não cumpriu)
+                (carenciaCumprida
+                    ? '<div style="background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);' +
+                      'border-radius:12px;padding:16px 20px;margin-bottom:24px;color:#6ee7b7;font-size:.88rem;">' +
+                      '<i class="bi bi-check-circle-fill me-2"></i>' +
+                      '<strong>Carência cumprida!</strong> Você já pode reativar o plano gratuito.' +
+                      '</div>'
+                    : '<div class="sg-bloqueio-contador-wrap">' +
+                      '<div class="sg-bloqueio-contador-label">Carência para Plano Gratuito</div>' +
+                      '<div class="sg-bloqueio-contador-dias" id="sg-contador-dias">' + diasFaltam + '</div>' +
+                      '<div class="sg-bloqueio-contador-sub">' +
+                      'dias restantes para liberar o acesso gratuito<br>' +
+                      '<span style="font-size:.75rem;opacity:.6;">' +
+                      'Liberação em: ' + liberacaoStr + '</span>' +
+                      '</div>' +
+                      '<div class="sg-bloqueio-progresso-wrap">' +
+                      '<div class="sg-bloqueio-progresso-track">' +
+                      '<div class="sg-bloqueio-progresso-fill" id="sg-progresso-fill"' +
+                      ' style="width:' + progresso.toFixed(1) + '%;"></div>' +
+                      '</div>' +
+                      '</div>' +
+                      '</div>') +
+
+                // Divisor
+                '<div class="sg-bloqueio-divisor">Retorne imediatamente com um plano pago</div>' +
+
+                // Opções
+                '<div class="sg-bloqueio-opcoes">' +
+
+                // Opção A — Reativar mesmo plano
+                '<button type="button" class="sg-btn-reativar primario" id="sg-btn-reativar-mesmo"' +
+                ' data-email="' + _esc(email) + '"' +
+                ' data-plano="' + _esc(planoId) + '">' +
+                '<i class="bi bi-arrow-repeat" style="font-size:1.2rem;flex-shrink:0;"></i>' +
+                '<div class="sg-btn-reativar-texto">' +
+                '<span class="sg-btn-reativar-titulo">Reativar ' + _esc(planoNome) + '</span>' +
+                '<span class="sg-btn-reativar-sub">Mesmo plano · nova data de cobrança a partir de hoje</span>' +
+                '</div></button>' +
+
+                // Opção B — Contratar novo plano
+                '<a href="/paginasSite/planosContrato.html?reativar=1&email=' + encodeURIComponent(email) + '"' +
+                ' class="sg-btn-reativar secundario">' +
+                '<i class="bi bi-grid-1x2" style="font-size:1.2rem;flex-shrink:0;"></i>' +
+                '<div class="sg-btn-reativar-texto">' +
+                '<span class="sg-btn-reativar-titulo">Escolher Outro Plano</span>' +
+                '<span class="sg-btn-reativar-sub">Upgrade ou downgrade · acesso imediato</span>' +
+                '</div></a>' +
+
+                '</div><!-- /.sg-bloqueio-opcoes -->' +
+
+                '<div class="sg-bloqueio-back">' +
+                '<a href="#" id="sg-bloqueio-fechar">← Voltar para o login</a>' +
+                '</div>' +
+
+                '</div><!-- /.sg-bloqueio-card -->';
+
+            document.body.appendChild(overlay);
+
+            // Botão voltar
+            document.getElementById('sg-bloqueio-fechar')
+                .addEventListener('click', function (e) {
+                    e.preventDefault();
+                    overlay.remove();
+                });
+
+            // Botão reativar mesmo plano
+            document.getElementById('sg-btn-reativar-mesmo')
+                .addEventListener('click', function () {
+                    reativarMesmoPlano(email, planoId, overlay);
+                });
+
+            // Contador dinâmico (atualiza a cada minuto)
+            if (!carenciaCumprida) {
+                setInterval(function () {
+                    var agora2   = new Date();
+                    var faltam2  = Math.max(0,
+                        Math.ceil((dataLib - agora2) / (24 * 60 * 60 * 1000)));
+                    var passados2 = Math.min(90, Math.max(0,
+                        Math.floor((agora2 - dataCanc) / (24 * 60 * 60 * 1000))));
+                    var prog2 = Math.min(100, (passados2 / 90) * 100);
+
+                    var elDias = document.getElementById('sg-contador-dias');
+                    var elProg = document.getElementById('sg-progresso-fill');
+                    if (elDias) elDias.textContent = faltam2;
+                    if (elProg) elProg.style.width = prog2.toFixed(1) + '%';
+                }, 60000);
+            }
+        }
+
+        // ── Reativa o mesmo plano ────────────────────────────────
+        function reativarMesmoPlano(email, planoId, overlay) {
+            var cad = _getUsuarios();
+            var d   = cad[email] || {};
+            var ass = d.assinatura || {};
+
+            var contratoId = ass.contratoId || ('CONT-' + Date.now());
+            var agora      = new Date().toISOString();
+
+            d.assinatura = Object.assign({}, ass, {
+                ativa:            true,
+                cancelada:        false,
+                plano:            planoId,
+                planoAnterior:    planoId,
+                contratoId:       contratoId,
+                dataInicio:       agora,
+                dataCancelamento: null
+            });
+            d.statusConta = 'ativo';
+            cad[email] = d;
+
+            localStorage.setItem(USUARIOS_KEY, JSON.stringify(cad));
+
+            // Faz login automático
+            localStorage.setItem('usuarioLogado', JSON.stringify({
+                email:  email,
+                nome:   d.nome || '',
+                tipo:   'prestador'
+            }));
+
+            if (overlay) overlay.remove();
+
+            // Redireciona para área exclusiva
+            setTimeout(function () {
+                window.location.href = '/paginasPrestador/prestadorAreaExclusiva.html?reativado=1';
+            }, 200);
+        }
+
+    })();
+    </script>
 
 </html>

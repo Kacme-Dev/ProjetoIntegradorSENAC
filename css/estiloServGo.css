@@ -2870,3 +2870,374 @@ footer {
 .adm-tool-titulo { font-weight: 700; font-size: .9rem; color: #1a1a1a; margin-bottom: 3px; }
 .adm-tool-desc   { font-size: .8rem; color: #666; }
 .adm-tool-acao   { flex-shrink: 0; align-self: center; }
+
+/* ════════════════════════════════════════════════════════════════════
+   SEÇÃO 32 — CANCELAMENTO DE PLANO (Modal + Tela Login Bloqueado)
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Modal Cancelamento ── */
+.sg-modal-cancelar .modal-header {
+    background: linear-gradient(135deg, #dc3545, #b02a37);
+    color: #fff;
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+    padding: 20px 24px 18px;
+}
+.sg-modal-cancelar .modal-content {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0,0,0,.22);
+}
+.sg-modal-cancelar .modal-body {
+    padding: 24px;
+}
+.sg-modal-cancelar .modal-footer {
+    border-top: 1px solid #f0f0f0;
+    padding: 16px 24px;
+    gap: 10px;
+}
+
+/* ── Bloco de regras dentro do modal ── */
+.sg-cancel-regras {
+    background: #fff8e1;
+    border: 1.5px solid #ffc300;
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin: 16px 0;
+}
+.sg-cancel-regras-titulo {
+    font-weight: 800;
+    font-size: .92rem;
+    color: #7c5800;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.sg-cancel-regra-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: .85rem;
+    color: #444;
+    line-height: 1.55;
+}
+.sg-cancel-regra-item:last-child { margin-bottom: 0; }
+.sg-cancel-regra-icone {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .8rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.sg-cancel-regra-icone.vermelho { background: #fde8ea; color: #dc3545; }
+.sg-cancel-regra-icone.amarelo  { background: #fff3cd; color: #b8870c; }
+.sg-cancel-regra-icone.azul     { background: #e0ecff; color: #146ADB; }
+.sg-cancel-regra-icone.verde    { background: #d1fae5; color: #059669; }
+
+.sg-cancel-plano-destaque {
+    background: #f8f9fa;
+    border: 1.5px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.sg-cancel-plano-nome {
+    font-weight: 800;
+    font-size: 1rem;
+    color: #1a1a1a;
+}
+.sg-cancel-plano-sub {
+    font-size: .82rem;
+    color: #888;
+}
+
+/* Checkbox confirmação */
+.sg-cancel-check-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fef2f2;
+    border: 1.5px solid #fca5a5;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 16px;
+    cursor: pointer;
+}
+.sg-cancel-check-wrap input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #dc3545;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.sg-cancel-check-label {
+    font-size: .84rem;
+    color: #7f1d1d;
+    font-weight: 600;
+    cursor: pointer;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Botão confirmar cancelamento */
+.sg-btn-confirmar-cancelar {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 22px;
+    font-size: .92rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background .18s, opacity .18s;
+}
+.sg-btn-confirmar-cancelar:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+.sg-btn-confirmar-cancelar:not(:disabled):hover {
+    background: #b02a37;
+}
+
+/* ── Tela de Login Bloqueado por Cancelamento ── */
+.sg-bloqueio-page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+}
+.sg-bloqueio-card {
+    background: rgba(255,255,255,.04);
+    backdrop-filter: blur(12px);
+    border: 1.5px solid rgba(255,255,255,.1);
+    border-radius: 20px;
+    padding: 40px 36px;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    animation: sgBloqueioFadeIn .4s ease;
+}
+@keyframes sgBloqueioFadeIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.sg-bloqueio-icone {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #dc3545, #b02a37);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #fff;
+    margin: 0 auto 20px;
+    box-shadow: 0 4px 20px rgba(220,53,69,.4);
+}
+.sg-bloqueio-titulo {
+    font-size: 1.35rem;
+    font-weight: 900;
+    color: #fff;
+    margin-bottom: 8px;
+}
+.sg-bloqueio-subtitulo {
+    font-size: .9rem;
+    color: rgba(255,255,255,.65);
+    margin-bottom: 24px;
+    line-height: 1.6;
+}
+.sg-bloqueio-plano-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,195,0,.15);
+    border: 1px solid rgba(255,195,0,.35);
+    color: #ffd740;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: .82rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+/* Contador de carência */
+.sg-bloqueio-contador-wrap {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin: 0 0 24px;
+}
+.sg-bloqueio-contador-label {
+    font-size: .8rem;
+    color: rgba(255,255,255,.55);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+.sg-bloqueio-contador-dias {
+    font-size: 3rem;
+    font-weight: 900;
+    color: #ffd740;
+    line-height: 1;
+    margin-bottom: 4px;
+}
+.sg-bloqueio-contador-sub {
+    font-size: .82rem;
+    color: rgba(255,255,255,.5);
+}
+.sg-bloqueio-progresso-wrap {
+    margin-top: 12px;
+}
+.sg-bloqueio-progresso-track {
+    background: rgba(255,255,255,.1);
+    border-radius: 6px;
+    height: 6px;
+    overflow: hidden;
+}
+.sg-bloqueio-progresso-fill {
+    height: 100%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #ffc300, #ffd740);
+    transition: width .6s ease;
+}
+
+/* Separador de seções */
+.sg-bloqueio-divisor {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0;
+    color: rgba(255,255,255,.3);
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+}
+.sg-bloqueio-divisor::before,
+.sg-bloqueio-divisor::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,.12);
+}
+
+/* Botões de reativação */
+.sg-bloqueio-opcoes {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.sg-btn-reativar {
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 10px;
+    border: none;
+    font-size: .92rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    transition: opacity .18s, transform .12s;
+}
+.sg-btn-reativar:hover { opacity: .88; transform: translateY(-1px); }
+.sg-btn-reativar.primario {
+    background: linear-gradient(135deg, #146ADB, #0d4fa3);
+    color: #fff;
+    justify-content: center;
+}
+.sg-btn-reativar.secundario {
+    background: linear-gradient(135deg, #ffc300, #e6b000);
+    color: #000;
+    justify-content: center;
+}
+.sg-btn-reativar-texto {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+}
+.sg-btn-reativar-titulo {
+    font-size: .9rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+.sg-btn-reativar-sub {
+    font-size: .75rem;
+    opacity: .75;
+    font-weight: 400;
+}
+.sg-bloqueio-back {
+    font-size: .82rem;
+    color: rgba(255,255,255,.4);
+    margin-top: 8px;
+}
+.sg-bloqueio-back a {
+    color: rgba(255,255,255,.5);
+    text-decoration: underline;
+}
+.sg-bloqueio-back a:hover { color: rgba(255,255,255,.8); }
+
+/* ── Badge "Cancelado" na página prestadorMeuPlano ── */
+.sg-badge-cancelado {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fde8ea;
+    border: 1.5px solid #f5c2c7;
+    color: #842029;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: .82rem;
+    font-weight: 700;
+}
+.sg-aviso-cancelamento {
+    background: linear-gradient(135deg, #fde8ea, #fff1f2);
+    border: 1.5px solid #f5c2c7;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+.sg-aviso-cancelamento-icone {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #dc3545;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.sg-aviso-cancelamento-titulo {
+    font-weight: 800;
+    font-size: 1rem;
+    color: #842029;
+    margin-bottom: 4px;
+}
+.sg-aviso-cancelamento-texto {
+    font-size: .87rem;
+    color: #6b2128;
+    line-height: 1.55;
+}

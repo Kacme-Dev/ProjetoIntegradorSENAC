@@ -512,6 +512,54 @@ document.addEventListener('DOMContentLoaded', function () {
     // Chave usada pelo script.js para armazenar usuários (deve ser idêntica a USUARIOS_KEY)
     var USUARIOS_KEY_LOCAL = 'usuariosCadastrados';
 
+    // ── Detecta contexto de REATIVAÇÃO (conta cancelada) ──
+    var urlParams    = new URLSearchParams(window.location.search);
+    var modoReativar = urlParams.get('reativar') === '1';
+    var emailReativar = urlParams.get('email') || null;
+
+    if (modoReativar) {
+        // Tenta identificar o usuário pelo email passado na URL ou pela sessão
+        var usuReativar = null;
+        if (emailReativar) {
+            try {
+                var cadR = JSON.parse(localStorage.getItem(USUARIOS_KEY_LOCAL) || '{}');
+                if (cadR[emailReativar]) {
+                    usuReativar = { email: emailReativar, tipo: 'prestador' };
+                }
+            } catch(e) {}
+        }
+        if (!usuReativar) {
+            try {
+                var tmp = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
+                if (tmp && tmp.tipo === 'prestador') usuReativar = tmp;
+            } catch(e) {}
+        }
+
+        if (usuReativar) {
+            // Injeta banner de reativação
+            var headerEl = document.querySelector('.planos-header');
+            if (headerEl) {
+                var bannerReativ = document.createElement('div');
+                bannerReativ.style.cssText =
+                    'max-width:980px;margin:0 auto 28px;' +
+                    'background:linear-gradient(135deg,#dc3545,#b02a37);' +
+                    'color:#fff;border-radius:12px;padding:20px 24px;';
+                bannerReativ.innerHTML =
+                    '<p style="margin:0 0 6px;font-size:1rem;font-weight:800;">' +
+                    '<i class="bi bi-person-fill-lock me-2"></i>Sua conta está bloqueada por cancelamento</p>' +
+                    '<p style="margin:0;font-size:.88rem;opacity:.9;">' +
+                    'Escolha um plano abaixo para reativar o acesso imediatamente. ' +
+                    'A nova data de cobrança inicia hoje.</p>';
+                headerEl.parentNode.insertBefore(bannerReativ, headerEl);
+            }
+
+            // Armazena o email para uso no fluxo de contratação
+            if (emailReativar) {
+                try { sessionStorage.setItem('sgReativarEmail', emailReativar); } catch(e) {}
+            }
+        }
+    }
+
     // ── Detecta contexto: cadastro novo (pendente) ou prestador já logado ──
     var pendente = null;
     try {
@@ -523,6 +571,23 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
         usuLogado = JSON.parse(localStorage.getItem('usuarioLogado') || 'null');
     } catch (e) {}
+
+    // Contexto C: reativação (email vindo da tela de bloqueio)
+    var emailReativSessao = null;
+    try { emailReativSessao = sessionStorage.getItem('sgReativarEmail'); } catch(e) {}
+    if (!usuLogado && emailReativSessao) {
+        // Simula usuário logado para o fluxo de contratação
+        var cadCheck = _getUsuariosLocal();
+        if (cadCheck[emailReativSessao] && cadCheck[emailReativSessao].tipo === 'prestador') {
+            usuLogado = { email: emailReativSessao, tipo: 'prestador',
+                          nome: cadCheck[emailReativSessao].nome || '' };
+        }
+    }
+
+    function _getUsuariosLocal() {
+        try { return JSON.parse(localStorage.getItem(USUARIOS_KEY_LOCAL) || '{}'); }
+        catch(e) { return {}; }
+    }
 
     // Modo cadastro novo: exibe banner informativo
     if (pendente && pendente.email) {
@@ -651,8 +716,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     contratoId: contratoId2,
                     dataInicio: new Date().toISOString()
                 };
+                // Reativa conta (remove bloqueio por cancelamento)
+                u2.statusConta = 'ativo';
                 cad2[email2] = u2;
                 localStorage.setItem(USUARIOS_KEY_LOCAL, JSON.stringify(cad2));
+                // Registra sessão ativa
+                localStorage.setItem('usuarioLogado', JSON.stringify({
+                    email: email2, nome: u2.nome || '', tipo: 'prestador'
+                }));
+                // Limpa email de reativação da sessão
+                try { sessionStorage.removeItem('sgReativarEmail'); } catch(e) {}
                 modalConf2.hide();
                 var toastEl = document.getElementById('toastContrato');
                 document.getElementById('toastContratoMsg').textContent = planoNome + ' contratado! Contrato: ' + contratoId2;
