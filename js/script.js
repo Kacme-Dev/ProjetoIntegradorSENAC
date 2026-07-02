@@ -14520,6 +14520,25 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // ── SPRINT 5 — Contexto: página aberta em NOVA ABA a partir do botão
+    //    "Ver Termos de Contrato Completos" em prestadorMeuPlano.html.
+    //    Nesse caso a aba de origem (prestadorMeuPlano.html) continua aberta
+    //    por trás, então "Voltar" não se aplica: os dois botões viram
+    //    "Fechar" (fundo #b91c1c, fonte branca) e apenas fecham esta aba.
+    if (urlParams.get('origem') === 'meuplano') {
+        var botoesVoltarMeuPlano = document.querySelectorAll('a[href="/paginasPrestador/prestadorMeuPlano.html"]');
+        botoesVoltarMeuPlano.forEach(function (btnFechar) {
+            btnFechar.innerHTML = '<i class="bi bi-x-lg me-1"></i> Fechar';
+            btnFechar.style.backgroundColor = '#b91c1c';
+            btnFechar.style.borderColor     = '#b91c1c';
+            btnFechar.style.color           = '#fff';
+            btnFechar.addEventListener('click', function (e) {
+                e.preventDefault();
+                window.close();
+            });
+        });
+    }
+
     // ── Detecta contexto: cadastro novo (pendente) ou prestador já logado ──
     var pendente = null;
     try {
