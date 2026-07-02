@@ -2675,7 +2675,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var li = btnAv.closest('.prest-historico-item');
                 pedidoAtual = btnAv.dataset.agId || (li ? li.dataset.pedidoId : null);
                 var infoEl = document.getElementById('modal-prest-avaliar-info');
-                if (infoEl) infoEl.innerHTML = '<strong>Serviço:</strong> ' + (li ? li.dataset.servico : '—') + ' | <strong>Cliente:</strong> ' + (li ? li.dataset.cliente : '—');
+                if (infoEl) infoEl.innerHTML = '<strong>Serviço:</strong> ' + _escaparHtml(li ? li.dataset.servico : '—') + ' | <strong>Cliente:</strong> ' + _escaparHtml(li ? li.dataset.cliente : '—');
                 renderEstrelas(starsAv, notaAv, 0);
                 document.getElementById('modal-prest-comentario').value = '';
                 if (modalAv) bootstrap.Modal.getOrCreateInstance(modalAv).show();
@@ -3008,7 +3008,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var subcatHtml = (ag.subcategoriasCliente && ag.subcategoriasCliente.length > 0)
                     ? '<p class="agenda-cliente-servico" style="font-size:.78rem;color:#555;"><i class="bi bi-list-check me-1"></i>' + ag.subcategoriasCliente.map(function(sc){ return _escaparHtml(sc); }).join(', ') + '</p>'
                     : '';
-                li.innerHTML = '<div><div class="agenda-slot-dia">' + diaLabel + '</div><div class="agenda-slot-tempo">' + horario + '</div></div><div><div class="agenda-cliente-nome">' + (ag.cliente || '—') + '</div><p class="agenda-cliente-servico">Serviço: ' + (ag.servico || '—') + '</p>' + subcatHtml + '<p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>' + (ag.endereco || '') + '</p></div><div class="agenda-status-area"><span class="agenda-status-tag ' + statusTag + '">' + statusTexto + '</span>' + badgeExtra + '<div class="agenda-botoes">' + botoesHTML + '</div></div>';
+                li.innerHTML = '<div><div class="agenda-slot-dia">' + diaLabel + '</div><div class="agenda-slot-tempo">' + horario + '</div></div><div><div class="agenda-cliente-nome">' + _escaparHtml(ag.cliente || '—') + '</div><p class="agenda-cliente-servico">Serviço: ' + _escaparHtml(ag.servico || '—') + '</p>' + subcatHtml + '<p class="agenda-cliente-local"><i class="bi bi-geo-alt me-1"></i>' + _escaparHtml(ag.endereco || '') + '</p></div><div class="agenda-status-area"><span class="agenda-status-tag ' + statusTag + '">' + statusTexto + '</span>' + badgeExtra + '<div class="agenda-botoes">' + botoesHTML + '</div></div>';
                 listaEl.appendChild(li);
             });
         }
@@ -3246,7 +3246,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var modalEl = document.getElementById('modalCancelarAgendamento');
         if (!modalEl) return;
         var infoBox = document.getElementById('modal-cancelar-info-agendamento');
-        if (infoBox) infoBox.innerHTML = '<strong>Cliente:</strong> ' + (ag.cliente || '—') + ' | <strong>Serviço:</strong> ' + (ag.servico || '—') + ' | <strong>Data:</strong> ' + (ag.data || '—');
+        if (infoBox) infoBox.innerHTML = '<strong>Cliente:</strong> ' + _escaparHtml(ag.cliente || '—') + ' | <strong>Serviço:</strong> ' + _escaparHtml(ag.servico || '—') + ' | <strong>Data:</strong> ' + _escaparHtml(ag.data || '—');
         // Limpa rádios
         document.querySelectorAll('input[name="motivo-cancelamento"]').forEach(function (r) { r.checked = false; });
         var obsEl = document.getElementById('motivo-observacao'); if (obsEl) obsEl.value = '';
@@ -3690,7 +3690,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var stars = Array.from({ length: 5 }, function (_, i) { return i < av.nota ? '<i class="bi bi-star-fill" style="color:#ffc107;"></i>' : '<i class="bi bi-star" style="color:#ccc;"></i>'; }).join('');
                 var card = document.createElement('div');
                 card.className = 'review-card-reverse review-card-prest-recebida';
-                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Cliente: ' + av.cliente + ' (' + av.servico + ')</h5><span class="text-muted"><small>' + av.data + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + av.comentario + '"</p>';
+                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Cliente: ' + _escaparHtml(av.cliente) + ' (' + _escaparHtml(av.servico) + ')</h5><span class="text-muted"><small>' + av.data + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + _escaparHtml(av.comentario) + '"</p>';
                 container.insertBefore(card, botaoBloco || null);
             });
         }
@@ -4023,7 +4023,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         var btnX = document.createElement('button');
                         btnX.type = 'button';
                         btnX.className = 'btn-galeria-excluir';
-                        btnX.style.cssText = 'position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:13px;line-height:1;cursor:pointer;z-index:2;';
+                        btnX.style.cssText = 'position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:28px;height:28px;font-size:16px;line-height:1;cursor:pointer;z-index:2;';
                         btnX.innerHTML = '&times;';
                         btnX.title = 'Excluir mídia';
                         btnX.addEventListener('click', function (e) {
@@ -4169,7 +4169,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (avsRec.length > 0) {
                 depDiv.innerHTML = avsRec.map(function (av) {
                     var stars = Array.from({ length: 5 }, function (_, i) { return i < av.nota ? '<i class="bi bi-star-fill" style="color:#ffc107;"></i>' : '<i class="bi bi-star" style="color:#ccc;"></i>'; }).join('');
-                    return '<div style="padding:10px;border-radius:8px;background:#f8f9fa;margin-bottom:8px;"><div>' + stars + '</div><p style="font-size:.85rem;margin:4px 0 0;">"' + _escaparHtml(av.comentario) + '"</p><small class="text-muted">— ' + av.cliente + '</small></div>';
+                    return '<div style="padding:10px;border-radius:8px;background:#f8f9fa;margin-bottom:8px;"><div>' + stars + '</div><p style="font-size:.85rem;margin:4px 0 0;">"' + _escaparHtml(av.comentario) + '"</p><small class="text-muted">— ' + _escaparHtml(av.cliente) + '</small></div>';
                 }).join('');
             } else {
                 depDiv.innerHTML = '<p class="text-muted" style="font-size:.85rem;">Nenhuma avaliação recebida ainda.</p>';
@@ -4816,13 +4816,13 @@ document.addEventListener('DOMContentLoaded', function () {
         var endEl  = document.getElementById('ci-endereco');
         var telEl  = document.getElementById('ci-telefone');
         var emlEl  = document.getElementById('ci-email');
-        if (endEl) endEl.innerHTML = '<i class="bi bi-geo-alt-fill me-2"></i>' + (d.endereco || SG_DADOS_ADM_DEFAULTS.endereco);
+        if (endEl) endEl.innerHTML = '<i class="bi bi-geo-alt-fill me-2"></i>' + _escaparHtml(d.endereco || SG_DADOS_ADM_DEFAULTS.endereco);
         if (telEl) {
-            var telHtml = '<i class="bi bi-telephone-fill me-2"></i>' + (d.telefone || SG_DADOS_ADM_DEFAULTS.telefone);
-            if (d.whatsapp) telHtml += '&nbsp;&nbsp;<a href="https://wa.me/' + d.whatsapp.replace(/\D/g,'') + '" target="_blank" style="color:inherit;"><i class="bi bi-whatsapp me-1" style="color:#25d366;"></i>' + d.whatsapp + '</a>';
+            var telHtml = '<i class="bi bi-telephone-fill me-2"></i>' + _escaparHtml(d.telefone || SG_DADOS_ADM_DEFAULTS.telefone);
+            if (d.whatsapp) telHtml += '&nbsp;&nbsp;<a href="https://wa.me/' + d.whatsapp.replace(/\D/g,'') + '" target="_blank" style="color:inherit;"><i class="bi bi-whatsapp me-1" style="color:#25d366;"></i>' + _escaparHtml(d.whatsapp) + '</a>';
             telEl.innerHTML = telHtml;
         }
-        if (emlEl) emlEl.innerHTML = '<i class="bi bi-envelope-fill me-2"></i>' + (d.emailSuporte || SG_DADOS_ADM_DEFAULTS.emailSuporte);
+        if (emlEl) emlEl.innerHTML = '<i class="bi bi-envelope-fill me-2"></i>' + _escaparHtml(d.emailSuporte || SG_DADOS_ADM_DEFAULTS.emailSuporte);
         // Horário de atendimento — adiciona se existir
         var horEl = document.getElementById('ci-horario');
         if (!horEl && d.horarioAtendimento) {
@@ -5472,7 +5472,7 @@ document.addEventListener('DOMContentLoaded', function () {
         pedidosList.querySelectorAll('.btn-avaliar').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var item = btn.closest('.cli-pedidos-item'); pedidoAtual = item.dataset.pedidoId;
-                var info = document.getElementById('modal-prestador-info'); if (info) info.innerHTML = '<strong>Serviço:</strong> ' + item.dataset.servico + ' | <strong>Prestador:</strong> ' + item.dataset.profissional;
+                var info = document.getElementById('modal-prestador-info'); if (info) info.innerHTML = '<strong>Serviço:</strong> ' + _escaparHtml(item.dataset.servico) + ' | <strong>Prestador:</strong> ' + _escaparHtml(item.dataset.profissional);
                 renderEstrelas(starsAv, notaAv, 0); var coment = document.getElementById('modal-comentario'); if (coment) coment.value = '';
                 var m = document.getElementById('modalAvaliar'); if (m) new bootstrap.Modal(m).show();
             });
@@ -5500,7 +5500,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 var av = obterAvaliacaoPorPedido(pedidoId);
                 if (!av) { alert('Nenhuma avaliação para editar. Use "Avaliar".'); return; }
                 pedidoAtual = pedidoId;
-                var info = document.getElementById('modal-editar-info'); if (info) info.innerHTML = '<strong>Serviço:</strong> ' + av.servico + ' | <strong>Prestador:</strong> ' + av.profissional;
+                var info = document.getElementById('modal-editar-info'); if (info) info.innerHTML = '<strong>Serviço:</strong> ' + _escaparHtml(av.servico) + ' | <strong>Prestador:</strong> ' + _escaparHtml(av.profissional);
                 renderEstrelas(starsEd, notaEd, av.nota); var coment = document.getElementById('modal-editar-comentario'); if (coment) coment.value = av.comentario;
                 var m = document.getElementById('modalEditar'); if (m) new bootstrap.Modal(m).show();
             });
@@ -5977,7 +5977,7 @@ document.addEventListener('DOMContentLoaded', function () {
             avs.slice().reverse().forEach(function (av) {
                 var stars = Array.from({ length: 5 }, function (_, i) { return i < av.nota ? '<i class="bi bi-star-fill" style="color:#ffc107;"></i>' : '<i class="bi bi-star" style="color:#ccc;"></i>'; }).join('');
                 var card = document.createElement('div'); card.className = 'review-card-reverse'; card.dataset.pedidoId = av.pedidoId;
-                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Prestador: ' + (av.profissional || av.profissional || '—') + ' (' + (av.servico || '') + ')</h5><span class="text-muted"><small>' + av.data + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + av.comentario + '"</p>';
+                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Prestador: ' + _escaparHtml(av.profissional || av.profissional || '—') + ' (' + _escaparHtml(av.servico || '') + ')</h5><span class="text-muted"><small>' + av.data + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + _escaparHtml(av.comentario) + '"</p>';
                 container.insertBefore(card, botao || null);
             });
         }
@@ -5986,7 +5986,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var btnEd = e.target.closest('.btn-editar-feita');
             if (btnEd) {
                 var pid = btnEd.dataset.pedidoId; var av = obterAvs().find(function (a) { return a.pedidoId === pid; }); if (!av) return;
-                pedidoAtual = pid; if (infoEl) infoEl.innerHTML = '<strong>Serviço:</strong> ' + av.servico + ' | <strong>Prestador:</strong> ' + av.profissional;
+                pedidoAtual = pid; if (infoEl) infoEl.innerHTML = '<strong>Serviço:</strong> ' + _escaparHtml(av.servico) + ' | <strong>Prestador:</strong> ' + _escaparHtml(av.profissional);
                 renderE(starsEl, notaEl, av.nota); if (comentEl) comentEl.value = av.comentario;
                 if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
             }
@@ -6030,7 +6030,7 @@ document.addEventListener('DOMContentLoaded', function () {
             avs.slice().reverse().forEach(function (av) {
                 var stars = Array.from({ length: 5 }, function (_, i) { return i < av.nota ? '<i class="bi bi-star-fill" style="color:#ffc107;"></i>' : '<i class="bi bi-star" style="color:#ccc;"></i>'; }).join('');
                 var card = document.createElement('div'); card.className = 'review-card-reverse'; card.dataset.recebidaId = av.id;
-                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Prestador: ' + av.prestador + ' (' + av.servico + ')</h5><span class="text-muted"><small>' + av.data + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + av.comentario + '"</p>';
+                card.innerHTML = '<div class="d-flex justify-content-between align-items-center mb-2"><h5 class="mb-0">Prestador: ' + _escaparHtml(av.prestador) + ' (' + _escaparHtml(av.servico) + ')</h5><span class="text-muted"><small>' + av.data + '</small></span></div><div class="rating">' + stars + '<h6 class="text-muted ms-2">Avaliação: ' + av.nota + '.0</h6></div><p class="review-text">"' + _escaparHtml(av.comentario) + '"</p>';
                 container.insertBefore(card, botao || null);
             });
         }
@@ -6888,12 +6888,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 var starsH = Array.from({ length: 5 }, function (_, i) {
                     return i < Math.round(mediaAv) ? '★' : '☆';
                 }).join('');
-                metaEl.innerHTML = (dados.categoria || 'Atividade') + ' &nbsp;·&nbsp; <span style="color:#ffc107;">' + starsH + '</span> &nbsp;' + mediaAv.toFixed(1) + ' &nbsp;·&nbsp; ' + avsRec.length + ' avaliação(ões)';
+                metaEl.innerHTML = _escaparHtml(dados.categoria || 'Atividade') + ' &nbsp;·&nbsp; <span style="color:#ffc107;">' + starsH + '</span> &nbsp;' + mediaAv.toFixed(1) + ' &nbsp;·&nbsp; ' + avsRec.length + ' avaliação(ões)';
             }
 
             // Atende em
             var atendeEl = document.getElementById('hs-atende');
-            if (atendeEl) atendeEl.innerHTML = '<i class="bi bi-geo-alt-fill me-1"></i> Atende em: ' + (dados.cidade || '—');
+            if (atendeEl) atendeEl.innerHTML = '<i class="bi bi-geo-alt-fill me-1"></i> Atende em: ' + _escaparHtml(dados.cidade || '—');
 
             // Descrição
             var descEl = document.getElementById('hs-desc');
@@ -9898,10 +9898,113 @@ document.addEventListener('DOMContentLoaded', function () {
         if (typeof callback === 'function') callback();
     }
 
+    // =========================================================
+    // SPRINT 9 — MODOS DE COR (Claro / Escuro / Daltônico)
+    // =========================================================
+    // Implementação 100% aditiva: não altera nenhuma função,
+    // variável ou comportamento já existente no site. Apenas
+    // adiciona um seletor de tema, injetado via JS em toda página,
+    // que grava a preferência em localStorage e aplica o atributo
+    // data-tema em <html> (a troca visual em si é feita inteiramente
+    // pelo CSS adicionado na seção 32 de estiloServGo.css).
+    var SG_TEMA_CHAVE = 'sgTema';
+    var SG_TEMAS = [
+        { id: 'claro',     label: 'Claro',     icone: 'bi-sun-fill' },
+        { id: 'escuro',    label: 'Escuro',    icone: 'bi-moon-stars-fill' },
+        { id: 'daltonico', label: 'Daltônico', icone: 'bi-eye-fill' }
+    ];
+
+    function _sgObterTema() {
+        try {
+            var t = localStorage.getItem(SG_TEMA_CHAVE);
+            if (t === 'escuro' || t === 'daltonico' || t === 'claro') return t;
+        } catch (e) {}
+        return 'claro';
+    }
+
+    function _sgAplicarTema(tema) {
+        try { document.documentElement.setAttribute('data-tema', tema); } catch (e) {}
+        try { localStorage.setItem(SG_TEMA_CHAVE, tema); } catch (e) {}
+    }
+
+    function inicializarSeletorTema() {
+        // Garante o tema correto aplicado (o <script> inline no <head>
+        // de cada página já faz isso antes da renderização, evitando
+        // "flash" de tema errado; esta chamada é apenas uma garantia
+        // adicional caso o atributo ainda não tenha sido definido).
+        if (!document.documentElement.getAttribute('data-tema')) {
+            document.documentElement.setAttribute('data-tema', _sgObterTema());
+        }
+
+        // Evita duplicar o botão caso a função seja chamada mais de uma vez.
+        if (document.getElementById('sg-tema-botao')) return;
+
+        var botao = document.createElement('button');
+        botao.type = 'button';
+        botao.id = 'sg-tema-botao';
+        botao.setAttribute('aria-label', 'Alterar modo de cores do site');
+        botao.setAttribute('aria-haspopup', 'true');
+        botao.setAttribute('aria-expanded', 'false');
+
+        var menu = document.createElement('div');
+        menu.id = 'sg-tema-menu';
+        menu.setAttribute('role', 'menu');
+
+        function _renderizar() {
+            var atual = _sgObterTema();
+            var infoAtual = SG_TEMAS.filter(function (t) { return t.id === atual; })[0] || SG_TEMAS[0];
+            botao.innerHTML = '<i class="bi ' + infoAtual.icone + '"></i>';
+
+            menu.innerHTML = '';
+            SG_TEMAS.forEach(function (t) {
+                var item = document.createElement('button');
+                item.type = 'button';
+                item.setAttribute('role', 'menuitemradio');
+                item.setAttribute('aria-checked', String(t.id === atual));
+                if (t.id === atual) item.className = 'sg-tema-ativo';
+                item.innerHTML = '<i class="bi ' + t.icone + '"></i><span>' + t.label + '</span>' +
+                    (t.id === atual ? '<i class="bi bi-check2 ms-auto"></i>' : '');
+                item.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    _sgAplicarTema(t.id);
+                    _renderizar();
+                    _fecharMenu();
+                });
+                menu.appendChild(item);
+            });
+        }
+
+        function _abrirMenu() {
+            menu.classList.add('sg-tema-menu-aberto');
+            botao.setAttribute('aria-expanded', 'true');
+        }
+        function _fecharMenu() {
+            menu.classList.remove('sg-tema-menu-aberto');
+            botao.setAttribute('aria-expanded', 'false');
+        }
+
+        botao.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (menu.classList.contains('sg-tema-menu-aberto')) _fecharMenu();
+            else _abrirMenu();
+        });
+        document.addEventListener('click', function (e) {
+            if (!menu.contains(e.target) && e.target !== botao) _fecharMenu();
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') _fecharMenu();
+        });
+
+        _renderizar();
+        document.body.appendChild(botao);
+        document.body.appendChild(menu);
+    }
+
         inicializarMeuPlano();
     inicializarBotoesAssinatura();
     inicializarAlterarSenhaGeral();
     inicializarSidebarResponsiva();
+    inicializarSeletorTema();       // Sprint 9 — modos de cor (claro/escuro/daltônico)
     inicializarAgendarServicos();
     inicializarCatalogoPublico();           // Sprint 4 — catálogo de prestadores na página pública
     inicializarHotsitePublico();
@@ -11341,6 +11444,20 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
+        // SPRINT 8 — Em telas mobile, fecha o menu lateral automaticamente após
+        // selecionar uma seção, evitando que ele fique cobrindo o conteúdo.
+        // Adicionado como listener independente para não alterar o handler
+        // de navegação já existente acima.
+        (function () {
+            var sidebarAdm = document.getElementById('admin-ger-sidebar');
+            if (!sidebarAdm) return;
+            sidebarAdm.querySelectorAll('li a[data-sec]').forEach(function (a) {
+                a.addEventListener('click', function () {
+                    if (window.innerWidth < 992) sidebarAdm.classList.remove('prest-sidebar-show');
+                });
+            });
+        }());
+
         // Sair limpa sessão
         var btnSair = document.getElementById('adm-btn-sair');
         if (btnSair) btnSair.addEventListener('click', function(){ DB.remove('usuarioLogado'); });
@@ -11482,7 +11599,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 var tabHtml = lista.length === 0
                     ? '<div class="adm-vazio"><i class="bi bi-person-x"></i>Nenhum usuário encontrado.</div>'
-                    : '<table class="adm-tabela"><thead><tr><th>Usuário</th><th>Tipo</th><th>Cadastro</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table>';
+                    : '<div style="overflow-x:auto;"><table class="adm-tabela"><thead><tr><th>Usuário</th><th>Tipo</th><th>Cadastro</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 
                 var corpoEl = document.getElementById('adm-usuarios-corpo');
                 if (corpoEl) corpoEl.innerHTML = tabHtml;
@@ -11747,7 +11864,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             var tabHtml = totalPrest === 0
                 ? '<div class="adm-vazio"><i class="bi bi-briefcase"></i>Nenhum prestador cadastrado.</div>'
-                : '<table class="adm-tabela"><thead><tr><th>Nome</th><th>Categoria</th><th>Cidade</th><th style="text-align:center;">Agendamentos</th><th>Avaliações</th><th>Status / Contrato</th><th>Ações</th></tr></thead><tbody>' + rows + rowsSemHotsite + '</tbody></table>';
+                : '<div style="overflow-x:auto;"><table class="adm-tabela"><thead><tr><th>Nome</th><th>Categoria</th><th>Cidade</th><th style="text-align:center;">Agendamentos</th><th>Avaliações</th><th>Status / Contrato</th><th>Ações</th></tr></thead><tbody>' + rows + rowsSemHotsite + '</tbody></table></div>';
 
             sec.innerHTML =
                 '<div class="adm-secao-titulo"><i class="bi bi-briefcase-fill" style="color:#FFC300;"></i>Gerenciar Prestadores</div>' +
@@ -11811,7 +11928,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 var tabHtml = noticias.length === 0
                     ? '<div class="adm-vazio"><i class="bi bi-newspaper"></i>Nenhuma notícia cadastrada. Crie a primeira!</div>'
-                    : '<table class="adm-tabela"><thead><tr><th>Título</th><th>Categoria</th><th>Autor</th><th>Criado em</th><th>Status</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table>';
+                    : '<div style="overflow-x:auto;"><table class="adm-tabela"><thead><tr><th>Título</th><th>Categoria</th><th>Autor</th><th>Criado em</th><th>Status</th><th>Ações</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
 
                 var listaEl = document.getElementById('adm-noticias-lista');
                 if (listaEl) listaEl.innerHTML = tabHtml;

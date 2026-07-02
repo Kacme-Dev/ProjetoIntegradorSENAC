@@ -4189,3 +4189,170 @@ footer {
         .hotsite-perfil-aside .btn-enviar-msg:active {
             transform: translateY(2px);
         }
+
+/* ============================================================
+   SPRINT 8 — Ajustes finos de responsividade mobile
+   ============================================================ */
+/* Rolagem horizontal de segurança para as tabelas de ranking
+   (avaliacao.html), evitando que colunas se comprimam demais ou
+   quebrem o layout em telas muito estreitas. */
+#ranking-clientes-corpo, #ranking-prestadores-corpo { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+
+/* ============================================================
+   32. MODOS DE COR — CLARO / ESCURO / DALTÔNICO   (SPRINT 9)
+   ============================================================
+   IMPLEMENTAÇÃO 100% ADITIVA — nenhuma regra das seções 01 a 31
+   acima foi alterada. O "Modo Claro" É o layout atual do site,
+   pixel a pixel idêntico a antes desta Sprint; ele continua sendo
+   o padrão sempre que nenhum tema tiver sido escolhido/salvo.
+
+   Como funciona:
+   - O tema ativo fica no atributo `data-tema` da tag <html>
+     ("claro" | "escuro" | "daltonico"), controlado via
+     localStorage por script.js (SG_Tema / inicializarSeletorTema).
+   - MODO ESCURO: inversão de cor global (mesma técnica usada por
+     extensões de "dark mode universal" tipo Dark Reader) aplicada
+     em <html>, com contra-inversão em fotos, vídeos e no banner
+     hero (que usa uma foto de fundo), para que essas imagens
+     continuem exibindo cores naturais em vez de aparecerem como
+     "negativos fotográficos".
+   - MODO DALTÔNICO: mantém a base do Modo Claro, mas substitui a
+     dupla verde/vermelho (a mais problemática para daltonismo
+     protanopia/deuteranopia) por azul/laranja — substituição de
+     paleta cientificamente estabelecida (paleta Okabe-Ito),
+     permanecendo distinguível para a grande maioria dos tipos de
+     daltonismo, sem depender de inversão de brilho.
+   ============================================================ */
+
+/* ---- Variáveis novas de apoio (não substituem nenhuma existente;
+        os valores abaixo são exatamente os que já estavam
+        hardcoded nas badges de status, apenas agora nomeados) ---- */
+:root {
+    --cor-sucesso:        #198754;
+    --cor-sucesso-clara:  #d1fae5;
+    --cor-sucesso-texto:  #065f46;
+    --cor-perigo-texto:   #991b1b;
+}
+
+/* ============================================================
+   MODO ESCURO
+   ============================================================ */
+html[data-tema="escuro"] {
+    filter: invert(1) hue-rotate(180deg);
+    background: #fff;
+    color-scheme: dark;
+}
+/* Contra-inversão: fotos, vídeos e o banner hero (foto de fundo)
+   voltam a exibir cores naturais — aplicar o MESMO filtro duas
+   vezes (uma no ancestral <html>, outra aqui) cancela o efeito. */
+html[data-tema="escuro"] img,
+html[data-tema="escuro"] video,
+html[data-tema="escuro"] .header-chamada {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+/* ============================================================
+   MODO DALTÔNICO
+   ============================================================ */
+html[data-tema="daltonico"] {
+    --cor-vermelho:       #d55e00;
+    --cor-vermelho-esc:   #a34700;
+    --cor-vermelho-claro: #ffe3cc;
+    --cor-sucesso:        #0072b2;
+    --cor-sucesso-clara:  #cce5f2;
+    --cor-sucesso-texto:  #00344d;
+    --cor-perigo-texto:   #7a3300;
+}
+/* Badges/status que usam verde fixo (fora de variável) — trocados
+   por azul, mantendo o mesmo papel semântico de "positivo/ativo". */
+html[data-tema="daltonico"] .prest-badge.concluido,
+html[data-tema="daltonico"] .cli-badge.concluido,
+html[data-tema="daltonico"] .agenda-status-tag.concluido,
+html[data-tema="daltonico"] .prest-badge.ativo,
+html[data-tema="daltonico"] .adm-badge-status.ativo,
+html[data-tema="daltonico"] .adm-badge-status.publicado,
+html[data-tema="daltonico"] .adm-badge-status.resolvido,
+html[data-tema="daltonico"] .adm-status-ativo {
+    background-color: var(--cor-sucesso-clara) !important;
+    color: var(--cor-sucesso-texto) !important;
+}
+/* Badges/status que usam vermelho fixo (fora de variável) —
+   trocados por laranja, mantendo o papel de "negativo/suspenso". */
+html[data-tema="daltonico"] .adm-badge-status.inativo,
+html[data-tema="daltonico"] .adm-badge-status.aberto {
+    background-color: var(--cor-vermelho-claro) !important;
+    color: var(--cor-perigo-texto) !important;
+}
+
+/* ============================================================
+   BOTÃO SELETOR DE TEMA — fixo no canto superior direito em
+   todas as páginas (injetado via JS em inicializarSeletorTema).
+   ============================================================ */
+#sg-tema-botao {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1200;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1.5px solid #dee2e6;
+    box-shadow: 0 2px 10px rgba(0,0,0,.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.05rem;
+    color: #444;
+    padding: 0;
+    transition: transform .15s;
+}
+#sg-tema-botao:hover { transform: scale(1.08); }
+#sg-tema-botao:active { transform: scale(.96); }
+
+#sg-tema-menu {
+    position: fixed;
+    top: 52px;
+    right: 10px;
+    z-index: 1200;
+    background: #ffffff;
+    border: 1.5px solid #dee2e6;
+    border-radius: 10px;
+    box-shadow: 0 6px 22px rgba(0,0,0,.18);
+    padding: 6px;
+    min-width: 172px;
+    display: none;
+}
+#sg-tema-menu.sg-tema-menu-aberto { display: block; }
+#sg-tema-menu button {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 7px;
+    font-size: .85rem;
+    color: #212529;
+    cursor: pointer;
+}
+#sg-tema-menu button:hover { background: #f2f4f8; }
+#sg-tema-menu button.sg-tema-ativo { background: #e0edff; color: #0d4fa3; font-weight: 700; }
+#sg-tema-menu button .bi { font-size: 1rem; width: 18px; text-align: center; }
+
+/* O botão/menu de tema NUNCA é invertido: mantém aparência estável
+   e reconhecível, servindo de referência visual fixa em qualquer
+   modo de cor ativo. */
+html[data-tema="escuro"] #sg-tema-botao,
+html[data-tema="escuro"] #sg-tema-menu {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+@media (max-width: 480px) {
+    #sg-tema-botao { top: 6px; right: 6px; width: 34px; height: 34px; font-size: .95rem; }
+    #sg-tema-menu  { top: 46px; right: 6px; min-width: 160px; }
+}
