@@ -128,10 +128,23 @@ button:active,
 /* ============================================================
    04. NAVBAR / HEADER
    ============================================================ */
+/* SPRINT 10 — <header> vira um "espaçador" de altura fixa no fluxo
+   normal do documento. Como a .navbar dentro dele passa a ser
+   position:fixed (portanto fora do fluxo), sem essa altura explícita
+   o <header> colapsaria a 0px e o conteúdo da página subiria por
+   baixo da navbar. Afeta apenas as páginas que realmente têm
+   <header> (não impacta adminLogin.html/adminCadastro.html, que não
+   usam a navbar padrão do site). */
+header { height: 64px; }
+
 .navbar {
   background-color: var(--fundo-card);
   box-shadow: 0 2px 12px rgba(0,0,0,.08);
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   z-index: 1000;
   padding-block: 8px;
 }
@@ -901,6 +914,17 @@ footer {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  /* SPRINT 10 — sidebar fixa: permanece parada na tela enquanto o
+     conteúdo principal (.prest-main) rola por trás dela. Começa
+     logo abaixo da navbar fixa (top:64px) e ocupa até o fim da
+     viewport; se a lista de itens for maior que a tela, ela rola
+     internamente (overflow-y:auto) sem afetar a rolagem da página. */
+  position: fixed;
+  top: 64px;
+  left: 0;
+  bottom: 0;
+  z-index: 900;
+  overflow-y: auto;
 }
 .prest-sidebar ul {
   list-style: none;
@@ -938,6 +962,11 @@ footer {
   margin-top: auto;
   border-top: 1px solid rgba(0,0,0,.07);
   padding-top: 6px;
+  /* SPRINT 10 — "Sair" permanece sempre visível no rodapé da sidebar,
+     mesmo quando a lista de itens acima precisa rolar internamente. */
+  position: sticky;
+  bottom: 0;
+  background-color: var(--fundo-card);
 }
 .prest-sidebar .sidebar-sair a { color: var(--cor-vermelho) !important; font-weight: 600; }
 .prest-sidebar .sidebar-sair a:hover {
@@ -956,6 +985,13 @@ footer {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
+  /* SPRINT 10 — mesma lógica de sidebar fixa aplicada ao prestador. */
+  position: fixed;
+  top: 64px;
+  left: 0;
+  bottom: 0;
+  z-index: 900;
+  overflow-y: auto;
 }
 .cli-sidebar ul {
   list-style: none;
@@ -993,6 +1029,10 @@ footer {
   margin-top: auto;
   border-top: 1px solid rgba(0,0,0,.07);
   padding-top: 6px;
+  /* SPRINT 10 — "Sair" sempre visível, igual à sidebar do prestador. */
+  position: sticky;
+  bottom: 0;
+  background-color: var(--fundo-card);
 }
 .cli-sidebar .sidebar-sair a { color: var(--cor-vermelho) !important; font-weight: 600; }
 .cli-sidebar .sidebar-sair a:hover {
@@ -1008,6 +1048,24 @@ footer {
   padding: 32px 28px;
   background-color: var(--fundo-app);
   overflow-x: hidden;
+  /* SPRINT 10 — compensa a sidebar agora fixa (position:fixed a
+     retirou do fluxo normal), evitando que o conteúdo principal
+     fique coberto por ela. */
+  margin-left: 230px;
+}
+
+/* SPRINT 10 — o rodapé (e a eventual seção de newsletter que o
+   antecede) de cada página com sidebar fica coberto pela sidebar
+   agora fixa ao rolar até o final da página. Usamos o combinador de
+   irmão geral (~), e não o de irmão imediato (+), porque em algumas
+   páginas há modais ocultos (display:none por padrão) entre o
+   wrapper e o rodapé — eles não ocupam espaço visual, mas quebrariam
+   a correspondência de "irmão imediato". */
+.prest-wrapper ~ footer,
+.cli-wrapper ~ footer,
+.prest-wrapper ~ .container-footer,
+.cli-wrapper ~ .container-footer {
+  margin-left: 230px;
 }
 
 /* Títulos de página internos */
@@ -2071,11 +2129,24 @@ footer {
     width: 100%; min-width: unset;
     border-right: none; border-bottom: 1px solid var(--borda);
     padding: 10px 0; display: none;
+    /* SPRINT 10 — em mobile a sidebar vira um painel deslizante que
+       cobre a tela quando aberto (data-tema/tema já usam a mesma
+       lógica), então mantemos position:fixed (herdado da regra
+       desktop) mas com bottom automático para acompanhar o
+       conteúdo, sem exceder a altura necessária. */
+    bottom: auto;
+    max-height: calc(100vh - 64px);
   }
   .prest-sidebar.prest-sidebar-show,
   .prest-sidebar.cli-sidebar-show { display: block; }
   .prest-sidebar li a { padding: 10px 16px; }
-  .prest-main { padding: 18px 14px; }
+  .prest-main {
+    padding: 18px 14px;
+    /* SPRINT 10 — em mobile a sidebar fica oculta por padrão (não
+       ocupa espaço fixo permanente), então o recuo de 230px usado
+       no desktop não se aplica aqui. */
+    margin-left: 0;
+  }
 }
 
 /* Sidebar & main — cliente */
@@ -2085,10 +2156,26 @@ footer {
     width: 100%; min-width: unset;
     border-right: none; border-bottom: 1px solid var(--borda);
     padding: 10px 0; display: none;
+    bottom: auto;
+    max-height: calc(100vh - 64px);
   }
   .cli-sidebar.cli-sidebar-show { display: block; }
   .cli-sidebar li a { padding: 10px 16px; }
-  .cli-main { padding: 18px 14px; }
+  .cli-main {
+    padding: 18px 14px;
+    margin-left: 0;
+  }
+}
+
+/* SPRINT 10 — em mobile, sem a sidebar ocupando espaço fixo
+   permanente, o rodapé também não precisa do recuo de 230px. */
+@media (max-width: 991.98px) {
+  .prest-wrapper ~ footer,
+  .cli-wrapper ~ footer,
+  .prest-wrapper ~ .container-footer,
+  .cli-wrapper ~ .container-footer {
+    margin-left: 0;
+  }
 }
 
 /* Stat grids */
@@ -4238,14 +4325,49 @@ footer {
 /* ============================================================
    MODO ESCURO
    ============================================================ */
+/* SPRINT 11 — CORREÇÃO CRÍTICA: a regra original aplicava o filtro de
+   inversão em <html> como um todo. Isso tem um efeito colateral pouco
+   conhecido da especificação CSS: um elemento com "filter" diferente
+   de "none" passa a ser o "containing block" de todos os seus
+   descendentes com position:fixed (e absolute) — exatamente como
+   "transform" já fazia. Como a Sprint 10 tornou .navbar e as sidebars
+   position:fixed (para ficarem fixas na tela durante a rolagem), elas
+   são descendentes de <html> — então, com o modo escuro ativo, elas
+   deixavam de ser fixas em relação à JANELA e passavam a ser "fixas"
+   em relação à altura TOTAL da página (que geralmente é muito maior
+   que a tela), rolando para fora de vista normalmente. Ou seja: o
+   modo escuro quebrava silenciosamente a navbar/sidebar fixas.
+   A correção: em vez de filtrar <html>, filtramos DIRETAMENTE cada
+   elemento de nível superior — a própria .navbar, as próprias
+   sidebars, as próprias áreas de conteúdo (.prest-main/.cli-main) e
+   todo o restante (rodapé, newsletter, modais, toasts) via
+   "body > *". Como o filtro passa a estar no PRÓPRIO elemento fixo
+   (não em um ancestral dele), o posicionamento relativo à janela é
+   preservado em qualquer modo de cor. Também movemos (nesta mesma
+   Sprint) os poucos modais que estavam aninhados dentro de
+   .prest-main para fora dele, como filhos diretos do <body> — assim
+   nenhum modal do site fica "preso" dentro de um contêiner filtrado. */
 html[data-tema="escuro"] {
-    filter: invert(1) hue-rotate(180deg);
-    background: #fff;
     color-scheme: dark;
 }
+/* Preenche o fundo do <body> diretamente (sem filter, para não criar
+   containing block) — evita qualquer lacuna clara aparecendo atrás
+   do conteúdo filtrado em páginas mais curtas que a tela. */
+html[data-tema="escuro"] body {
+    background-color: #12141a;
+}
+html[data-tema="escuro"] body > *:not(header):not(.prest-wrapper):not(.cli-wrapper),
+html[data-tema="escuro"] .navbar,
+html[data-tema="escuro"] .prest-sidebar,
+html[data-tema="escuro"] .cli-sidebar,
+html[data-tema="escuro"] .prest-main,
+html[data-tema="escuro"] .cli-main {
+    filter: invert(1) hue-rotate(180deg);
+}
 /* Contra-inversão: fotos, vídeos e o banner hero (foto de fundo)
-   voltam a exibir cores naturais — aplicar o MESMO filtro duas
-   vezes (uma no ancestral <html>, outra aqui) cancela o efeito. */
+   voltam a exibir cores naturais — aplicar o MESMO filtro uma
+   segunda vez (o elemento já herda uma inversão do contêiner
+   filtrado acima) cancela o efeito, restaurando as cores originais. */
 html[data-tema="escuro"] img,
 html[data-tema="escuro"] video,
 html[data-tema="escuro"] .header-chamada {
@@ -4291,7 +4413,15 @@ html[data-tema="daltonico"] .adm-badge-status.aberto {
    ============================================================ */
 #sg-tema-botao {
     position: fixed;
-    top: 10px;
+    /* SPRINT 10 — reposicionado para logo ABAIXO da navbar (agora
+       fixa/position:fixed em toda a página). Antes, com a navbar em
+       fluxo normal, o botão só coincidia com ela no topo absoluto da
+       página; agora que a navbar permanece sempre visível, mantê-lo
+       na mesma faixa vertical (top:10px) arriscaria sobrepor itens
+       do lado direito da navbar (ex.: "Meu Perfil", "Sair") em
+       larguras de tela intermediárias (~992–1140px), onde o
+       container da navbar tem pouca folga até a borda da tela. */
+    top: 76px;
     right: 10px;
     z-index: 1200;
     width: 38px;
@@ -4314,7 +4444,7 @@ html[data-tema="daltonico"] .adm-badge-status.aberto {
 
 #sg-tema-menu {
     position: fixed;
-    top: 52px;
+    top: 118px;
     right: 10px;
     z-index: 1200;
     background: #ffffff;
@@ -4353,6 +4483,6 @@ html[data-tema="escuro"] #sg-tema-menu {
 }
 
 @media (max-width: 480px) {
-    #sg-tema-botao { top: 6px; right: 6px; width: 34px; height: 34px; font-size: .95rem; }
-    #sg-tema-menu  { top: 46px; right: 6px; min-width: 160px; }
+    #sg-tema-botao { top: 70px; right: 6px; width: 34px; height: 34px; font-size: .95rem; }
+    #sg-tema-menu  { top: 108px; right: 6px; min-width: 160px; }
 }

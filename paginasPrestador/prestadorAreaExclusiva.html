@@ -206,75 +206,75 @@
                     </li>
                 </ul>
             </div>
-
-            <!-- MODAL: AVALIAR CLIENTE -->
-            <div class="modal fade" id="modalPrestAvaliar" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header" style="background-color:#FFC300; color:#000;">
-                            <h5 class="modal-title"><i class="bi bi-star me-2"></i>Avaliar Serviço</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div id="modal-prest-avaliar-info" class="mb-3 p-2 bg-light rounded text-dark"></div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-dark">Nota:</label>
-                                <div class="modal-estrelas" id="modal-prest-estrelas">
-                                    <i class="bi bi-star" data-nota="1"></i>
-                                    <i class="bi bi-star" data-nota="2"></i>
-                                    <i class="bi bi-star" data-nota="3"></i>
-                                    <i class="bi bi-star" data-nota="4"></i>
-                                    <i class="bi bi-star" data-nota="5"></i>
-                                </div>
-                                <input type="hidden" id="modal-prest-nota-valor" value="0">
-                            </div>
-                            <div class="mb-3">
-                                <label for="modal-prest-comentario" class="form-label fw-bold text-dark">Comentário:</label>
-                                <textarea class="form-control" id="modal-prest-comentario" rows="4" maxlength="1000" style="resize:none;" placeholder="Comentário sobre o serviço/cliente..."></textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="button" class="btn btn-warning" id="btn-prest-salvar-avaliacao"><i class="bi bi-floppy me-1"></i>Salvar Avaliação</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- MODAL: EDITAR AVALIAÇÃO -->
-            <div class="modal fade" id="modalPrestEditar" tabindex="-1" aria-hidden="true">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header" style="background-color:#FFC300; color:#000;">
-                            <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Editar Avaliação</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div id="modal-prest-editar-info" class="mb-3 p-2 bg-light rounded text-dark"></div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-dark">Nota:</label>
-                                <div class="modal-estrelas" id="modal-prest-editar-estrelas">
-                                    <i class="bi bi-star" data-nota="1"></i>
-                                    <i class="bi bi-star" data-nota="2"></i>
-                                    <i class="bi bi-star" data-nota="3"></i>
-                                    <i class="bi bi-star" data-nota="4"></i>
-                                    <i class="bi bi-star" data-nota="5"></i>
-                                </div>
-                                <input type="hidden" id="modal-prest-editar-nota-valor" value="0">
-                            </div>
-                            <div class="mb-3">
-                                <label for="modal-prest-editar-comentario" class="form-label fw-bold text-dark">Comentário:</label>
-                                <textarea class="form-control" id="modal-prest-editar-comentario" rows="4" maxlength="1000" style="resize:none;"></textarea>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="button" class="btn btn-warning" id="btn-prest-salvar-edicao"><i class="bi bi-floppy me-1"></i>Salvar Alterações</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </main>
+    </div>
+
+    <!-- MODAL: AVALIAR CLIENTE -->
+    <div class="modal fade" id="modalPrestAvaliar" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color:#FFC300; color:#000;">
+                    <h5 class="modal-title"><i class="bi bi-star me-2"></i>Avaliar Serviço</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modal-prest-avaliar-info" class="mb-3 p-2 bg-light rounded text-dark"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Nota:</label>
+                        <div class="modal-estrelas" id="modal-prest-estrelas">
+                            <i class="bi bi-star" data-nota="1"></i>
+                            <i class="bi bi-star" data-nota="2"></i>
+                            <i class="bi bi-star" data-nota="3"></i>
+                            <i class="bi bi-star" data-nota="4"></i>
+                            <i class="bi bi-star" data-nota="5"></i>
+                        </div>
+                        <input type="hidden" id="modal-prest-nota-valor" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal-prest-comentario" class="form-label fw-bold text-dark">Comentário:</label>
+                        <textarea class="form-control" id="modal-prest-comentario" rows="4" maxlength="1000" style="resize:none;" placeholder="Comentário sobre o serviço/cliente..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-warning" id="btn-prest-salvar-avaliacao"><i class="bi bi-floppy me-1"></i>Salvar Avaliação</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: EDITAR AVALIAÇÃO -->
+    <div class="modal fade" id="modalPrestEditar" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color:#FFC300; color:#000;">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Editar Avaliação</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modal-prest-editar-info" class="mb-3 p-2 bg-light rounded text-dark"></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Nota:</label>
+                        <div class="modal-estrelas" id="modal-prest-editar-estrelas">
+                            <i class="bi bi-star" data-nota="1"></i>
+                            <i class="bi bi-star" data-nota="2"></i>
+                            <i class="bi bi-star" data-nota="3"></i>
+                            <i class="bi bi-star" data-nota="4"></i>
+                            <i class="bi bi-star" data-nota="5"></i>
+                        </div>
+                        <input type="hidden" id="modal-prest-editar-nota-valor" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal-prest-editar-comentario" class="form-label fw-bold text-dark">Comentário:</label>
+                        <textarea class="form-control" id="modal-prest-editar-comentario" rows="4" maxlength="1000" style="resize:none;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-warning" id="btn-prest-salvar-edicao"><i class="bi bi-floppy me-1"></i>Salvar Alterações</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- FOOTER -->

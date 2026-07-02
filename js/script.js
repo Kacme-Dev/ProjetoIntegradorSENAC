@@ -1003,6 +1003,15 @@ document.addEventListener('DOMContentLoaded', function () {
         function _hoje()        { return new Date(); }
         function _addDias(d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
         function _iso(d)        { return d.toISOString(); }
+        // SPRINT 10 — próximo dia útil a partir de uma data (pula sábado/domingo).
+        // Usado nas opções de cancelamento/troca IMEDIATA: em vez de aguardar o
+        // fim da vigência contratada, a mudança passa a valer já no próximo dia útil.
+        function _proximoDiaUtil(d) {
+            var x = new Date(d.getTime());
+            x.setDate(x.getDate() + 1);
+            while (x.getDay() === 0 || x.getDay() === 6) { x.setDate(x.getDate() + 1); } // 0=dom, 6=sáb
+            return x;
+        }
         function fmt(iso)       { try { return new Date(iso).toLocaleDateString('pt-BR'); } catch (e) { return '—'; } }
         function nomePlano(id)  { return NOMES[id] || ((SG_Trial.obterPlano(id) || {}).nome) || id || '—'; }
         function rank(id)       { return (RANK[id] != null) ? RANK[id] : 1; }
@@ -1148,8 +1157,13 @@ document.addEventListener('DOMContentLoaded', function () {
             return d;
         }
 
-        // Agenda troca (upgrade/downgrade/gratuito) para o FIM da vigência atual.
-        function agendarTroca(email, planoDestino) {
+        // Agenda troca (upgrade/downgrade/gratuito). Por padrão, para o FIM da
+        // vigência atual (comportamento original, inalterado). SPRINT 10 —
+        // quando imediato=true, antecipa o fim da vigência atual para o
+        // PRÓXIMO DIA ÚTIL: o prestador perde o plano atual nessa data e o
+        // novo plano entra em vigor a partir daí (mesmo mecanismo de resolver(),
+        // sem nenhuma alteração nele — apenas a data de referência muda).
+        function agendarTroca(email, planoDestino, imediato) {
             var cad = _usuarios();
             var d   = cad[email] || {};
             var ass = d.assinatura;
@@ -1158,43 +1172,81 @@ document.addEventListener('DOMContentLoaded', function () {
             var atual = ass.plano;
             var tipo  = tipoMudanca(atual, planoDestino);
             if (tipo === 'igual') return { ok: false, motivo: 'mesmo_plano' };
+            var efetivaEm = ass.dataFim;
+            var dataFimOriginal = ass.dataFim; // SPRINT 10 — preservado para reverterTroca() restaurar corretamente
+            if (imediato) {
+                efetivaEm   = _iso(_proximoDiaUtil(_hoje()));
+                ass.dataFim = efetivaEm; // antecipa o fim da vigência atual
+            }
             ass.mudancaAgendada = {
                 planoDestino: planoDestino,
                 nomeDestino: nomePlano(planoDestino),
                 tipo: tipo,
-                efetivaEm: ass.dataFim
+                efetivaEm: efetivaEm,
+                imediato: !!imediato,
+                dataFimOriginal: dataFimOriginal
             };
             ass.cancelamentoAgendado = null; // troca substitui cancelamento agendado
             cad[email] = d; _salvar(cad);
-            return { ok: true, tipo: tipo, efetivaEm: ass.dataFim, atual: atual, destino: planoDestino };
+            return { ok: true, tipo: tipo, efetivaEm: efetivaEm, imediato: !!imediato, atual: atual, destino: planoDestino };
         }
 
-        // Agenda cancelamento para o FIM da vigência (carência inicia no fim da vigência).
-        function agendarCancelamento(email) {
+        // Agenda cancelamento. Por padrão, para o FIM da vigência (carência
+        // inicia no fim da vigência) — comportamento original, inalterado.
+        // SPRINT 10 — quando imediato=true, antecipa o fim da vigência atual
+        // para o PRÓXIMO DIA ÚTIL: a partir daí a conta é bloqueada e a
+        // carência de 90 dias começa a contar (mesmo mecanismo de resolver()).
+        function agendarCancelamento(email, imediato) {
             var cad = _usuarios();
             var d   = cad[email] || {};
             var ass = d.assinatura;
             if (!ass || !ass.ativa) return { ok: false, motivo: 'sem_assinatura' };
             _normalizarVigencia(ass);
             var fim = ass.dataFim || _iso(_addDias(_hoje(), CICLO_DIAS));
+            var dataFimOriginalCancel = fim; // SPRINT 10 — preservado para reverterCancelamento() restaurar corretamente
+            if (imediato) {
+                fim = _iso(_proximoDiaUtil(_hoje()));
+                ass.dataFim = fim; // antecipa o fim da vigência atual
+            }
             ass.cancelamentoAgendado = {
                 efetivaEm: fim,
+                imediato: !!imediato,
+                dataFimOriginal: dataFimOriginalCancel,
                 carenciaDias: _carencia(),
                 carenciaAteh: _iso(_addDias(new Date(fim), _carencia()))
             };
             ass.mudancaAgendada = null; // cancelamento substitui troca agendada
             cad[email] = d; _salvar(cad);
-            return { ok: true, efetivaEm: fim, carenciaDias: _carencia(), carenciaAteh: ass.cancelamentoAgendado.carenciaAteh };
+            return { ok: true, efetivaEm: fim, imediato: !!imediato, carenciaDias: _carencia(), carenciaAteh: ass.cancelamentoAgendado.carenciaAteh };
         }
 
         function reverterTroca(email) {
             var cad = _usuarios(); var d = cad[email] || {};
-            if (d.assinatura) { d.assinatura.mudancaAgendada = null; cad[email] = d; _salvar(cad); }
+            if (d.assinatura) {
+                var ma = d.assinatura.mudancaAgendada;
+                // SPRINT 10 — se a troca era IMEDIATA, a vigência atual havia sido
+                // antecipada para o próximo dia útil; ao reverter, restaura a data
+                // de fim ORIGINAL para não corromper o próximo ciclo de renovação.
+                if (ma && ma.imediato && ma.dataFimOriginal) {
+                    d.assinatura.dataFim = ma.dataFimOriginal;
+                }
+                d.assinatura.mudancaAgendada = null;
+                cad[email] = d; _salvar(cad);
+            }
             return d;
         }
         function reverterCancelamento(email) {
             var cad = _usuarios(); var d = cad[email] || {};
-            if (d.assinatura) { d.assinatura.cancelamentoAgendado = null; cad[email] = d; _salvar(cad); }
+            if (d.assinatura) {
+                var ca = d.assinatura.cancelamentoAgendado;
+                // SPRINT 10 — mesma lógica: restaura a vigência original se o
+                // cancelamento revertido era do tipo imediato.
+                if (ca && ca.imediato && ca.dataFimOriginal) {
+                    d.assinatura.dataFim = ca.dataFimOriginal;
+                }
+                d.assinatura.cancelamentoAgendado = null;
+                cad[email] = d; _salvar(cad);
+            }
             return d;
         }
 
@@ -1204,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', function () {
             sessao: sessao, resolver: resolver, estado: estado, contratar: contratar,
             agendarTroca: agendarTroca, agendarCancelamento: agendarCancelamento,
             reverterTroca: reverterTroca, reverterCancelamento: reverterCancelamento,
-            carenciaDias: _carencia
+            carenciaDias: _carencia, proximoDiaUtil: function () { return _proximoDiaUtil(_hoje()); }
         };
     }());
     try { window.SG_Plano = SG_Plano; } catch (e) {}
@@ -9781,11 +9833,19 @@ document.addEventListener('DOMContentLoaded', function () {
         var corpo;
         if (agendar) {
             var fim = window.SG_Plano.fmt(est.dataFim);
+            var proximoUtilTroca = window.SG_Plano.fmt(window.SG_Plano.proximoDiaUtil());
+            var avisoImediatoTroca =
+                'Ao confirmar <strong>imediatamente</strong>, o <strong>' + _escaparHtml(est.planoNome) + '</strong> se encerra já no <strong>próximo dia útil (' + proximoUtilTroca + ')</strong> ' +
+                'e você <strong>perde o acesso aos benefícios do plano atual</strong> a partir dessa data. Os benefícios do <strong>' + _escaparHtml(planoNome) + '</strong> ' +
+                'ficam disponíveis a partir da ativação do novo plano, que ocorre na mesma data. <strong>Não há reembolso</strong> do valor já pago pelo plano atual, ' +
+                'e você entrará em uma <strong>nova vigência</strong>, com a cobrança referente ao novo plano contratado.';
             corpo = '<p>Você está alterando do <strong>' + _escaparHtml(est.planoNome) + '</strong> para o <strong>' + _escaparHtml(planoNome) + '</strong>.</p>' +
                 '<div style="background:#fff8e1;border-left:4px solid #FFC300;padding:12px 14px;border-radius:0 8px 8px 0;margin-bottom:10px;">' +
                 '<p style="margin:0 0 6px;font-size:.86rem;"><i class="bi bi-calendar-check me-1"></i>Você mantém os benefícios do <strong>' + _escaparHtml(est.planoNome) + '</strong> até <strong>' + fim + '</strong> (fim da vigência atual).</p>' +
                 '<p style="margin:0;font-size:.86rem;"><i class="bi bi-arrow-right-circle me-1"></i>A partir de <strong>' + fim + '</strong>, o <strong>' + _escaparHtml(planoNome) + '</strong> entra em vigor, iniciando um novo ciclo.</p></div>' +
-                '<p class="text-muted small" style="margin:0;"><i class="bi bi-info-circle me-1"></i>Não há reembolso proporcional — o período já contratado é integral.</p>';
+                '<p class="text-muted small" style="margin:0 0 4px;"><i class="bi bi-info-circle me-1"></i>Não há reembolso proporcional — o período já contratado é integral.</p>' +
+                '<p style="font-size:.85rem;color:#555;margin:10px 0 4px;"><strong>Quando você deseja que a ' + (acao === 'upgrade' ? 'atualização' : 'mudança') + ' entre em vigor?</strong></p>' +
+                _sgHtmlEscolhaImediato('troca', avisoImediatoTroca);
         } else {
             corpo = '<p>Você está prestes a <strong>' + label.toLowerCase() + ' ' + _escaparHtml(planoNome) + '</strong> por <strong>' + (precos[planoId] || '') + '</strong>.</p>' +
                 '<p class="text-muted small">O plano entra em vigor imediatamente e inicia um novo ciclo de 30 dias. Ao confirmar, você aceita os <a href="/paginasSite/planosContrato.html" target="_blank">Termos de Contrato</a>.</p>';
@@ -9808,10 +9868,11 @@ document.addEventListener('DOMContentLoaded', function () {
         var modalEl = document.getElementById(modalId);
         var modal   = new bootstrap.Modal(modalEl);
         modal.show();
+        if (agendar) _sgWireEscolhaImediato(modalEl, 'troca');
 
         document.getElementById('sg-meu-plano-btn-ok').addEventListener('click', function () {
             if (window.SG_Plano) {
-                if (agendar) window.SG_Plano.agendarTroca(email, planoId);
+                if (agendar) window.SG_Plano.agendarTroca(email, planoId, _sgLerImediato(modalEl, 'troca'));
                 else         window.SG_Plano.contratar(email, planoId);
             }
             modal.hide();
@@ -9819,6 +9880,51 @@ document.addEventListener('DOMContentLoaded', function () {
             if (typeof callback === 'function') callback();
         });
     }
+
+    // ── SPRINT 10 — Escolha "aguardar fim da vigência" vs "imediato" ──────
+    // Bloco reaproveitado nos 3 fluxos (cancelar / upgrade / downgrade) que
+    // envolvem agendamento de plano. Mantém 100% do comportamento padrão
+    // (agendado para o fim da vigência) quando o prestador não marcar a
+    // opção "imediato" — apenas adiciona a nova alternativa solicitada.
+    function _sgHtmlEscolhaImediato(idBase, textoAvisoImediato) {
+        return '' +
+            '<div class="sg-imediato-escolha" style="margin:14px 0 10px;">' +
+                '<label class="sg-imediato-opcao" data-grp="' + idBase + '" style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border:1.5px solid #146ADB;background:#f0f6ff;border-radius:8px;margin-bottom:8px;cursor:pointer;">' +
+                    '<input type="radio" name="sg-quando-' + idBase + '" value="agendado" checked style="margin-top:3px;">' +
+                    '<span style="font-size:.85rem;"><strong>Aguardar o fim da vigência atual</strong> (padrão) — você mantém os benefícios normalmente até lá.</span>' +
+                '</label>' +
+                '<label class="sg-imediato-opcao" data-grp="' + idBase + '" style="display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border:1.5px solid #dee2e6;background:#fff;border-radius:8px;cursor:pointer;">' +
+                    '<input type="radio" name="sg-quando-' + idBase + '" value="imediato" style="margin-top:3px;">' +
+                    '<span style="font-size:.85rem;"><strong>Fazer imediatamente</strong> — passa a valer já no próximo dia útil.</span>' +
+                '</label>' +
+            '</div>' +
+            '<div id="sg-imediato-aviso-' + idBase + '" style="display:none;background:#fee2e2;border-left:4px solid #dc3545;padding:12px 14px;border-radius:0 8px 8px 0;margin-bottom:10px;font-size:.84rem;color:#7a1212;">' +
+                '<i class="bi bi-exclamation-triangle-fill me-1"></i>' + textoAvisoImediato +
+            '</div>';
+    }
+    function _sgWireEscolhaImediato(container, idBase) {
+        var radios = container.querySelectorAll('input[name="sg-quando-' + idBase + '"]');
+        var aviso  = container.querySelector('#sg-imediato-aviso-' + idBase);
+        radios.forEach(function (r) {
+            r.addEventListener('change', function () {
+                container.querySelectorAll('.sg-imediato-opcao[data-grp="' + idBase + '"]').forEach(function (lbl) {
+                    var input = lbl.querySelector('input');
+                    lbl.style.borderColor = input.checked ? '#146ADB' : '#dee2e6';
+                    lbl.style.background  = input.checked ? '#f0f6ff' : '#fff';
+                });
+                if (aviso) aviso.style.display = (r.value === 'imediato' && r.checked) ? 'block' : 'none';
+            });
+        });
+    }
+    function _sgLerImediato(container, idBase) {
+        var sel = container.querySelector('input[name="sg-quando-' + idBase + '"]:checked');
+        return !!(sel && sel.value === 'imediato');
+    }
+    // Exposto em window para reuso pelo bloco isolado de planosContrato.html
+    // (extraído como script próprio na Sprint 1, sem acesso direto a este escopo).
+    try {
+        window.SG_ImediatoUI = { html: _sgHtmlEscolhaImediato, wire: _sgWireEscolhaImediato, ler: _sgLerImediato };
+    } catch (e) {}
 
     // ── Cancelar assinatura (agendado para o fim da vigência) ─────────
     function _sgMeuPlanoCancelar(email, dadosUsu) {
@@ -9835,6 +9941,14 @@ document.addEventListener('DOMContentLoaded', function () {
         var nomePlanoAtual = est.planoNome;
         var fim     = window.SG_Plano.fmt(est.dataFim);
         var carencia = (window.SG_Plano.carenciaDias ? window.SG_Plano.carenciaDias() : 90);
+        var proximoUtil = window.SG_Plano.fmt(window.SG_Plano.proximoDiaUtil());
+
+        // SPRINT 10 — aviso específico da opção "cancelar imediatamente".
+        var avisoImediatoCancel =
+            'Ao cancelar <strong>imediatamente</strong>, seu plano se encerra já no <strong>próximo dia útil (' + proximoUtil + ')</strong>. ' +
+            'A partir dessa data você <strong>perde o acesso aos benefícios do plano contratado</strong> e <strong>não haverá reembolso do valor já pago</strong>. ' +
+            'Para voltar a usar o Plano Gratuito de 30 dias será necessário aguardar <strong>90 dias</strong> — ou você pode <strong>reativar este plano</strong> ' +
+            'ou <strong>contratar um novo plano</strong> a qualquer momento, sem esperar a carência.';
 
         var html = '<div class="modal fade" id="' + modalId + '" tabindex="-1" aria-modal="true" role="dialog">' +
             '<div class="modal-dialog modal-dialog-centered modal-lg">' +
@@ -9858,27 +9972,33 @@ document.addEventListener('DOMContentLoaded', function () {
             '<li style="margin-bottom:0;"><i class="bi bi-arrow-repeat me-2" style="color:#146ADB;"></i>' +
             '<strong>Retorno antecipado:</strong> para voltar antes da carência, reative o mesmo plano pago ou contrate um novo — iniciando um novo ciclo do zero.</li>' +
             '</ul>' +
-            '<p style="font-size:.85rem;color:#555;margin-bottom:0;">Deseja agendar o cancelamento do <strong>' + _escaparHtml(nomePlanoAtual) + '</strong> para <strong>' + fim + '</strong>?</p>' +
+            '<p style="font-size:.85rem;color:#555;margin-bottom:6px;"><strong>Quando você deseja que o cancelamento entre em vigor?</strong></p>' +
+            _sgHtmlEscolhaImediato('cancelar', avisoImediatoCancel) +
             '</div>' +
             '<div class="modal-footer">' +
             '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-arrow-left me-1"></i>Manter Assinatura</button>' +
             '<button type="button" class="btn btn-danger fw-bold" id="sg-meu-plano-confirmar-cancelar">' +
-            '<i class="bi bi-calendar-x me-1"></i>Agendar Cancelamento</button>' +
+            '<i class="bi bi-calendar-x me-1"></i>Confirmar Cancelamento</button>' +
             '</div></div></div></div>';
 
         document.body.insertAdjacentHTML('beforeend', html);
         var modalEl = document.getElementById(modalId);
         var modal   = new bootstrap.Modal(modalEl, { backdrop: 'static' });
         modal.show();
+        _sgWireEscolhaImediato(modalEl, 'cancelar');
 
         document.getElementById('sg-meu-plano-confirmar-cancelar').addEventListener('click', function () {
-            var r = window.SG_Plano ? window.SG_Plano.agendarCancelamento(email) : { ok: false };
+            var imediato = _sgLerImediato(modalEl, 'cancelar');
+            var r = window.SG_Plano ? window.SG_Plano.agendarCancelamento(email, imediato) : { ok: false };
             modal.hide();
             modalEl.addEventListener('hidden.bs.modal', function () {
                 modalEl.remove();
                 if (r && r.ok) {
-                    _sgToastAssinatura('Cancelamento agendado para <strong>' + window.SG_Plano.fmt(r.efetivaEm) + '</strong>. Seus benefícios seguem ativos até lá.', 'success');
-                    setTimeout(function () { window.location.reload(); }, 1400);
+                    var msgOk = imediato
+                        ? 'Cancelamento confirmado! Seu plano se encerra no próximo dia útil, <strong>' + window.SG_Plano.fmt(r.efetivaEm) + '</strong>, sem reembolso do valor pago.'
+                        : 'Cancelamento agendado para <strong>' + window.SG_Plano.fmt(r.efetivaEm) + '</strong>. Seus benefícios seguem ativos até lá.';
+                    _sgToastAssinatura(msgOk, 'success');
+                    setTimeout(function () { window.location.reload(); }, 1800);
                 } else {
                     _sgToastAssinatura('Não foi possível agendar o cancelamento.', 'erro');
                 }
@@ -14901,19 +15021,28 @@ document.addEventListener('DOMContentLoaded', function () {
             var tituloEl2 = document.getElementById('modalConfirmarContratoTitulo');
 
             if (temPlanoPagoAtivo) {
-                // ALTERAÇÃO de plano vigente → agendada para o fim da vigência.
-                // Sem reembolso: o período já contratado é integral.
+                // ALTERAÇÃO de plano vigente → agendada para o fim da vigência
+                // (padrão) ou imediata (próximo dia útil), conforme escolha do
+                // prestador logo abaixo. Sem reembolso em ambos os casos.
                 var fimVig  = estadoB.dataFim;
                 var tipoMud = window.SG_Plano.tipoMudanca(estadoB.plano, planoId);
                 var rotulo  = tipoMud === 'upgrade' ? 'Upgrade' : (tipoMud === 'downgrade' ? 'Downgrade' : 'Alteração');
                 if (tituloEl2) tituloEl2.innerHTML = '<i class="bi bi-arrow-left-right me-2"></i>' + rotulo + ' de Plano';
+                var proximoUtilPC = window.SG_Plano.proximoDiaUtil ? window.SG_Plano.fmt(window.SG_Plano.proximoDiaUtil()) : '—';
+                var avisoImediatoPC =
+                    'Ao confirmar <strong>imediatamente</strong>, o <strong>' + _escLocal(estadoB.planoNome) + '</strong> se encerra já no <strong>próximo dia útil (' + proximoUtilPC + ')</strong> ' +
+                    'e você <strong>perde o acesso aos benefícios do plano atual</strong> a partir dessa data. Os benefícios do <strong>' + _escLocal(planoNome) + '</strong> ' +
+                    'ficam disponíveis a partir da ativação do novo plano, que ocorre na mesma data. <strong>Não há reembolso</strong> do valor já pago pelo plano atual, ' +
+                    'e você entrará em uma <strong>nova vigência</strong>, com a cobrança referente ao novo plano contratado.';
                 bodyEl2.innerHTML =
                     '<p>Você está alterando do <strong>' + _escLocal(estadoB.planoNome) + '</strong> para o <strong>' + _escLocal(planoNome) + '</strong>.</p>' +
                     '<div style="background:#fff8e1;border-left:4px solid #FFC300;padding:12px 14px;border-radius:0 8px 8px 0;margin-bottom:10px;">' +
                     '<p style="margin:0 0 6px;font-size:.86rem;"><i class="bi bi-calendar-check me-1"></i>Você mantém os benefícios do <strong>' + _escLocal(estadoB.planoNome) + '</strong> até o fim da vigência atual (<strong>' + window.SG_Plano.fmt(fimVig) + '</strong>).</p>' +
                     '<p style="margin:0;font-size:.86rem;"><i class="bi bi-arrow-right-circle me-1"></i>A partir de <strong>' + window.SG_Plano.fmt(fimVig) + '</strong>, o <strong>' + _escLocal(planoNome) + '</strong> entra em vigor, iniciando um novo ciclo.</p>' +
                     '</div>' +
-                    '<p class="text-muted small" style="margin:0;"><i class="bi bi-info-circle me-1"></i>Não há reembolso proporcional — o período já contratado é integral. Você pode reverter esta troca em "Meu Plano" enquanto a vigência atual não terminar.</p>';
+                    '<p class="text-muted small" style="margin:0 0 4px;"><i class="bi bi-info-circle me-1"></i>Não há reembolso proporcional — o período já contratado é integral. Você pode reverter esta troca em "Meu Plano" enquanto a vigência atual não terminar.</p>' +
+                    '<p style="font-size:.85rem;color:#555;margin:10px 0 4px;"><strong>Quando você deseja que a mudança entre em vigor?</strong></p>' +
+                    (window.SG_ImediatoUI ? window.SG_ImediatoUI.html('pc-troca', avisoImediatoPC) : '');
             } else {
                 // CONTRATAÇÃO imediata (sem plano pago ativo: trial, gratuito, expirado ou pós-carência).
                 if (tituloEl2) tituloEl2.innerHTML = '<i class="bi bi-credit-card me-2"></i>Confirmar Contratação';
@@ -14927,6 +15056,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             var modalConf2 = new bootstrap.Modal(modalConfEl2);
             modalConf2.show();
+            if (temPlanoPagoAtivo && window.SG_ImediatoUI) window.SG_ImediatoUI.wire(modalConfEl2, 'pc-troca');
 
             var btnConf2 = document.getElementById('btn-confirmar-contrato');
             var novoBtn2 = btnConf2.cloneNode(true);
@@ -14934,13 +15064,16 @@ document.addEventListener('DOMContentLoaded', function () {
             novoBtn2.addEventListener('click', function () {
                 var msg, destinoUrl;
                 if (temPlanoPagoAtivo) {
-                    var r = window.SG_Plano.agendarTroca(email2, planoId);
+                    var imediatoPC = window.SG_ImediatoUI ? window.SG_ImediatoUI.ler(modalConfEl2, 'pc-troca') : false;
+                    var r = window.SG_Plano.agendarTroca(email2, planoId, imediatoPC);
                     if (!r.ok) {
                         modalConf2.hide();
                         _toastLocal(r.motivo === 'mesmo_plano' ? 'Esse é o seu plano Atual. Escolha outro plano!' : 'Não foi possível agendar a troca.', '#dc3545');
                         return;
                     }
-                    msg = (r.tipo === 'upgrade' ? 'Upgrade' : 'Troca') + ' agendada! ' + planoNome + ' entra em vigor em ' + window.SG_Plano.fmt(r.efetivaEm) + '.';
+                    msg = imediatoPC
+                        ? (r.tipo === 'upgrade' ? 'Upgrade' : 'Troca') + ' confirmada! ' + planoNome + ' entra em vigor no próximo dia útil, ' + window.SG_Plano.fmt(r.efetivaEm) + '.'
+                        : (r.tipo === 'upgrade' ? 'Upgrade' : 'Troca') + ' agendada! ' + planoNome + ' entra em vigor em ' + window.SG_Plano.fmt(r.efetivaEm) + '.';
                     destinoUrl = '/paginasPrestador/prestadorMeuPlano.html';
                 } else {
                     window.SG_Plano.contratar(email2, planoId);
