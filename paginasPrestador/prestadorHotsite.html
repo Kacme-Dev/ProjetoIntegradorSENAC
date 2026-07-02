@@ -8,75 +8,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/css/estiloServGo.css">
-    <style>
-        /* Responsividade padrão igual ao index.html: breakpoint lg (992px). */
-        @media (max-width: 991.98px) {
-            .cli-wrapper { flex-direction: column; }
-            .cli-sidebar {
-                width: 100%;
-                min-width: unset;
-                border-right: none;
-                border-bottom: 1px solid var(--borda);
-                padding: 12px 0;
-                display: none;
-            }
-            .cli-sidebar.cli-sidebar-show { display: block; }
-        }
-
-        /* Avatar com cor amarela igual ao preview do Adm */
-        .hotsite-perfil-aside .hotsite-avatar {
-            background-color: #FFC300;
-            color: #000;
-        }
-
-        /* Botão Agendar Serviço — amarelo (igual ao preview do Adm) */
-        .hotsite-perfil-aside .cta-agendar {
-            display: inline-block;
-            width: 100%;
-            text-align: center;
-            padding: 10px 22px;
-            border-radius: 6px;
-            background-color: #FFC300;
-            color: #000;
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            margin-top: 12px;
-            transition: background-color 0.2s;
-        }
-        .hotsite-perfil-aside .cta-agendar:hover {
-            background-color: #e6b000;
-            color: #000;
-            text-decoration: none;
-        }
-
-        /* Botão Enviar Mensagem — azul principal */
-        .hotsite-perfil-aside .btn-enviar-msg {
-            display: inline-block;
-            width: 100%;
-            text-align: center;
-            padding: 10px 22px;
-            border-radius: 6px;
-            background-color: var(--azul-principal);
-            color: #fff;
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: background-color 0.2s;
-        }
-        .hotsite-perfil-aside .btn-enviar-msg:hover {
-            background-color: var(--blue2, #0056b3);
-            color: #fff;
-        }
-        .hotsite-perfil-aside .btn-enviar-msg:active {
-            transform: translateY(2px);
-        }
-    </style>
 </head>
 
 <body>
@@ -235,7 +166,17 @@
                             <div class="hotsite-thumb" data-slot="6"><i class="bi bi-image"></i> Foto 7</div>
                             <div class="hotsite-thumb" data-slot="7"><i class="bi bi-image"></i> Foto 8</div>
                             <div class="hotsite-thumb" data-slot="8"><i class="bi bi-image"></i> Foto 9</div>
-                            <div class="hotsite-thumb" data-slot="9"><i class="bi bi-play-circle"></i> Vídeo</div>
+                            <div class="hotsite-thumb" data-slot="9"><i class="bi bi-image"></i> Foto 10</div>
+                            <div class="hotsite-thumb" data-slot="10"><i class="bi bi-image"></i> Foto 11</div>
+                            <div class="hotsite-thumb" data-slot="11"><i class="bi bi-image"></i> Foto 12</div>
+                            <div class="hotsite-thumb" data-slot="12"><i class="bi bi-image"></i> Foto 13</div>
+                            <div class="hotsite-thumb" data-slot="13"><i class="bi bi-image"></i> Foto 14</div>
+                            <div class="hotsite-thumb" data-slot="14"><i class="bi bi-image"></i> Foto 15</div>
+                            <div class="hotsite-thumb" data-slot="15"><i class="bi bi-image"></i> Foto 16</div>
+                            <div class="hotsite-thumb" data-slot="16"><i class="bi bi-image"></i> Foto 17</div>
+                            <div class="hotsite-thumb" data-slot="17"><i class="bi bi-image"></i> Foto 18</div>
+                            <div class="hotsite-thumb" data-slot="18"><i class="bi bi-play-circle"></i> Vídeo 1</div>
+                            <div class="hotsite-thumb" data-slot="19"><i class="bi bi-play-circle"></i> Vídeo 2</div>
                         </div>
                     </div>
 
@@ -317,6 +258,25 @@
             </div>
         </div>
     </footer>
+
+    <!-- ============================================================ -->
+    <!--  MODAL: CHAT COM O PRESTADOR                                -->
+    <!-- ============================================================ -->
+    <!-- SPRINT 3 — Corrigido: este modal estava sem suas tags de abertura
+         (modal / modal-dialog / modal-content / modal-header), fazendo o
+         modal-body e o modal-footer abaixo "vazarem" para o corpo normal
+         da página, sempre visíveis, logo após o rodapé. A estrutura foi
+         reconstituída seguindo o mesmo padrão usado nos demais modais de
+         chat do site (ex.: clienteAreaExclusiva.html). Nenhum gatilho ou
+         lógica de envio/recebimento de mensagens foi adicionado — apenas
+         a marcação estrutural que já deveria existir. -->
+    <div class="modal fade" id="modalChatPrestador" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content agenda-chat-modal">
+                <div class="modal-header" style="background-color:#146ADB; color:#fff;">
+                    <h5 class="modal-title"><i class="bi bi-chat-dots me-2"></i>Chat com o Prestador</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
                 <div class="modal-body p-0">
                     <!-- HISTÓRICO DE MENSAGENS -->
                     <div id="hs-chat-historico" class="agenda-chat-historico" aria-live="polite">

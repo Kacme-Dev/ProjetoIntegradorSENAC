@@ -118,6 +118,17 @@
                 <li><a href="/paginasPrestador/prestadorAvaliacoesRecebidas.html"><i class="bi bi-star-half"></i> Avaliações Recebidas</a></li>
                 <li><a href="/paginasPrestador/dashboardPrestador.html"><i class="bi bi-grid-1x2"></i> Dashboard</a></li>
                 <li><a href="/paginasPrestador/prestadorContato.html"><i class="bi bi-chat-text"></i> Suporte/Contato</a></li>
+
+                <!-- SPRINT 3 — Corrigido: o bloco antigo de Contratar/Cancelar/Alterar
+                     Plano (diretamente nesta sidebar) usava uma lógica de assinatura
+                     paralela e desatualizada (cancelamento imediato com logout forçado,
+                     sem gerar cobrança financeira e sem respeitar a vigência), que
+                     conflitava com as regras oficiais de SG_Plano usadas em
+                     prestadorMeuPlano.html. Substituído pelo mesmo link padrão já
+                     usado nas demais páginas do prestador, apontando para a página
+                     correta e única de gestão de planos. -->
+                <li><a href="/paginasPrestador/prestadorMeuPlano.html"><i class="bi bi-star-half"></i> Plano Contratado</a></li>
+
                 <li class="sidebar-sair"><a href="/index.html" id="sidebar-btn-sair"><i class="bi bi-box-arrow-right"></i> Sair</a></li>
             </ul>
         </nav>

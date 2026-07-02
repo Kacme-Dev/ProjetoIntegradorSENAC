@@ -116,7 +116,7 @@
                 <div class="prest-card-corpo">
                     <p style="font-size:.88rem;color:#666;margin-bottom:14px;">
                         Compare os planos e faça upgrade, downgrade ou cancelamento conforme sua necessidade.
-                        Alterações entram em vigor imediatamente.
+                        As alterações são agendadas para o fim da vigência atual — você mantém os benefícios do plano vigente até lá.
                     </p>
                     <!-- Botão Alterar Plano → direciona para planosContrato.html -->
                     <a href="/paginasSite/planosContrato.html"
@@ -147,6 +147,16 @@
                     <i class="bi bi-file-earmark-text me-2"></i>Informações do Contrato
                 </div>
                 <div class="prest-card-corpo" id="sg-plano-contrato-corpo">
+                    <!-- Renderizado pelo JS -->
+                </div>
+            </div>
+
+            <!-- Seção: Pagamentos & Faturas (SPRINT 3) -->
+            <div class="prest-card" style="margin-bottom:24px;">
+                <div class="prest-card-cabecalho">
+                    <i class="bi bi-wallet2 me-2"></i>Pagamentos &amp; Faturas
+                </div>
+                <div class="prest-card-corpo" id="sg-financeiro-corpo">
                     <!-- Renderizado pelo JS -->
                 </div>
             </div>
@@ -232,8 +242,8 @@
                     </div>
 
                     <p style="font-size:.88rem;color:#444;margin-bottom:0;">
-                        Antes de confirmar, leia atentamente as regras que entram em vigor
-                        <strong>imediatamente</strong> após o cancelamento:
+                        Ao confirmar, o cancelamento é <strong>agendado para o fim da sua vigência atual</strong>.
+                        Você continua usando todos os benefícios até essa data. Leia as regras:
                     </p>
 
                     <!-- Regras de negócio obrigatórias -->
@@ -248,10 +258,10 @@
                                 <i class="bi bi-lock-fill"></i>
                             </div>
                             <div>
-                                <strong style="color:#1a1a1a;">Bloqueio imediato de acesso.</strong>
-                                Após o cancelamento, sua conta será bloqueada e você
-                                não poderá fazer login na plataforma para prestar serviços.
-                                Seu status será alterado para <em>"bloqueado por cancelamento"</em>.
+                                <strong style="color:#1a1a1a;">Benefícios até o fim da vigência, depois bloqueio.</strong>
+                                Você mantém o acesso e todos os benefícios do plano até o
+                                <strong>término da vigência atual</strong>. No dia seguinte, a conta é
+                                bloqueada e o status passa a <em>"bloqueado por cancelamento"</em>.
                             </div>
                         </div>
 
@@ -262,8 +272,8 @@
                             <div>
                                 <strong style="color:#1a1a1a;">Carência de 90 dias para o Plano Gratuito.</strong>
                                 O retorno ao uso gratuito da plataforma só será possível após
-                                <strong>90 dias corridos</strong> a partir da data do cancelamento.
-                                Um contador será exibido informando o tempo restante.
+                                <strong>90 dias corridos contados a partir do fim da vigência</strong>
+                                (quando o cancelamento é efetivado). Um contador exibirá o tempo restante.
                             </div>
                         </div>
 
@@ -284,9 +294,9 @@
                                 <i class="bi bi-globe-x"></i>
                             </div>
                             <div>
-                                <strong style="color:#1a1a1a;">HotSite removido do catálogo.</strong>
-                                Seu perfil público deixará de ser exibido na plataforma para
-                                clientes imediatamente após o cancelamento.
+                                <strong style="color:#1a1a1a;">HotSite removido ao fim da vigência.</strong>
+                                Seu perfil público continua visível até o término da vigência e deixa
+                                de ser exibido aos clientes quando o cancelamento é efetivado.
                             </div>
                         </div>
 
@@ -306,8 +316,8 @@
                     <label class="sg-cancel-check-wrap" for="sg-check-ciencia">
                         <input type="checkbox" id="sg-check-ciencia">
                         <span class="sg-cancel-check-label">
-                            Li e compreendi todas as regras acima. Confirmo que desejo
-                            cancelar meu plano e estou ciente do bloqueio imediato.
+                            Li e compreendi todas as regras acima. Confirmo que desejo agendar
+                            o cancelamento para o fim da vigência e estou ciente da carência de 90 dias.
                         </span>
                     </label>
 
@@ -332,310 +342,11 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/script.js" defer></script>
 
-    <!-- Complemento inline: renderiza recursos e dados do contrato após o script.js -->
-    <script>
-    /* ═══════════════════════════════════════════════════════════════
-       MÓDULO — CANCELAMENTO DE PLANO (prestadorMeuPlano.html)
-       ═══════════════════════════════════════════════════════════════ */
-    (function () {
-        'use strict';
-
-        var USUARIOS_KEY = 'usuariosCadastrados';
-        var PLANO_NOMES = {
-            basico:       'Plano Básico',
-            profissional: 'Plano Profissional',
-            premium:      'Plano Premium',
-            trial:        'Trial Gratuito (30 dias)'
-        };
-
-        // ── Helpers ──────────────────────────────────────────────
-        function _getUsuarios() {
-            try { return JSON.parse(localStorage.getItem(USUARIOS_KEY) || '{}'); }
-            catch(e) { return {}; }
-        }
-        function _setUsuarios(obj) {
-            localStorage.setItem(USUARIOS_KEY, JSON.stringify(obj));
-        }
-        function _getLogado() {
-            try { return JSON.parse(localStorage.getItem('usuarioLogado') || 'null'); }
-            catch(e) { return null; }
-        }
-        function _esc(s) {
-            return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }
-
-        // ── Renderiza botão "Cancelar Plano" no wrap existente ───
-        function renderizarBotaoCancelar() {
-            var wrap = document.getElementById('sg-cancelar-plano-wrap');
-            if (!wrap) return;
-
-            var usu = _getLogado();
-            if (!usu || usu.tipo !== 'prestador') return;
-
-            var cad    = _getUsuarios();
-            var d      = cad[usu.email] || {};
-            var ass    = d.assinatura || {};
-
-            // Só exibe o botão se houver plano ativo (não trial puro sem assinatura)
-            if (!ass.ativa || ass.cancelada) {
-                // Se já cancelado, exibe badge informativo
-                if (ass.cancelada) {
-                    wrap.innerHTML =
-                        '<span class="sg-badge-cancelado">' +
-                        '<i class="bi bi-x-circle-fill"></i>Plano cancelado em ' +
-                        new Date(ass.dataCancelamento).toLocaleDateString('pt-BR') + '</span>';
-                }
-                return;
-            }
-
-            wrap.innerHTML =
-                '<button type="button" id="sg-btn-abrir-cancelar"' +
-                ' style="background:#dc3545;color:#fff;border:none;border-radius:8px;' +
-                'padding:11px 20px;font-weight:700;font-size:.9rem;cursor:pointer;' +
-                'display:inline-flex;align-items:center;gap:8px;">' +
-                '<i class="bi bi-x-circle"></i> Cancelar Plano</button>';
-
-            document.getElementById('sg-btn-abrir-cancelar')
-                .addEventListener('click', abrirModalCancelamento);
-        }
-
-        // ── Abre modal de confirmação ────────────────────────────
-        function abrirModalCancelamento() {
-            var usu = _getLogado();
-            if (!usu) return;
-            var cad    = _getUsuarios();
-            var d      = cad[usu.email] || {};
-            var ass    = d.assinatura || {};
-            var planoId = ass.plano || 'basico';
-
-            // Preenche info do plano no modal
-            var nomeEl = document.getElementById('sg-modal-plano-nome');
-            var contEl = document.getElementById('sg-modal-plano-contrato');
-            if (nomeEl) nomeEl.textContent = PLANO_NOMES[planoId] || planoId;
-            if (contEl) {
-                contEl.textContent = ass.contratoId
-                    ? 'Contrato: ' + ass.contratoId
-                    : 'Contratado em: ' + (ass.dataInicio
-                        ? new Date(ass.dataInicio).toLocaleDateString('pt-BR') : '—');
-            }
-
-            // Reseta checkbox
-            var chk = document.getElementById('sg-check-ciencia');
-            var btnConf = document.getElementById('sg-btn-confirmar-cancelar');
-            if (chk) { chk.checked = false; }
-            if (btnConf) { btnConf.disabled = true; }
-
-            var modalEl = document.getElementById('modalCancelarPlano');
-            if (modalEl) {
-                new bootstrap.Modal(modalEl).show();
-            }
-        }
-
-        // ── Checkbox libera botão de confirmar ───────────────────
-        document.addEventListener('change', function (e) {
-            if (e.target && e.target.id === 'sg-check-ciencia') {
-                var btnConf = document.getElementById('sg-btn-confirmar-cancelar');
-                if (btnConf) btnConf.disabled = !e.target.checked;
-            }
-        });
-
-        // ── Confirma o cancelamento ──────────────────────────────
-        document.addEventListener('click', function (e) {
-            if (e.target && e.target.id === 'sg-btn-confirmar-cancelar') {
-                efetivarCancelamento();
-            }
-        });
-
-        function efetivarCancelamento() {
-            var usu = _getLogado();
-            if (!usu) return;
-
-            var cad = _getUsuarios();
-            var d   = cad[usu.email] || {};
-            var ass = d.assinatura || {};
-
-            var agora = new Date().toISOString();
-
-            // Grava o cancelamento no objeto do usuário
-            d.assinatura = Object.assign({}, ass, {
-                ativa:             false,
-                cancelada:         true,
-                dataCancelamento:  agora,
-                planoAnoCancelado: ass.plano || 'basico'
-            });
-
-            // Marca status da conta
-            d.statusConta = 'bloqueado_cancelamento';
-
-            cad[usu.email] = d;
-            _setUsuarios(cad);
-
-            // Encerra a sessão ativa
-            localStorage.removeItem('usuarioLogado');
-
-            // Fecha modal e redireciona para login com parâmetro informativo
-            var modalEl = document.getElementById('modalCancelarPlano');
-            if (modalEl) {
-                var instancia = bootstrap.Modal.getInstance(modalEl);
-                if (instancia) instancia.hide();
-            }
-
-            setTimeout(function () {
-                window.location.href = '/paginasSite/login.html?cancelamento=efetuado';
-            }, 400);
-        }
-
-        // ── Exibe aviso se conta já cancelada (carregamento da página) ──
-        function exibirAvisoCancelamento() {
-            var usu = _getLogado();
-            // se não está mais logado (cancelou), não há nada a exibir aqui
-            if (!usu) return;
-
-            var cad = _getUsuarios();
-            var d   = cad[usu.email] || {};
-            var ass = d.assinatura || {};
-
-            if (!ass.cancelada) return;
-
-            var mainEl = document.getElementById('sg-meu-plano-main');
-            if (!mainEl) return;
-
-            var dataCanc = new Date(ass.dataCancelamento);
-            var dataLib  = new Date(dataCanc.getTime() + 90 * 24 * 60 * 60 * 1000);
-            var hoje     = new Date();
-            var diasFalt = Math.max(0, Math.ceil((dataLib - hoje) / (24 * 60 * 60 * 1000)));
-
-            var avisoHtml =
-                '<div class="sg-aviso-cancelamento">' +
-                '<div class="sg-aviso-cancelamento-icone"><i class="bi bi-x-circle-fill"></i></div>' +
-                '<div>' +
-                '<div class="sg-aviso-cancelamento-titulo">Plano Cancelado — Conta Bloqueada</div>' +
-                '<div class="sg-aviso-cancelamento-texto">' +
-                'Seu plano foi cancelado em <strong>' + dataCanc.toLocaleDateString('pt-BR') + '</strong>. ' +
-                'O acesso à plataforma está bloqueado. ' +
-                (diasFalt > 0
-                    ? 'O plano gratuito poderá ser reativado em <strong>' + diasFalt + ' dias</strong>.'
-                    : 'O período de carência já foi cumprido. Você pode reativar gratuitamente.') +
-                '<br><a href="/paginasSite/planosContrato.html?reativar=1" style="color:#842029;font-weight:700;">' +
-                '<i class="bi bi-arrow-repeat me-1"></i>Reativar plano agora</a>' +
-                '</div>' +
-                '</div>' +
-                '</div>';
-
-            mainEl.insertAdjacentHTML('afterbegin', avisoHtml);
-        }
-
-        // ── Init ─────────────────────────────────────────────────
-        document.addEventListener('DOMContentLoaded', function () {
-            renderizarBotaoCancelar();
-            exibirAvisoCancelamento();
-        });
-    })();
-
-    /* ═══════════════════════════════════════════════════════════════
-       RECURSOS E DADOS DO CONTRATO (bloco original)
-       ═══════════════════════════════════════════════════════════════ */
-    document.addEventListener('DOMContentLoaded', function () {
-        // Recursos por plano (espelhando planosContrato.html)
-        var RECURSOS = {
-            basico: [
-                'HotSite ativo no catálogo',
-                'Agendamentos ilimitados',
-                'Avaliações de clientes',
-                'Suporte por e-mail',
-                'Galeria de até 3 fotos'
-            ],
-            profissional: [
-                'HotSite ativo no catálogo',
-                'Agendamentos ilimitados',
-                'Avaliações de clientes',
-                'Suporte por e-mail',
-                'Galeria de até 10 fotos',
-                'Destaque no catálogo',
-                'Relatórios mensais'
-            ],
-            premium: [
-                'HotSite ativo no catálogo',
-                'Agendamentos ilimitados',
-                'Avaliações de clientes',
-                'Suporte por e-mail',
-                'Galeria de até 20 fotos + vídeo',
-                'Destaque no catálogo',
-                'Relatórios mensais detalhados',
-                'Suporte prioritário 24h',
-                'Selo verificado ServGo!'
-            ],
-            trial: [
-                'HotSite ativo no catálogo (período de testes)',
-                'Agendamentos ilimitados',
-                'Avaliações de clientes',
-                'Suporte por e-mail',
-                'Galeria de até 3 fotos',
-                '<span style="color:#b8870c;">Acesso por tempo limitado — 30 dias a partir do cadastro</span>'
-            ]
-        };
-
-        // Aguarda o script.js inicializar (defer) e então preenche as seções adicionais
-        setTimeout(function () {
-            try {
-                var usuRaw = localStorage.getItem('usuarioLogado');
-                if (!usuRaw) return;
-                var usu = JSON.parse(usuRaw);
-                if (usu.tipo !== 'prestador') return;
-
-                var cadRaw = localStorage.getItem('usuariosCadastrados');
-                var cad    = cadRaw ? JSON.parse(cadRaw) : {};
-                var d      = cad[usu.email] || {};
-                var ass    = d.assinatura || {};
-                var planoId = ass.ativa ? ass.plano : (d.trialInicio ? 'trial' : 'trial');
-
-                // Recursos
-                var recursosEl = document.getElementById('sg-plano-recursos-corpo');
-                if (recursosEl) {
-                    var lista = RECURSOS[planoId] || RECURSOS['trial'];
-                    recursosEl.innerHTML = '<ul style="list-style:none;padding:0;margin:0;">' +
-                        lista.map(function (r) {
-                            return '<li style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;font-size:.88rem;color:#333;">' +
-                                '<i class="bi bi-check-circle-fill" style="color:#10b981;margin-top:1px;flex-shrink:0;"></i>' + r + '</li>';
-                        }).join('') + '</ul>';
-                }
-
-                // Informações do contrato
-                var contratoEl = document.getElementById('sg-plano-contrato-corpo');
-                if (contratoEl) {
-                    var rows = [];
-                    if (ass.contratoId) rows.push(['Número do Contrato', ass.contratoId]);
-                    if (ass.plano)      rows.push(['Plano', ass.plano.charAt(0).toUpperCase() + ass.plano.slice(1)]);
-                    if (ass.dataInicio) rows.push(['Contratado em', new Date(ass.dataInicio).toLocaleDateString('pt-BR')]);
-                    if (d.trialInicio && !ass.ativa) rows.push(['Início do Trial', new Date(d.trialInicio).toLocaleDateString('pt-BR')]);
-                    if (d.dataCadastro) rows.push(['Cadastro em', new Date(d.dataCadastro).toLocaleDateString('pt-BR')]);
-                    rows.push(['E-mail', usu.email]);
-                    rows.push(['Nome', d.nome || usu.nome || '—']);
-
-                    if (rows.length === 0) {
-                        contratoEl.innerHTML = '<p style="color:#888;font-size:.88rem;">Nenhum contrato ativo no momento.</p>';
-                    } else {
-                        contratoEl.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:.88rem;">' +
-                            rows.map(function (r) {
-                                return '<tr>' +
-                                    '<td style="padding:8px 12px;font-weight:700;color:#555;width:40%;border-bottom:1px solid #f0f0f0;">' + r[0] + '</td>' +
-                                    '<td style="padding:8px 12px;color:#222;border-bottom:1px solid #f0f0f0;">' + r[1] + '</td>' +
-                                    '</tr>';
-                            }).join('') + '</table>';
-                    }
-                }
-
-                // Exibe botão de trial se ainda não iniciou
-                if (!ass.ativa && !ass.cancelada && !d.trialInicio) {
-                    var wrapTrial = document.getElementById('sg-btn-trial-wrap');
-                    if (wrapTrial) wrapTrial.style.display = 'block';
-                }
-
-            } catch (e) {
-                console.warn('prestadorMeuPlano: erro ao renderizar detalhes:', e);
-            }
-        }, 100);
-    });
-    </script>
+    <!-- SPRINT 2 — Complemento inline: Recursos e Dados do Contrato.
+         Status, cards e cancelamento são geridos pelo script.js
+         (inicializarMeuPlano + window.SG_Plano). Aqui apenas
+         preenchemos os recursos do plano vigente e a tabela de
+         contrato, lendo a sessão de sessionStorage (corrige o bug
+         que deixava estas seções em branco). -->
 </body>
 </html>
