@@ -3700,6 +3700,47 @@ document.addEventListener('DOMContentLoaded', function () {
     // =========================================================
     // HOTSITE ADM (prestadorHotsiteAdm.html)
     // =========================================================
+    // =========================================================
+    // SPRINT 6 — LIMITES DE GALERIA DE MÍDIA POR PLANO CONTRATADO
+    // =========================================================
+    // Cada plano libera uma quantidade diferente de fotos e vídeos na
+    // galeria do HotSite. As fotos sempre ocupam os primeiros slots;
+    // os vídeos ocupam os últimos. Este mapa é a ÚNICA fonte de verdade
+    // sobre o limite de cada plano — usado tanto no Hotsite Admin (onde
+    // o prestador faz upload) quanto no Hotsite público (onde os
+    // clientes visualizam), garantindo que o limite do plano contratado
+    // seja efetivamente respeitado nos dois lugares.
+    var LIMITES_GALERIA_POR_PLANO = {
+        gratuito:     { fotos: 3,  videos: 1 },  // Teste grátis de 30 dias
+        basico:       { fotos: 6,  videos: 1 },  // R$ 49,90/mês
+        profissional: { fotos: 11, videos: 1 },  // R$ 89,90/mês
+        premium:      { fotos: 18, videos: 2 }   // R$ 139,90/mês
+    };
+
+    /**
+     * Resolve o limite de galeria (fotos/vídeos/total) vigente para o
+     * e-mail informado, com base no plano efetivamente contratado.
+     * Reaproveita SG_Plano.estado(), que já resolve trial, vigência,
+     * trocas e cancelamentos agendados antes de responder.
+     * Apenas uma assinatura paga ATIVA ('assinante') libera o limite do
+     * próprio plano contratado; qualquer outra situação — trial (com ou
+     * sem trialInicio ainda registrado), downgrade ao gratuito, cancelado,
+     * em carência ou qualquer estado inesperado — aplica o limite mais
+     * restritivo (Plano Gratuito), por segurança.
+     */
+    function _obterLimiteGaleriaPorEmail(email) {
+        var padrao = LIMITES_GALERIA_POR_PLANO.gratuito;
+        var planoId = 'gratuito';
+        try {
+            var est = (window.SG_Plano && window.SG_Plano.estado) ? window.SG_Plano.estado(email) : null;
+            if (est && est.fase === 'assinante' && est.plano && LIMITES_GALERIA_POR_PLANO[est.plano]) {
+                planoId = est.plano;
+            }
+        } catch (e) { /* mantém o padrão (gratuito) em caso de qualquer falha */ }
+        var limite = LIMITES_GALERIA_POR_PLANO[planoId] || padrao;
+        return { fotos: limite.fotos, videos: limite.videos, total: limite.fotos + limite.videos, planoId: planoId };
+    }
+
     function inicializarHotsitePrestador() {
         var inputCnpj = document.getElementById('adm-cnpj');
         if (!inputCnpj) return;
@@ -3866,11 +3907,15 @@ document.addEventListener('DOMContentLoaded', function () {
             avatarDiv.addEventListener('click', function () { inputAvatar.click(); });
         }
 
-        // SPRINT 2 — Galeria de 20 slots (18 imagens + 2 vídeos)
-        // Slots 0–17: imagens | Slots 18 e 19: vídeos
-        // galeriaDados é indexado por slot (0–19) e persiste em memória até Salvar & Publicar.
-        var TOTAL_SLOTS_GALERIA = 20;
-        var INICIO_SLOTS_VIDEO = 18; // slots 18 e 19 = vídeos
+        // SPRINT 2 — Galeria de slots dinâmicos, de acordo com o plano contratado.
+        // SPRINT 6 — Os limites (quantidade de fotos e vídeos) agora respeitam
+        // efetivamente o plano vigente do prestador (ver LIMITES_GALERIA_POR_PLANO),
+        // em vez de liberar sempre o máximo (18 imagens + 2 vídeos) para todos.
+        // Slots de fotos vêm sempre antes dos slots de vídeo.
+        // galeriaDados é indexado por slot e persiste em memória até Salvar & Publicar.
+        var _limiteGaleriaPlano = _obterLimiteGaleriaPorEmail(emailLogado);
+        var TOTAL_SLOTS_GALERIA = _limiteGaleriaPlano.total;
+        var INICIO_SLOTS_VIDEO  = _limiteGaleriaPlano.fotos; // slots a partir daqui são vídeo
         var galeriaSalva = dadosSalvos.galeria;
         var galeriaDados = new Array(TOTAL_SLOTS_GALERIA).fill(null);
         // Carrega dados salvos respeitando o índice de slot, independente do tamanho do array salvo
@@ -3921,6 +3966,14 @@ document.addEventListener('DOMContentLoaded', function () {
             // Garante TOTAL_SLOTS_GALERIA slots no DOM antes de renderizar
             var galContainer = document.getElementById('galeria-thumbs');
             if (galContainer) {
+                // SPRINT 6 — remove quaisquer slots (inclusive os pré-existentes
+                // no HTML estático) cujo índice ultrapasse o limite do plano
+                // contratado. Sem isso, um prestador em um plano com limite
+                // menor que a marcação estática padrão continuaria enxergando
+                // e podendo usar slots que não pertencem ao seu plano.
+                Array.prototype.slice.call(galContainer.querySelectorAll('.hotsiteadm-thumb-preview')).forEach(function (thumbExcedente) {
+                    if (parseInt(thumbExcedente.dataset.slot, 10) >= TOTAL_SLOTS_GALERIA) thumbExcedente.remove();
+                });
                 var existentes = galContainer.querySelectorAll('.hotsiteadm-thumb-preview').length;
                 for (var s = existentes; s < TOTAL_SLOTS_GALERIA; s++) {
                     var newThumb = document.createElement('div');
@@ -4036,6 +4089,26 @@ document.addEventListener('DOMContentLoaded', function () {
                 })(parseInt(thumb.dataset.slot));
             });
         }
+        // SPRINT 6 — Aviso informativo (puramente aditivo, não altera nenhum
+        // comportamento existente) mostrando ao prestador quantos arquivos de
+        // mídia o seu plano atual libera na galeria.
+        (function _sgExibirAvisoLimiteGaleria() {
+            var galContainerRef = document.getElementById('galeria-thumbs');
+            if (!galContainerRef || !galContainerRef.parentNode) return;
+            var idAviso = 'sg-aviso-limite-galeria';
+            var existenteAviso = document.getElementById(idAviso);
+            if (existenteAviso) existenteAviso.remove();
+            var nomesPlanoAviso = { gratuito: 'Teste Grátis (30 dias)', basico: 'Plano Básico', profissional: 'Plano Profissional', premium: 'Plano Premium' };
+            var aviso = document.createElement('div');
+            aviso.id = idAviso;
+            aviso.style.cssText = 'margin:8px 0 12px;padding:8px 12px;background:#eef4ff;border:1px solid #b8d0f5;border-radius:6px;font-size:.82rem;color:#0d4fa3;';
+            aviso.innerHTML = '<i class="bi bi-info-circle me-1"></i>Seu plano atual (<strong>' +
+                (nomesPlanoAviso[_limiteGaleriaPlano.planoId] || _limiteGaleriaPlano.planoId) +
+                '</strong>) permite até <strong>' + TOTAL_SLOTS_GALERIA + ' arquivos de mídia</strong> (' +
+                _limiteGaleriaPlano.fotos + ' foto' + (_limiteGaleriaPlano.fotos === 1 ? '' : 's') + ' + ' +
+                _limiteGaleriaPlano.videos + ' vídeo' + (_limiteGaleriaPlano.videos === 1 ? '' : 's') + ').';
+            galContainerRef.parentNode.insertBefore(aviso, galContainerRef);
+        }());
         renderizarGaleria();
 
         // Remove botão de upload múltiplo (substituído pelos cards)
@@ -6832,19 +6905,34 @@ document.addEventListener('DOMContentLoaded', function () {
             var telEl = document.getElementById('hs-tel');
             if (telEl) telEl.textContent = dados.tel || '—';
 
-            // SPRINT 2/3 — Galeria (20 slots: 18 imagens + 2 vídeos)
+            // SPRINT 2/3/6 — Galeria: quantidade de slots (fotos + vídeos) e o
+            // ponto em que os vídeos começam agora dependem do plano
+            // efetivamente contratado pelo prestador (ver LIMITES_GALERIA_POR_PLANO),
+            // em vez de assumir sempre o máximo de 20 (18 imagens + 2 vídeos).
             // Itens podem ser data URLs diretas (legado) ou referências
             // "idbmidia://<chave>" apontando para o IndexedDB (SG_MidiaDB).
+            var _limiteGaleriaPublico = _obterLimiteGaleriaPorEmail(emailPrest);
             var galeriaEl = document.getElementById('hs-galeria');
+            if (galeriaEl) {
+                // Oculta quaisquer slots estáticos que ultrapassem o limite do
+                // plano contratado, para não exibir molduras vazias de mídia
+                // que o prestador não tem direito a preencher.
+                galeriaEl.querySelectorAll('.hotsite-thumb').forEach(function (thumbPublico) {
+                    var slotPublico = parseInt(thumbPublico.dataset.slot, 10);
+                    if (!isNaN(slotPublico) && slotPublico >= _limiteGaleriaPublico.total) {
+                        thumbPublico.style.display = 'none';
+                    }
+                });
+            }
             if (galeriaEl && dados.galeria && dados.galeria.length > 0) {
                 var thumbs = galeriaEl.querySelectorAll('.hotsite-thumb');
                 dados.galeria.forEach(function (item, idx) {
-                    if (!item || idx >= thumbs.length) return;
+                    if (!item || idx >= thumbs.length || idx >= _limiteGaleriaPublico.total) return;
                     var thumb = thumbs[idx];
 
                     function _renderMidia(valor) {
                         if (!valor) return;
-                        var isVid = idx >= 18 || valor.startsWith('data:video') || valor.includes('/video/');
+                        var isVid = idx >= _limiteGaleriaPublico.fotos || valor.startsWith('data:video') || valor.includes('/video/');
                         thumb.innerHTML = '';
                         thumb.style.overflow = 'hidden';
                         var el = isVid ? document.createElement('video') : document.createElement('img');
@@ -12424,7 +12512,7 @@ document.addEventListener('DOMContentLoaded', function () {
                   titulo:'Cláusulas Gerais — Todos os Planos',
                   corpo:'<p><strong>1. Objeto do Contrato</strong><br>O presente contrato regula a prestação de serviços de plataforma digital ServGo!, consistente na disponibilização de HotSite para prestadores de serviço e intermediação de agendamentos.</p>'+
                         '<p><strong>2. Vigência</strong><br>A assinatura é mensal, renovada automaticamente, e pode ser cancelada a qualquer momento pelo prestador pelo painel de controle, sem multa.</p>'+
-                        '<p><strong>3. Período de Testes</strong><br>Novos prestadores têm direito a 30 (trinta) dias de uso gratuito da plataforma, com todas as funcionalidades do Plano Básico. Após esse período, a continuidade exige a contratação de um plano.</p>'+
+                        '<p><strong>3. Período de Testes</strong><br>Novos prestadores têm direito a 30 (trinta) dias de uso gratuito da plataforma, com HotSite ativo no catálogo, agendamentos ilimitados, avaliações de clientes, suporte por e-mail e galeria de até 4 (quatro) arquivos de mídia (3 fotos + 1 vídeo). Após esse período, a continuidade exige a contratação de um plano.</p>'+
                         '<p><strong>4. Pagamento</strong><br>As cobranças são mensais, realizadas na data de aniversário da assinatura. O não pagamento dentro de 5 (cinco) dias corridos implica suspensão do acesso.</p>'+
                         '<p><strong>5. Cancelamento</strong><br>O cancelamento pode ser solicitado a qualquer momento. O acesso permanece ativo até o fim do ciclo mensal pago. Ao cancelar, o HotSite é removido do catálogo e o login é bloqueado.</p>'+
                         '<p><strong>6. Responsabilidade</strong><br>O prestador é responsável pelo conteúdo publicado em seu HotSite. A ServGo! não se responsabiliza por serviços contratados diretamente entre prestador e cliente fora da plataforma.</p>'+
@@ -12432,7 +12520,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 { id:'basico', icone:'bi-file-earmark', cor:'#146ADB', aberto:false,
                   titulo:'Contrato — Plano Básico (R$ 49,90/mês)',
                   corpo:'<p>Aplicam-se todas as Cláusulas Gerais, acrescidas das seguintes condições específicas:</p><ul>'+
-                        '<li><strong>HotSite:</strong> O prestador terá um perfil público no catálogo ServGo! com informações básicas, categoria de serviço, cidade, avaliações e galeria de até 3 (três) fotos.</li>'+
+                        '<li><strong>HotSite:</strong> O prestador terá um perfil público no catálogo ServGo! com informações básicas, categoria de serviço, cidade, avaliações e galeria de até 7 (sete) arquivos de mídia (6 fotos + 1 vídeo).</li>'+
                         '<li><strong>Agendamentos:</strong> O sistema de agendamentos online é ilimitado. O prestador configura sua agenda e disponibilidade pelo painel.</li>'+
                         '<li><strong>Avaliações:</strong> Clientes podem avaliar o prestador após o atendimento. O prestador pode responder às avaliações.</li>'+
                         '<li><strong>Suporte:</strong> Atendimento por e-mail em horário comercial (seg a sex, 8h–18h), com retorno em até 48h úteis.</li>'+
@@ -12441,7 +12529,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 { id:'profissional', icone:'bi-file-earmark-check', cor:'#b8870c', aberto:false,
                   titulo:'Contrato — Plano Profissional (R$ 89,90/mês)',
                   corpo:'<p>Inclui todos os benefícios do Plano Básico, mais:</p><ul>'+
-                        '<li><strong>Galeria Ampliada:</strong> Galeria de até 10 (dez) fotos profissionais publicadas no HotSite.</li>'+
+                        '<li><strong>Galeria Ampliada:</strong> Galeria de até 12 (doze) arquivos de mídia (11 fotos + 1 vídeo) publicados no HotSite.</li>'+
                         '<li><strong>Destaque no Catálogo:</strong> O HotSite é posicionado prioritariamente nos resultados de busca e na listagem do catálogo público, com badge "Destaque".</li>'+
                         '<li><strong>Relatórios Mensais:</strong> Relatório mensal com estatísticas de visitas ao HotSite, agendamentos realizados, avaliações recebidas e comparativo com o mês anterior.</li>'+
                         '<li><strong>Suporte:</strong> Atendimento por e-mail em horário comercial, com retorno em até 24h úteis.</li>'+
@@ -12449,7 +12537,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 { id:'premium', icone:'bi-file-earmark-check-fill', cor:'#198754', aberto:false,
                   titulo:'Contrato — Plano Premium (R$ 139,90/mês)',
                   corpo:'<p>Inclui todos os benefícios do Plano Profissional, mais:</p><ul>'+
-                        '<li><strong>Galeria Premium:</strong> Galeria de até 20 (vinte) fotos e 1 (um) vídeo de apresentação publicados no HotSite.</li>'+
+                        '<li><strong>Galeria Premium:</strong> Galeria de até 20 (vinte) arquivos de mídia (18 fotos + 2 vídeos) publicados no HotSite.</li>'+
                         '<li><strong>Suporte Prioritário 24h:</strong> Canal de suporte exclusivo com retorno garantido em até 4h, incluindo fins de semana e feriados.</li>'+
                         '<li><strong>Selo Verificado ServGo!:</strong> Após verificação de documentos e histórico na plataforma, o HotSite recebe o selo oficial de profissional verificado, exibido em destaque no catálogo.</li>'+
                         '<li><strong>Relatórios Avançados:</strong> Relatório mensal detalhado com análise de desempenho, perfil de cliente, horários de pico e sugestões de otimização.</li>'+
@@ -14832,27 +14920,30 @@ document.addEventListener('DOMContentLoaded', function () {
     (function () {
         'use strict';
 
+        // SPRINT 6 — Lista de recursos alinhada aos limites reais de galeria
+        // agora aplicados (LIMITES_GALERIA_POR_PLANO): cada plano libera uma
+        // quantidade específica de fotos + vídeos, nunca o máximo para todos.
         var RECURSOS = {
             gratuito: [
                 'HotSite ativo no catálogo (Plano Gratuito)',
                 'Agendamentos ilimitados',
                 'Avaliações de clientes',
-                'Galeria de até 1 foto',
-                '<span style="color:#b8870c;">Recursos dos planos pagos não incluídos</span>'
+                'Suporte por e-mail',
+                'Galeria de até 4 arquivos de mídia (3 fotos + 1 vídeo)'
             ],
             basico: [
                 'HotSite ativo no catálogo',
                 'Agendamentos ilimitados',
                 'Avaliações de clientes',
                 'Suporte por e-mail',
-                'Galeria de até 3 fotos'
+                'Galeria de até 7 arquivos de mídia (6 fotos + 1 vídeo)'
             ],
             profissional: [
                 'HotSite ativo no catálogo',
                 'Agendamentos ilimitados',
                 'Avaliações de clientes',
                 'Suporte por e-mail',
-                'Galeria de até 10 fotos',
+                'Galeria de até 12 arquivos de mídia (11 fotos + 1 vídeo)',
                 'Destaque no catálogo',
                 'Relatórios mensais'
             ],
@@ -14861,7 +14952,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 'Agendamentos ilimitados',
                 'Avaliações de clientes',
                 'Suporte por e-mail',
-                'Galeria de até 20 fotos + vídeo',
+                'Galeria de até 20 arquivos de mídia (18 fotos + 2 vídeos)',
                 'Destaque no catálogo',
                 'Relatórios mensais detalhados',
                 'Suporte prioritário 24h',
@@ -14872,7 +14963,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 'Agendamentos ilimitados',
                 'Avaliações de clientes',
                 'Suporte por e-mail',
-                'Galeria de até 3 fotos',
+                'Galeria de até 4 arquivos de mídia (3 fotos + 1 vídeo)',
                 '<span style="color:#b8870c;">Acesso por tempo limitado — 30 dias a partir do cadastro</span>'
             ]
         };
