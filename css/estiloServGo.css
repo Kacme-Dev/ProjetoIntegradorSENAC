@@ -4486,3 +4486,91 @@ html[data-tema="escuro"] #sg-tema-menu {
     #sg-tema-botao { top: 70px; right: 6px; width: 34px; height: 34px; font-size: .95rem; }
     #sg-tema-menu  { top: 108px; right: 6px; min-width: 160px; }
 }
+
+
+/* ============================================================
+   SPRINT 13/14 — Categorias da barra de serviços: separador em "|"
+   e degradê de cor (esquerda → direita)
+   ============================================================
+   Ajuste 100% visual via CSS — o HTML original do bloco de categorias
+   (hrefs, atributos data-cat usados pelo roteamento em script.js,
+   classes) permanece absolutamente intacto e sem nenhuma alteração.
+
+   1) SEPARADOR EM PIPE: a linha vertical do Bootstrap (.border-end)
+      é removida visualmente e substituída por um caractere "|"
+      inserido via ::after — sem tocar na marcação original.
+
+      SPRINT 14 — correção de centralização: antes, o espaçamento
+      ficava assimétrico (o pipe nascia colado ao final do texto do
+      próprio link, enquanto o espaço "antes" da PRÓXIMA palavra vinha
+      da soma do padding-direito deste link + gap do flex + padding-
+      esquerdo do próximo — empurrando cada palavra visualmente para o
+      canto direito do seu "espaço" entre pipes). A correção remove o
+      padding horizontal do link e o gap do flex, e passa a controlar
+      TODO o espaçamento horizontal via margem IGUAL nos dois lados do
+      próprio "|" — garantindo, por construção matemática, que cada
+      palavra fique exatamente centralizada entre os separadores.
+
+   2) DEGRADÊ DE COR: a barra (.servicos) tem fundo sólido na cor azul
+      padrão do site (var(--cor-azul), #146ADB). Por isso, um degradê
+      indo do azul escuro ATÉ esse mesmo azul do fundo ficaria ilegível
+      (texto azul sobre fundo azul). A cor de texto ATUAL já é branco
+      quase opaco exatamente por esse motivo. Interpretando a intenção
+      dentro desse contexto: o degradê vai de um azul claro sutil
+      (mais escuro que o restante) até o branco — o "tom mais claro
+      padrão do site" para texto sobre fundos azuis. Os 11 tons abaixo
+      foram calibrados para manter contraste WCAG AA (>= 4.5:1) em
+      TODOS os itens sobre o fundo #146ADB.
+
+      SPRINT 15 — CORREÇÃO DE RAIZ: a tentativa da Sprint 14 de zerar o
+      padding horizontal do link (".filter-pill a { padding: 6px 0; }")
+      nunca chegou a funcionar de verdade no navegador. O motivo: cada
+      link já traz, na própria marcação original (inalterada), a
+      classe do Bootstrap "px-3" — e as utilities de espaçamento do
+      Bootstrap são definidas com "!important" (ex.: padding-right/
+      padding-left: 1rem !important). Uma regra comum, sem !important,
+      JAMAIS vence uma regra com !important, não importa a
+      especificidade. Por isso o padding de 16px de cada lado
+      continuava sendo aplicado por baixo do meu CSS, mantendo cada
+      palavra "colada" ao seu próprio pipe e todo o espaço sobrando do
+      lado de fora — exatamente o sintoma relatado. A correção agora
+      neutraliza a própria combinação ".filter-pill a.px-3" com
+      !important, control ando de vez 100% do espaçamento horizontal
+      através da margem simétrica do "|".
+   ============================================================ */
+.filter-pill {
+    gap: 0; /* o espaçamento horizontal vem só da margem do "|" abaixo */
+}
+.filter-pill a {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+.filter-pill a.px-3 {
+    /* SPRINT 15 — neutraliza especificamente a utility .px-3 do
+       Bootstrap (que aplica padding-left/right:1rem !important na
+       marcação original). Usar !important aqui é necessário e seguro:
+       sem ele, a regra do Bootstrap sempre venceria, independente da
+       especificidade. */
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+.filter-pill a.border-end {
+    border-right: none !important; /* remove a linha vertical original */
+}
+.filter-pill a:not(:last-child)::after {
+    content: "|";
+    display: inline-block;
+    margin: 0 10px; /* Sprint 14 — mesma margem dos dois lados do pipe: centraliza cada palavra entre os separadores */
+    color: inherit; /* acompanha o mesmo tom do item à esquerda */
+}
+.filter-pill a:nth-child(1):not(:hover)  { color: #E8F4FF; }
+.filter-pill a:nth-child(2):not(:hover)  { color: #EAF5FF; }
+.filter-pill a:nth-child(3):not(:hover)  { color: #EDF6FF; }
+.filter-pill a:nth-child(4):not(:hover)  { color: #EFF7FF; }
+.filter-pill a:nth-child(5):not(:hover)  { color: #F1F8FF; }
+.filter-pill a:nth-child(6):not(:hover)  { color: #F4FAFF; }
+.filter-pill a:nth-child(7):not(:hover)  { color: #F6FBFF; }
+.filter-pill a:nth-child(8):not(:hover)  { color: #F8FCFF; }
+.filter-pill a:nth-child(9):not(:hover)  { color: #FAFDFF; }
+.filter-pill a:nth-child(10):not(:hover) { color: #FDFEFF; }
+.filter-pill a:nth-child(11):not(:hover) { color: #FFFFFF; }
